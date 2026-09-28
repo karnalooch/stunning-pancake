@@ -42,6 +42,9 @@ services:
           --set=app_user="$$APP_DB_USER" \
           --set=app_password="$$APP_DB_PASSWORD" \
           --set=admin_user="$$PGUSER" <<'SQL'
+        -- Extension/bootstrap DDL belongs to the privileged migration/bootstrap
+        -- path. Runtime services (including telemetry) must stay NOSUPERUSER.
+        CREATE EXTENSION IF NOT EXISTS postgis;
         SELECT format(
           'CREATE ROLE %I LOGIN PASSWORD %L NOSUPERUSER NOBYPASSRLS NOREPLICATION',
           :'app_user', :'app_password'

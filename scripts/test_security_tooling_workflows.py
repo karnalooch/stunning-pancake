@@ -259,6 +259,36 @@ class FullReleaseLaneContractTests(unittest.TestCase):
                     group,
                 )
 
+    def test_home_lab_runtime_proof_checks_out_exact_source_head(self):
+        raw = text(HOME_LAB)
+        self.assertIn(
+            "ref: ${{ github.event.pull_request.head.sha || github.sha }}",
+            raw,
+        )
+        self.assertIn("Assert exact source checkout", raw)
+        self.assertIn(
+            "EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}",
+            raw,
+        )
+        self.assertIn('ACTUAL_HEAD_SHA="$(git rev-parse HEAD)"', raw)
+
+    def test_home_lab_runtime_proof_has_one_heavy_owner_on_workflow_edits(self):
+        release_trigger = self._trigger(FULL_RELEASE)["pull_request"]["paths"]
+        self.assertIn(".github/workflows/home-lab.yml", release_trigger)
+
+        raw = text(HOME_LAB)
+        self.assertIn("Cold-start smoke to DEV ENV READY", raw)
+        self.assertIn("python scripts/home_lab.py cold-start-smoke", raw)
+        self.assertIn("WORKFLOW_NAME: ${{ github.workflow }}", raw)
+        self.assertIn(
+            "Full Release owns the duplicate runtime proof for home-lab workflow changes",
+            raw,
+        )
+        self.assertIn(
+            "steps.runtime-scope.outputs.run == 'true'",
+            raw,
+        )
+
     def test_release_orchestrator_is_read_only_and_cannot_deploy(self):
         release = load(FULL_RELEASE)
         self.assertEqual(release["permissions"], {"contents": "read"})

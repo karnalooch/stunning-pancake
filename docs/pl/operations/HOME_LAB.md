@@ -19,16 +19,18 @@ Używaj `python scripts/home_lab.py ...` jako jedynej kanonicznej ścieżki ster
 
 ## Wymagania
 
-- Docker Desktop z WSL2 albo Docker Engine z obsługą `docker compose`;
-- co najmniej 16 GB RAM i 40 GB wolnego miejsca;
-- Git oraz Python 3.12+ do skryptu sterującego.
+- Git;
+- Node.js 24.21.0 i pnpm 12.4.2 przez Corepack;
+- Python 3.12;
+- Docker Desktop albo Docker Engine z Docker Compose v2.
+
+Kanoniczne wymagania hosta sprawdza read-only `python scripts/dev_doctor.py`; runbook nie utrzymuje osobnych, arbitralnych progów RAM/dysku.
 
 ## Pierwsze uruchomienie
 
 ```powershell
 python scripts/home_lab.py init
-python scripts/home_lab.py config
-python scripts/home_lab.py up
+python scripts/home_lab.py cold-start-smoke
 ```
 
 `init` tworzy ignorowany plik `.env.home` i odmawia nadpisania istniejącego pliku. Generuje niezależne lokalne wartości dla hasła bazy, dedykowanego `ADMIN_PASSWORD` GLOBAL_OWNER-a, Django `SECRET_KEY`, sekretu podpisującego JWT telemetrii oraz klucza AES-256 do backupów. Wartości sekretów nigdy nie trafiają do evidence T87.
@@ -47,6 +49,20 @@ python scripts/home_lab.py up --all-admin
 ```
 
 Profile można łączyć. `simulation` uruchamia również BRouter i OSRM. Pierwsze przygotowanie danych routingu może pobrać duże pliki i potrwać znacznie dłużej niż start rdzenia.
+
+## T90 — cold-start smoke i `DEV ENV READY`
+
+Po zielonym doctorze i jednorazowym `init` kanoniczny dowód gotowości środowiska uruchamiaj jedną komendą:
+
+```powershell
+python scripts/home_lab.py cold-start-smoke
+```
+
+Komenda działa fail-closed i z czystego stanu procesów wykonuje `down --remove-orphans` **bez `-v`**, więc zachowuje wolumeny i lokalne dane. Następnie waliduje dokładnie `docker-compose.yml` + `docker-compose.home.yml`, wykonuje `up -d --build --wait`, sprawdza usługi rdzenia i HTTP backendu/telemetrii/GLOBAL_OWNER, brak oczekujących migracji Django oraz aktywne ścieżki PostgreSQL, Redis i głównego workera Celery.
+
+Po pełnym PASS zapisuje pozbawione sekretów evidence powiązane z dokładnym SHA do `backups/home-lab/evidence/t90-dev-env-ready-*.json`. Tylko ten pełny kontrakt wypisuje `DEV ENV READY`. Nie używaj samego `docker compose up`, statusu kontenera ani pojedynczego health endpointu jako równoważnego dowodu.
+
+Ponowne uruchomienie jest bezpieczne: smoke najpierw usuwa stare kontenery/orphans, ale nie usuwa nazwanych wolumenów. Po awarii częściowo uruchomiony stos może pozostać do diagnostyki; kolejny smoke zaczyna ponownie od kontrolowanego restartu.
 
 ## Codzienna obsługa
 

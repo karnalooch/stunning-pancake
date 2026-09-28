@@ -451,6 +451,123 @@ def check_health() -> None:
     print("Home lab core services and HTTP health endpoints are ready")
 
 
+def print_startup_diagnostics() -> None:
+    """Print bounded local diagnostics when Compose cannot reach healthy state."""
+    print("Home Lab startup failed; bounded telemetry diagnostics follow")
+    run(compose_command("ps"), check=False)
+    run(
+        compose_command(
+            "logs",
+            "--no-color",
+            "--tail",
+            "120",
+            "telemetry",
+        ),
+        check=False,
+    )
+
+
+def check_runtime_dependencies() -> dict[str, str]:
+    """Prove the core stateful services and worker path are actually responsive."""
+    require_environment()
+    postgres = run_capture(
+        compose_command(
+            "exec",
+            "-T",
+            "db",
+            "sh",
+            "-c",
+            'pg_isready --username="$POSTGRES_USER" --dbname="$POSTGRES_DB"',
+        )
+    ).strip()
+    if "accepting connections" not in postgres.lower():
+        raise SystemExit(f"PostgreSQL readiness check failed: {postgres or 'no output'}")
+
+    redis = run_capture(
+        compose_command("exec", "-T", "redis", "redis-cli", "ping")
+    ).strip()
+    if redis.upper() != "PONG":
+        raise SystemExit(f"Redis readiness check failed: {redis or 'no output'}")
+
+    celery = run_capture(
+        compose_command(
+            "exec",
+            "-T",
+            "celery_worker",
+            "celery",
+            "-A",
+            "core",
+            "inspect",
+            "ping",
+            "--timeout",
+            "5",
+        )
+    ).strip()
+    if "pong" not in celery.lower():
+        raise SystemExit("Celery worker ping failed: no pong response")
+
+    print("PostgreSQL, Redis and Celery worker runtime dependencies are ready")
+    return {
+        "postgres": "accepting_connections",
+        "redis": "PONG",
+        "celery_worker": "pong",
+    }
+
+
+def cold_start_smoke() -> Path:
+    """Restart the canonical Home Lab and prove the complete DX0 runtime contract."""
+    require_environment()
+    commit = checked_out_commit()
+    configuration = validate_pilot_configuration()
+    started_at = datetime.now(UTC)
+
+    # Preserve persistent volumes, but remove stale containers/orphans so every
+    # retry proves the same canonical startup path from a known process state.
+    run(compose_command("down", "--remove-orphans"))
+    run(compose_command("config", "--quiet"))
+    try:
+        run(compose_command("up", "-d", "--build", "--wait"))
+    except subprocess.CalledProcessError:
+        print_startup_diagnostics()
+        raise
+
+    check_health()
+    check_migrations()
+    dependencies = check_runtime_dependencies()
+    completed_at = datetime.now(UTC)
+
+    report = {
+        "schema_version": 1,
+        "gate": "t90-dev-env-ready",
+        "overall_status": "PASS",
+        "git_commit": commit,
+        "git_checkout_clean": True,
+        "started_at_utc": started_at.isoformat(),
+        "completed_at_utc": completed_at.isoformat(),
+        "configuration": configuration,
+        "compose_files": [
+            str(BASE_COMPOSE_FILE.relative_to(ROOT)),
+            str(HOME_COMPOSE_FILE.relative_to(ROOT)),
+        ],
+        "core_services": list(CORE_SERVICES),
+        "health_endpoints": [url for _service, url in HEALTH_ENDPOINTS],
+        "migrations": "no_pending",
+        "runtime_dependencies": dependencies,
+        "persistent_volumes_deleted": False,
+    }
+    EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
+    stamp = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
+    report_path = EVIDENCE_DIR / f"t90-dev-env-ready-{stamp}.json"
+    report_path.write_text(
+        json.dumps(report, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    print(f"T90 cold-start smoke PASS: commit={commit[:12]}…")
+    print(f"Evidence written: {report_path}")
+    print("DEV ENV READY")
+    return report_path
+
+
 def validate_backup(path: Path) -> Path:
     resolved = path.expanduser().resolve()
     if not resolved.is_file() or not resolved.name.endswith(BACKUP_SUFFIX):
@@ -874,6 +991,7 @@ def parse_args() -> argparse.Namespace:
     restore.add_argument("path", type=Path)
     sub.add_parser("operator-gate")
     sub.add_parser("p3-recovery-drill")
+    sub.add_parser("cold-start-smoke")
     return parser.parse_args()
 
 
@@ -905,6 +1023,8 @@ def main() -> None:
         operator_gate()
     elif args.action == "p3-recovery-drill":
         p3_recovery_drill()
+    elif args.action == "cold-start-smoke":
+        cold_start_smoke()
 
 
 if __name__ == "__main__":

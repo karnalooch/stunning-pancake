@@ -69,6 +69,28 @@ class HomeLabTests(unittest.TestCase):
         self.assertIn("MIGRATION_DATABASE_URL:", content)
         self.assertIn("APP_DB_USER:-4velo_runtime", content)
 
+    def test_privileged_bootstrap_owns_postgis_extension_before_runtime_role(self):
+        home = home_lab.HOME_COMPOSE_FILE.read_text(encoding="utf-8")
+        extension = "CREATE EXTENSION IF NOT EXISTS postgis;"
+        role = "CREATE ROLE %I LOGIN PASSWORD %L NOSUPERUSER NOBYPASSRLS NOREPLICATION"
+        self.assertIn(extension, home)
+        self.assertIn(role, home)
+        self.assertLess(home.index(extension), home.index(role))
+
+        # Compose must defer these variables to /bin/bash inside the init
+        # container. A single dollar is interpolated by Compose before the
+        # service-level environment exists, which can silently blank PGUSER
+        # or APP_DB_PASSWORD on a fresh bootstrap.
+        self.assertIn('--set=app_user="$$APP_DB_USER"', home)
+        self.assertIn('--set=app_password="$$APP_DB_PASSWORD"', home)
+        self.assertIn('--set=admin_user="$$PGUSER"', home)
+
+        telemetry_lifecycle = (
+            home_lab.ROOT / "telemetry" / "lifecycle.py"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("CREATE EXTENSION IF NOT EXISTS postgis", telemetry_lifecycle)
+        self.assertIn("NOSUPERUSER runtime role", telemetry_lifecycle)
+
     def test_pilot_core_ports_replace_base_bindings_with_loopback_only(self):
         content = home_lab.HOME_COMPOSE_FILE.read_text(encoding="utf-8")
         self.assertEqual(content.count("ports: !override"), 5)
@@ -160,6 +182,129 @@ class HomeLabTests(unittest.TestCase):
             ("global_admin", "http://127.0.0.1:3001/"),
             home_lab.HEALTH_ENDPOINTS,
         )
+
+    def test_runtime_dependency_check_proves_postgres_redis_and_celery(self):
+        outputs = [
+            "/var/run/postgresql:5432 - accepting connections\n",
+            "PONG\n",
+            "->  celery@worker: OK\n        pong\n",
+        ]
+        with patch.object(home_lab, "require_environment"), patch.object(
+            home_lab, "run_capture", side_effect=outputs
+        ) as capture:
+            result = home_lab.check_runtime_dependencies()
+
+        self.assertEqual(
+            result,
+            {
+                "postgres": "accepting_connections",
+                "redis": "PONG",
+                "celery_worker": "pong",
+            },
+        )
+        commands = [call.args[0] for call in capture.call_args_list]
+        self.assertIn("pg_isready", " ".join(commands[0]))
+        self.assertEqual(commands[1][-2:], ["redis-cli", "ping"])
+        self.assertIn("celery_worker", commands[2])
+        self.assertIn("inspect", commands[2])
+        self.assertIn("ping", commands[2])
+
+    def test_runtime_dependency_check_fails_closed_without_celery_pong(self):
+        outputs = [
+            "/var/run/postgresql:5432 - accepting connections\n",
+            "PONG\n",
+            "Error: No nodes replied within time constraint\n",
+        ]
+        with patch.object(home_lab, "require_environment"), patch.object(
+            home_lab, "run_capture", side_effect=outputs
+        ), self.assertRaises(SystemExit):
+            home_lab.check_runtime_dependencies()
+
+    def test_cold_start_smoke_prints_bounded_diagnostics_on_compose_failure(self):
+        failure = home_lab.subprocess.CalledProcessError(1, ["docker", "compose", "up"])
+        with (
+            patch.object(home_lab, "require_environment"),
+            patch.object(home_lab, "checked_out_commit", return_value="e" * 40),
+            patch.object(home_lab, "validate_pilot_configuration", return_value={}),
+            patch.object(home_lab, "run", side_effect=[None, None, failure]),
+            patch.object(home_lab, "print_startup_diagnostics") as diagnostics,
+            self.assertRaises(home_lab.subprocess.CalledProcessError),
+        ):
+            home_lab.cold_start_smoke()
+
+        diagnostics.assert_called_once_with()
+
+    def test_startup_diagnostics_are_bounded_to_status_and_telemetry_logs(self):
+        with patch.object(home_lab, "run") as run_mock:
+            home_lab.print_startup_diagnostics()
+
+        commands = [call.args[0] for call in run_mock.call_args_list]
+        self.assertEqual(commands[0][-1], "ps")
+        self.assertEqual(
+            commands[1][-5:],
+            ["logs", "--no-color", "--tail", "120", "telemetry"],
+        )
+        self.assertTrue(all(call.kwargs["check"] is False for call in run_mock.call_args_list))
+
+    def test_cold_start_smoke_writes_exact_sha_secret_free_evidence(self):
+        with tempfile.TemporaryDirectory() as folder:
+            evidence_dir = Path(folder) / "evidence"
+            configuration = {
+                "telemetry_jwt_required": True,
+                "telemetry_audience_required": True,
+                "telemetry_ack_mode": "direct-db",
+                "rls_runtime_role_guard": True,
+                "demo_seed": False,
+                "runtime_db_role_separated": True,
+                "admin_password_configured": True,
+                "backup_encryption_key_valid": True,
+            }
+            dependencies = {
+                "postgres": "accepting_connections",
+                "redis": "PONG",
+                "celery_worker": "pong",
+            }
+            with (
+                patch.object(home_lab, "require_environment"),
+                patch.object(home_lab, "checked_out_commit", return_value="d" * 40),
+                patch.object(
+                    home_lab,
+                    "validate_pilot_configuration",
+                    return_value=configuration,
+                ),
+                patch.object(home_lab, "run") as run_mock,
+                patch.object(home_lab, "check_health"),
+                patch.object(home_lab, "check_migrations"),
+                patch.object(
+                    home_lab,
+                    "check_runtime_dependencies",
+                    return_value=dependencies,
+                ),
+                patch.object(home_lab, "EVIDENCE_DIR", evidence_dir),
+                patch("builtins.print") as print_mock,
+            ):
+                report_path = home_lab.cold_start_smoke()
+
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            self.assertEqual(report["overall_status"], "PASS")
+            self.assertEqual(report["gate"], "t90-dev-env-ready")
+            self.assertEqual(report["git_commit"], "d" * 40)
+            self.assertEqual(report["migrations"], "no_pending")
+            self.assertEqual(report["runtime_dependencies"], dependencies)
+            self.assertFalse(report["persistent_volumes_deleted"])
+
+            commands = [call.args[0] for call in run_mock.call_args_list]
+            self.assertEqual(commands[0][-2:], ["down", "--remove-orphans"])
+            self.assertNotIn("-v", commands[0])
+            self.assertEqual(commands[1][-2:], ["config", "--quiet"])
+            self.assertEqual(commands[2][-4:], ["up", "-d", "--build", "--wait"])
+            printed = [call.args[0] for call in print_mock.call_args_list]
+            self.assertEqual(printed[-1], "DEV ENV READY")
+
+            serialized = report_path.read_text(encoding="utf-8")
+            self.assertNotIn("SECRET_KEY", serialized)
+            self.assertNotIn("ADMIN_PASSWORD", serialized)
+            self.assertNotIn("TELEMETRY_INGEST_JWT_SECRET", serialized)
 
     def test_operator_gate_writes_commit_bound_secret_free_evidence(self):
         with tempfile.TemporaryDirectory() as folder:
