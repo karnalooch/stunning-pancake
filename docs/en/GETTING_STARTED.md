@@ -17,16 +17,32 @@ See the [takeover guide](../PROJECT_TAKEOVER.md) for project limitations.
 
 ## Tools
 
-- Git, Node 20 (CI version), pnpm 9.15.
-- Docker with Compose 2 and resources for PostGIS, Redis and routing services.
-- Python 3.12 for CI-aligned local tools; service images use Python 3.11.
+- Git.
+- Node.js **24.21.0** (tracked in `.nvmrc`; the root manifest allows Node 24 from 24.21.0) and pnpm **12.4.2** through Corepack.
+- Docker Desktop / Docker Engine with Compose v2.
+- At least **16 GB RAM** and **40 GB free disk space** for the Home Lab.
+- Python **3.12+** for CI-aligned local tools; CI currently uses Python 3.12 and service images may use their own pinned runtime.
 
-## Preparation
+## Preflight
+
+After cloning the repository, run the read-only doctor before installing dependencies or starting services:
 
 ```powershell
 git clone https://github.com/karnalooch/stunning-pancake.git 4velo
 cd 4velo
-corepack pnpm install --frozen-lockfile
+python scripts/dev_doctor.py
+```
+
+The doctor checks the repository root, Git checkout, Python, the exact Node/pnpm pins, Corepack, Docker Compose, Docker daemon access, RAM and free disk space. It exits non-zero with a concrete remediation for every required failure. It checks only whether `.env.home` exists and never reads or prints its secret values. Runtime health and the final `DEV ENV READY` claim belong to T90.
+
+## Preparation
+
+After the doctor passes, follow its canonical next steps:
+
+```powershell
+corepack enable
+corepack prepare pnpm@12.4.2 --activate
+pnpm install --frozen-lockfile
 python scripts/home_lab.py init
 ```
 
