@@ -67,6 +67,14 @@
 - Przy zmianach autoryzacji i danych sprawdź granice uprawnień, izolację danych oraz migracje. Nie uruchamiaj migracji na produkcji w ramach lokalnej walidacji.
 - Przy zmianach CI/Docker sprawdź odpowiednie wyzwalacze, filtry ścieżek, zależności jobów, warunki agregacji i kontekst builda. Nie osłabiaj bramek, aby uzyskać zielony wynik.
 
+## Weryfikacja dokumentacji
+- Traktuj zgodność dokumentacji jako część Definition of Done, nie jako opcjonalny cleanup po implementacji. Dla zmian zachowania, API, konfiguracji, CI/CD, bezpieczeństwa, release, operacji lub procesu developerskiego przed zakończeniem zadania jawnie oceń, czy bieżący SSOT wymaga aktualizacji.
+- Zaczynaj od [docs/README.md](docs/README.md) i właściwego indeksu domenowego. Nie używaj `PROJECT_TAKEOVER.md`, `TAKEOVER_*`, datowanych audytów, snapshotów ani `docs/archive/` jako bieżącej instrukcji, chyba że zadanie dotyczy ich historii/provenance.
+- Przed edycją sprawdź aktualny dokument kanoniczny dla zmienianego kontraktu, a po implementacji porównaj go z końcowym zachowaniem kodu/konfiguracji. Nie zakładaj, że brak zmiany dokumentacji oznacza brak wpływu.
+- Jeśli zmiana dezaktualizuje instrukcję, przykład, wersję runtime, kontrakt API, runbook, checklistę, diagram, opis bramki albo status wspieranej ścieżki, zaktualizuj właściwy SSOT w tym samym PR. Nie twórz równoległego dokumentu, gdy istnieje kanoniczne miejsce.
+- Gdy zmieniasz dokumentację albo kod/konfigurację, która wymaga aktualizacji dokumentacji, uruchom komplet aktualnych guardów: `python scripts/check_docs_links.py`, `python scripts/check_docs_i18n.py`, `python scripts/check_docs_structure.py` i `python scripts/check_docs_freshness.py`. Jeśli repo wymaga dodatkowego testu domenowego dokumentacji, uruchom również jego.
+- Przy parowanych dokumentach PL/EN zachowaj kontrakt i18n. Nie poprawiaj tylko jednej wersji, jeśli manifest lub standard wymaga pary.
+- W raporcie końcowym podaj osobno wynik weryfikacji dokumentacji: jaki SSOT sprawdzono, czy wymagał zmiany, jakie guardy uruchomiono i ich wynik. Jeśli czegoś nie można było zweryfikować, oznacz to `BLOCKED` lub `NOT RUN`; nie deklaruj zgodności dokumentacji na podstawie założenia.
 ## Walidacja i dowody
 - Uruchom najmniejszy zestaw kontroli, który wiarygodnie pokrywa zmianę, oraz wszystkie bramki wymagane przez zadanie lub repo.
 - Dla zmiany zachowania dodaj lub popraw test sprawdzający rezultat i istotną regresję. Nie dodawaj testów powielających kod wyłącznie dla liczby testów.
