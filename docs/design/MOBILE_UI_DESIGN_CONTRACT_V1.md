@@ -1,19 +1,21 @@
-# 4VELO Mobile UI Design Contract v1.2
+# 4VELO Mobile UI Design Contract v1.2 — Reference Baseline
+
+> **CURRENT PRODUCT UX AUTHORITY:** [Product UX v2](./PRODUCT_UX_V2.md) (2026-09-28). This file remains a visual/reference baseline where it does not conflict with UX v2. Its previous IA freeze is superseded.
 
 | | |
 |---|---|
-| **Status** | **APPROVED / FROZEN for implementation** |
+| **Status** | **REFERENCE / subordinate to Product UX v2** |
 | **Decision date** | 2026-09-16; visual freeze refined 2026-09-18 |
 | **Selected direction** | **Adventure Grand Prix — Grand Prix Modern refinement / Frozen UI v1.2** |
 | **Applies to** | 4VELO mobile application |
 | **Implementation order** | Auth/Onboarding → Home → Active Ride → Ride Summary → Profile/Compete/Explore |
 | **Runtime changes in this document** | None |
-| **Visual authority** | [UI Visual Protection Architecture v1](./MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md) |
+| **Visual authority** | [Product UX v2](./PRODUCT_UX_V2.md) → this reference baseline → historical [UI Visual Protection Architecture v1](./MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md) |
 | **Repo implementation** | **COMPLETE across production mobile screens as of 2026-09-27 / PR #298; physical T84 validation still pending** |
 
 ## 0. Visual authority
 
-This contract is subordinate to `MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md`. All pre-takeover mobile visual decisions, mockups, old generated assets and previous SSOT claims are historical/non-normative when they conflict with Frozen UI v1.2.
+This contract is subordinate to [Product UX v2](./PRODUCT_UX_V2.md). Frozen UI v1.2 remains useful as a visual baseline for palette, readability, safe ride presentation and restrained pixel-art usage, but it no longer protects the old shell, tab names, screen composition or information architecture.
 
 ## 0.1 Implementation checkpoint — 2026-09-27
 
@@ -222,18 +224,19 @@ A normal screen should not make every container a special surface.
 
 ## 8. Navigation contract
 
-Current information architecture remains valid unless a later product decision changes it.
+The later product decision in [Product UX v2](./PRODUCT_UX_V2.md) changes the information architecture.
 
-Primary domains remain:
+Primary mobile domains are now:
 
-- Ride/Home;
-- Compete;
-- Explore;
-- Profile.
+- **Today**;
+- **Discover**;
+- **Start Ride**;
+- **Club**;
+- **You**.
 
-The active ride/tracking surface remains outside ordinary browsing behaviour.
+The active ride/tracking surface remains outside ordinary browsing behaviour and follows the focused `Start Ride -> Active Ride -> Summary` flow.
 
-Bottom navigation should become modern product chrome. Pixel icons may remain if they are crisp and immediately recognisable, but typography and active-state treatment must be modern and quiet.
+Bottom navigation is modern product chrome. Existing `Ride/Home / Compete / Explore / Profile` tab names and the `GameTabBar` implementation are legacy migration inputs, not protected product structure.
 
 ## 9. Auth and onboarding contract — first implementation slice
 

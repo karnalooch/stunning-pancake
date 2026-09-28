@@ -1,4 +1,6 @@
-# Mobile Design System — 4VELO (Active SSOT)
+# Mobile Design System — 4VELO (Historical Reference)
+
+> **CURRENT PRODUCT UX AUTHORITY:** [Product UX v2](./PRODUCT_UX_V2.md). The takeover-era legacy marker below is intentionally preserved for machine provenance checks.
 
 > **VISUAL_AUTHORITY: SUPERSEDED_BY_TAKEOVER_UI_FREEZE_V1_2**  
 > **Historical / non-normative for mobile visual decisions.** This document predates takeover T00 / PR #60. Current visual authority is `docs/design/MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md` + Frozen UI v1.2. Functional, safety, data and security facts survive only where retained by current code/current takeover contracts.
@@ -6,7 +8,7 @@
 
 | | |
 |--|--|
-| **Status** | ✅ Active (living spec) |
+| **Status** | ⚪ Historical / non-normative for current UI direction |
 | **Owner role** | Mobile Lead / Design |
 | **Last reviewed** | 2026-06-13 |
 | **Audience** | Mobile engineers, designers, product |
@@ -18,7 +20,7 @@
 
 ---
 
-This is the living design SSOT for the 4VELO mobile app. It supersedes the archived snapshot [`docs/archive/designmobile.md`](../archive/designmobile.md) as the source of truth for **direction and systems**; the archived doc is retained as a detailed component/token/mockup reference appendix.
+This file is a historical design reference. [Product UX v2](./PRODUCT_UX_V2.md) is the current source of truth for mobile product direction, shell, IA and legacy retirement. This file may still explain older components/tokens and safety rationale, but it does not constrain the v2 migration.
 
 ## 1. Direction: bike-computer core, pixel-art skin
 
