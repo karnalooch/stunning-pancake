@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "purpose": "Review SLA for current-first documentation only. Historical snapshots, audits and evidence are intentionally excluded.",
+  "documents": [
+    {
+      "path": "docs/README.md",
+      "max_age_days": 90
+    },
+    {
+      "path": "docs/DOCUMENTATION_LIFECYCLE.md",
+      "max_age_days": 180
+    },
+    {
+      "path": "docs/DOCUMENTATION_STANDARDS.md",
+      "max_age_days": 180
+    },
+    {
+      "path": "docs/pl/GETTING_STARTED.md",
+      "max_age_days": 90
+    },
+    {
+      "path": "docs/en/GETTING_STARTED.md",
+      "max_age_days": 90
+    },
+    {
+      "path": "docs/pl/operations/README.md",
+      "max_age_days": 180
+    },
+    {
+      "path": "docs/en/operations/README.md",
+      "max_age_days": 180
+    },
+    {
+      "path": "docs/pl/operations/HOME_LAB.md",
+      "max_age_days": 90
+    },
+    {
+      "path": "docs/en/operations/HOME_LAB.md",
+      "max_age_days": 90
+    },
+    {
+      "path": "docs/pl/operations/PRE_RELEASE_VERIFICATION.md",
+      "max_age_days": 90
+    },
+    {
+      "path": "docs/en/operations/PRE_RELEASE_VERIFICATION.md",
+      "max_age_days": 90
+    },
+    {
+      "path": "docs/security/README.md",
+      "max_age_days": 90
+    },
+    {
+      "path": "docs/ci/README.md",
+      "max_age_days": 90
+    },
+    {
+      "path": "docs/adr/README.md",
+      "max_age_days": 180
+    }
+  ]
+}

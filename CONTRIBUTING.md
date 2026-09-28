@@ -68,6 +68,6 @@ Checklist utrzymania: [docs/MAINTENANCE.md](docs/MAINTENANCE.md).
 - Rozróżniaj pliki śledzone (`git ls-files`), lokalne i ignorowane (`git check-ignore`). Brak statycznych odwołań nie jest wystarczającym dowodem, że plik można usunąć.
 - Generator jest źródłem plików generowanych. Regeneruj je właściwą komendą, sprawdź diff i zachowaj lockfile przy instalacji odtwarzającej środowisko.
 - Dokumentuj bieżące zachowanie w istniejącym przewodniku. Raporty pozostają datowanymi wynikami kontroli; roadmapa nie jest dowodem wdrożenia.
-- Zachowuj pary językowe z `docs/locales/i18n_manifest.json`. Po zmianach dokumentacji uruchom `python scripts/check_docs_links.py`, `python scripts/check_docs_i18n.py` i `python scripts/check_docs_structure.py`.
+- Zachowuj pary językowe z `docs/locales/i18n_manifest.json`. Po zmianach dokumentacji uruchom `python scripts/check_docs_links.py`, `python scripts/check_docs_i18n.py`, `python scripts/check_docs_structure.py` i `python scripts/check_docs_freshness.py`.
 - Archiwizuj dokument dopiero po wskazaniu jego następcy i sprawdzeniu odsyłaczy. Nie usuwaj dokumentacji tylko dlatego, że jest stara.
 - W PR podaj komendy, wyniki oraz blokery. Nie zamieniaj `BLOCKED` lub niewykonanych testów na `PASS`; brak lokalnego środowiska opisz i skonfrontuj z właściwym zadaniem CI.

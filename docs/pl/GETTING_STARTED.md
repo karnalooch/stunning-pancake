@@ -13,7 +13,7 @@
 
 Instrukcja jest oparta na konfiguracji repo. Pełny start Compose wymaga lokalnej
 weryfikacji; lista adresów poniżej nie oznacza działających usług.
-[Przewodnik przejęcia](../PROJECT_TAKEOVER.md) opisuje ograniczenia projektu.
+Bieżące ograniczenia i granice źródeł prawdy opisują [hub dokumentacji](../README.md) oraz [mapa ryzyka](../reports/RISK_AND_OWNERSHIP_MAP.md).
 
 ## Narzędzia
 

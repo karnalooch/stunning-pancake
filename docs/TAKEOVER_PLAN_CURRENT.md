@@ -2,20 +2,20 @@
 
 **Status:** canonical execution index  
 **Decision date:** 2026-09-17  
-**Last reconciled with `main`:** 2026-09-27 (`48d70199`)  
+**Last reconciled with `main`:** 2026-09-28 (`cf8067d0`)  
 **Rule:** one tranche = one small, reviewable responsibility/PR unless a historical tranche already landed in several small PRs. Tranche IDs are stable identifiers; the explicit execution-order section below is authoritative when a later-added tranche is intentionally pulled forward.
 
 ## One plan, not two
 
 The partial takeover is no longer a separate execution plan. It is part of the general takeover and is tracked with the same `Txx` tranche IDs used from the beginning.
 
-For day-to-day work, this is the one file to remember.
+For takeover tranche status/evidence, this is the stable execution index. For documentation navigation and operational procedures, start from [`docs/README.md`](README.md).
 
 Supporting documents remain useful as detailed contracts/evidence, but they do not define a separate queue:
 
-- `TAKEOVER_CLEANUP_PLAN.md` — original detailed T00–T59 cleanup contracts and history;
-- `PARTIAL_TAKEOVER_PILOT_PLAN.md` — historical scope/decision record for the shortened route to pilot;
-- `P3_PILOT_DATA_SAFETY_AUDIT_2026-09-16.md` — detailed data-safety findings and exit criteria;
+- [`archive/takeover/TAKEOVER_CLEANUP_PLAN.md`](archive/takeover/TAKEOVER_CLEANUP_PLAN.md) — original detailed T00–T59 cleanup contracts and history;
+- [`archive/takeover/PARTIAL_TAKEOVER_PILOT_PLAN.md`](archive/takeover/PARTIAL_TAKEOVER_PILOT_PLAN.md) — historical scope/decision record for the shortened route to pilot;
+- [`archive/takeover/P3_PILOT_DATA_SAFETY_AUDIT_2026-09-16.md`](archive/takeover/P3_PILOT_DATA_SAFETY_AUDIT_2026-09-16.md) — detailed data-safety findings and exit criteria;
 - `TAKEOVER_DATA_SAFETY_AND_DR.md` — detailed disaster-recovery/data-safety package when merged;
 - design/audit documents — detailed UI contracts.
 

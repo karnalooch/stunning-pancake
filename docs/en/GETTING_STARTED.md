@@ -13,7 +13,7 @@
 
 This guide is based on repository configuration. Full Compose startup still requires
 local verification; the addresses below are not evidence of healthy services.
-See the [takeover guide](../PROJECT_TAKEOVER.md) for project limitations.
+For current limitations and source-of-truth boundaries, start from the [documentation hub](../README.md) and the [risk map](../reports/RISK_AND_OWNERSHIP_MAP.md).
 
 ## Tools
 

@@ -4,7 +4,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Tech Lead |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-28 |
 | **Audience** | Autorzy dokumentacji, reviewerzy |
 | **Wersja angielska** | [STANDARD.en.md](./STANDARD.en.md) |
 
@@ -65,7 +65,7 @@ Tabele env — **jedno SSOT**; drugi język **linkuje**, nie kopiuje pełnych ta
 2. W tym samym PR zaktualizuj **parę**, jeśli zmiana dotyczy kroków operacyjnych lub env.
 3. Podnieś **Last reviewed** w obu.
 4. Wpis w [MIGRATION_REGISTRY.md](./MIGRATION_REGISTRY.md).
-5. `python scripts/check_docs_links.py` oraz `python scripts/check_docs_i18n.py`.
+5. `python scripts/check_docs_links.py`, `python scripts/check_docs_i18n.py`, `python scripts/check_docs_structure.py` oraz `python scripts/check_docs_freshness.py`.
 
 Tylko jeden język zaktualizowany → status `translation-debt` w rejestrze.
 

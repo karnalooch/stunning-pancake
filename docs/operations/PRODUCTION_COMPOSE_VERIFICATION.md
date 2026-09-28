@@ -38,6 +38,5 @@ A successful Compose config check or Docker image build must not be interpreted
 as proof that the complete standalone stack is production-ready.
 
 See also the [current takeover plan](../TAKEOVER_PLAN_CURRENT.md),
-[repository map](../reports/REPOSITORY_MAP.md),
-[risk and ownership map](../reports/RISK_AND_OWNERSHIP_MAP.md), and
-[project takeover guide](../PROJECT_TAKEOVER.md).
+[documentation hub](../README.md), [repository map](../reports/REPOSITORY_MAP.md), and
+[risk and ownership map](../reports/RISK_AND_OWNERSHIP_MAP.md).
