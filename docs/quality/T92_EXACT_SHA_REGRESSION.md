@@ -1,6 +1,6 @@
 # T92 — exact-SHA full pre-pilot regression
 
-**Status:** IMPLEMENTATION IN PROGRESS — issue #330  
+**Status:** BLOCKED — implementation merged in PR #331; execution requires T58 PASS and T91 real-device PASS — issue #330  
 **Prerequisites:** T58 PASS on the same candidate and T91 real-device PASS  
 **Scope:** one exact candidate SHA reachable from protected `main`
 
