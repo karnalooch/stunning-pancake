@@ -5,12 +5,12 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-28 |
 | **Audience** | See canonical document |
 | **lang** | pl |
 | **translation** | [English](../../en/operations/PRE_RELEASE_VERIFICATION.md) |
 | **translation_status** | reviewed |
-| **translation_reviewed** | 2026-06-04 |
+| **translation_reviewed** | 2026-09-28 |
 | **canonical_path** | docs/pl/operations/PRE_RELEASE_VERIFICATION.md |
 
 ---
@@ -19,7 +19,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Release Manager |
-| **Last reviewed** | 2026-06-03 |
+| **Last reviewed** | 2026-09-28 |
 | **Audience** | Release Manager |
 | **Compliance** | [COMPLIANCE_INDEX.md](../../compliance/COMPLIANCE_INDEX.md) |
 
@@ -35,6 +35,26 @@ python scripts/release/pre_release_check.py
 
 To jest szybki "artifact gate" (sprawdza wymagane pliki release i k8s baseline).
 Nie zastępuje pełnych testów CI.
+
+### Brama evidence T58 dla pilota
+
+Powyższe zwykłe polecenie celowo pozostaje tanie i bezpieczne dla CI. Jawna
+brama pilota jest surowsza i fail-closed: brakujące, częściowe, zablokowane lub
+nieznane dowody blokują GO.
+
+```bash
+python scripts/release/pre_release_check.py --pilot --report t58-pilot-release.json
+```
+
+Kanoniczny inwentarz dowodów to
+`docs/security/PILOT_RELEASE_EVIDENCE.json`. Wymagany element T58 spełnia tylko
+status `PASS`. Aktualny stan repo ma świadomie zwracać **NO-GO**, dopóki nie
+zostaną domknięte pozostałe działania ownera, telefonu i środowiska pilota.
+
+Dla dokładnego checkoutu użyj ręcznego/reużywalnego workflow
+`.github/workflows/pilot-release-gate.yml` i podaj pełny 40-znakowy SHA
+kandydata. Workflow uploaduje raport bez sekretów również wtedy, gdy brama
+zwróci NO-GO.
 
 ## 2) CI reliability gate (wymagane)
 

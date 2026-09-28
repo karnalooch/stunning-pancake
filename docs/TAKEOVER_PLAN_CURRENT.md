@@ -134,7 +134,7 @@ These retain their original IDs. Only statuses/notes below are refreshed where l
 | T55 | Documentation navigation + takeover updates | PLANNED | Final docs cleanup after current plan stabilizes. |
 | T56 | Orphan investigation | PLANNED | Post-pilot cleanup. |
 | T57 | Business-integrity backup/restore + measured RPO/RTO | DONE | Real home-lab drill passed 2026-09-18: encrypted backup → isolated restore → business snapshot/invariant match → restricted-runtime critical-path smoke. Measured RPO 64.397 s / RTO 4.344 s against plan targets 24 h / 4 h. PR #115 contains blocker fixes discovered by the drill. |
-| T58 | Home-lab release gate | PLANNED | Must include data-safety evidence and fail closed on missing proof before T59. |
+| T58 | Home-lab release gate | ACTIVE | #325 implements a two-level release check: the existing cheap artifact gate remains CI-safe, while explicit `--pilot` mode consumes `docs/security/PILOT_RELEASE_EVIDENCE.json`, binds a secret-free report to the exact checkout and fails closed unless every required pre-T58 item is PASS. Current expected result is NO-GO while T28/T68/T76/T84/T85/T86 remain unresolved. |
 | T59 | Release-candidate declaration | PLANNED | Final pre-pilot declaration after T92 + required gates. |
 
 ## T60–T76 — pilot data-safety work added by the partial takeover
