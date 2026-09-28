@@ -36,14 +36,22 @@ describe('Product UX v2 main shell contract', () => {
     expect(map).toContain('onOpenMarketplace');
   });
 
-  test('Start Ride owns a focused pre-ride surface while live tracking stays hidden', () => {
+  test('Start Ride owns pre-ride setup while Today only navigates into it', () => {
     const shell = read('bootstrap/NavigationShell.tsx');
+    const today = read('screens/RideDashboardScreen.tsx');
     const start = read('screens/StartRideScreen.tsx');
 
     expect(shell).toContain('<Tab.Screen name="StartRide">');
     expect(shell).toContain('<Tab.Screen name="Tracking" options={{ tabBarButton: () => null }}>');
+    expect(shell).toContain("onOpenStartRide={() => navRef.current?.navigate('MainTabs', { screen: 'StartRide' })}");
+
+    expect(today).toContain('home-open-start-ride');
+    expect(today).not.toContain('ACTIVITY_SPORT_OPTIONS');
+    expect(today).not.toContain('onStartRide');
+
     expect(start).toContain('start-ride-primary');
     expect(start).toContain('ACTIVITY_SPORT_OPTIONS');
+    expect(start).toContain('GpsRecoveryBanner');
   });
 
   test('deep-link compatibility keeps established public paths behind new internal names', () => {
