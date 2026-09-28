@@ -210,7 +210,7 @@ UI is not considered complete because screenshots look good. It must be truthful
 | --- | --- | --- | --- |
 | T85 | Club Admin pilot path validation/polish | PARTIAL | #302 / PR #303 merged (`4989f139`). Repo audit/fixes cover TENANT_ADMIN member management, assignment hierarchy, GLOBAL_OWNER-only account deletion, RBAC revoke hierarchy, authoritative tenant scope and existing own-tenant activity/moderation/club isolation. Evidence: `admin/T85_TENANT_ADMIN_PILOT_VALIDATION.md`. Real pilot-environment TENANT_ADMIN role smoke is still required before DONE. |
 | T86 | GLOBAL_OWNER pilot path validation/polish | PARTIAL | #305 / PR #306 merged (`d5f5cd5d`). Repo-side hardening rejects GLOBAL_OWNER self-delete/deactivation/demotion (single + bulk), removes destructive self-actions from the admin UI, makes GLOBAL_OWNER tenant-neutral across supported admin writes and preserves existing platform-wide club/audit scope. Evidence: `admin/T86_GLOBAL_OWNER_PILOT_VALIDATION.md`. Real pilot-environment GLOBAL_OWNER smoke is still required before DONE. |
-| T87 | Pilot operator flow | PARTIAL | #308 / PR #309 merged (`189a1c4a`). Repo-side operator gate now fails closed on pilot config invariants, checks backend/telemetry/GLOBAL_OWNER admin HTTP, proves no pending Django migrations, creates an encrypted AES-256-GCM backup, verifies isolated restore, and writes secret-free evidence bound to the exact clean Git commit. Canonical procedure: `en/operations/HOME_LAB.md` / `pl/operations/HOME_LAB.md`. Real execution of `python scripts/home_lab.py operator-gate` on the exact intended pilot environment and evidence review are still required before DONE. |
+| T87 | Pilot operator flow | DONE | #308 closed. PR #309 merged (`189a1c4a`), SSOT reconciliation #310 merged (`5085b521`). Exact intended pilot home lab executed `python scripts/home_lab.py operator-gate` on clean commit `5085b5215e6f…`: core services + backend/telemetry/GLOBAL_OWNER admin HTTP PASS, Django migrations current, encrypted backup `4velo-home-20260927-235157.dump.enc` created, isolated restore PASS, evidence `backups/home-lab/evidence/t87-operator-20260927-235202.json` written. Canonical procedure: `en/operations/HOME_LAB.md` / `pl/operations/HOME_LAB.md`. |
 
 ## T88–T92 — pre-pilot hardening & polish
 
@@ -260,7 +260,7 @@ This is the only short sequence worth remembering:
    T81 DONE -> T82 DONE -> T83 DONE -> T84 physical Android validation (#300)
 
 5. panels/operations:
-   T85 PARTIAL (#302/#303/#304) -> T86 PARTIAL (#305/#306) -> T87 PARTIAL (#308/#309)
+   T85 PARTIAL (#302/#303/#304) -> T86 PARTIAL (#305/#306) -> T87 DONE (#308/#309/#310)
 
 6. pre-pilot:
    T28 -> T29/T30 only where findings require them
