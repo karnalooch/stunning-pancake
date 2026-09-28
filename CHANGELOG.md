@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## v0.3.7-dev (2026-09-28) — MapLibre native runtime boundary
+
+### Mobile platform
+- Updated `@maplibre/maplibre-react-native` from 11.3.4 to 11.4.0.
+- Adopted MapLibre Native 13.6.1 on Android and 6.31.0 on iOS through the React Native binding update.
+- Moved the numeric app/runtime boundary to `0.3.7` because MapLibre is a native-runtime dependency and Expo uses `runtimeVersion.policy = appVersion`.
+
+
 ## v0.3.6-dev (2026-09-28) — Expo SDK 55 native compatibility boundary
 
 ### Mobile platform
