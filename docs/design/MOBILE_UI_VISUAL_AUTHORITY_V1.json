@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "authorityVersion": "1.0.0",
+  "authorityVersion": "2.0.0",
   "visualFreezeVersion": "1.2.0",
-  "decisionDate": "2026-09-18",
+  "decisionDate": "2026-09-28",
   "scope": "mobile_visual_only",
   "supersessionBoundary": {
     "rule": "all mobile visual/design/art-direction/mockup decisions authored before takeover master plan T00 / PR #60 are non-normative",
@@ -12,7 +12,7 @@
     "t00PullRequest": 60
   },
   "currentAuthority": [
-    "docs/design/MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md",
+    "docs/design/PRODUCT_UX_V2.md",
     "docs/design/MOBILE_UI_DESIGN_CONTRACT_V1.md",
     "docs/design/MOBILE_ASSET_BIBLE_V1.md",
     "docs/design/MOBILE_ASSET_PRODUCTION_LIST_V1.md",
@@ -66,5 +66,9 @@
     "activeRideDecorativeSceneAllowed": false,
     "summaryCelebrationRequiresDurableSuccess": true,
     "legacyGeneratedAssetsAreVisualReference": false
-  }
+  },
+  "productUxVersion": "2.0.0",
+  "supersededAuthoritySources": [
+    "docs/design/MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md"
+  ]
 }
