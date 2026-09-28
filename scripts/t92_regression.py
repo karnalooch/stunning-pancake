@@ -30,7 +30,6 @@ def build_evidence(
     workflow_run_id: str,
     repository: str,
     lane_results: dict[str, str],
-    operator_reason: str = "",
 ) -> dict:
     candidate = validate_candidate_sha(candidate_sha)
     missing = [lane for lane in REQUIRED_LANES if lane not in lane_results]
@@ -51,7 +50,6 @@ def build_evidence(
         "candidate_sha": candidate,
         "repository": repository.strip(),
         "workflow_run_id": str(workflow_run_id).strip(),
-        "operator_reason": operator_reason.strip() or None,
         "t94_selective_execution_used": False,
         "deployment_performed": False,
         "lane_results": normalized,
@@ -78,7 +76,6 @@ def parse_args() -> argparse.Namespace:
     write.add_argument("--preflight-result", required=True)
     write.add_argument("--exact-regression-result", required=True)
     write.add_argument("--full-release-result", required=True)
-    write.add_argument("--operator-reason", default="")
     write.add_argument("--output", type=Path, required=True)
     return parser.parse_args()
 
@@ -95,7 +92,6 @@ def main() -> int:
             candidate_sha=args.candidate_sha,
             workflow_run_id=args.workflow_run_id,
             repository=args.repository,
-            operator_reason=args.operator_reason,
             lane_results={
                 "preflight": args.preflight_result,
                 "exact_regression": args.exact_regression_result,
