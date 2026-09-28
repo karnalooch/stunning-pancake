@@ -172,7 +172,14 @@ jobs:
         continue-on-error: true
         run: |
           mkdir -p artifacts/t92
-          python scripts/t92_regression.py write-evidence             --candidate-sha "${{ inputs.candidate_sha }}"             --workflow-run-id "${{ github.run_id }}"             --repository "${{ github.repository }}"             --preflight-result "${{ needs.preflight.result }}"             --exact-regression-result "${{ needs.exact-regression.result }}"             --full-release-result "${{ needs.full-release.result }}"             --output "artifacts/t92/t92-exact-sha-${{ inputs.candidate_sha }}.json"
+          python scripts/t92_regression.py write-evidence \
+            --candidate-sha "${{ inputs.candidate_sha }}" \
+            --workflow-run-id "${{ github.run_id }}" \
+            --repository "${{ github.repository }}" \
+            --preflight-result "${{ needs.preflight.result }}" \
+            --exact-regression-result "${{ needs.exact-regression.result }}" \
+            --full-release-result "${{ needs.full-release.result }}" \
+            --output "artifacts/t92/t92-exact-sha-${{ inputs.candidate_sha }}.json"
 
       - name: Upload T92 exact-SHA evidence
         if: always()
