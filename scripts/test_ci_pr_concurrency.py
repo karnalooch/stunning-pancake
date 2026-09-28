@@ -10,7 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
-EXPECTED_GROUP = "${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}"
+EXPECTED_GROUP_SUFFIX = "${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}"
 EXPECTED_CANCEL = "${{ github.event_name == 'pull_request' }}"
 
 
@@ -24,7 +24,15 @@ class PullRequestWorkflowConcurrencyTests(unittest.TestCase):
             pr_workflows.append(path.name)
             with self.subTest(workflow=path.name):
                 self.assertIn("concurrency:", text)
-                self.assertIn(f"group: {EXPECTED_GROUP}", text)
+                group_line = next(
+                    line.strip()
+                    for line in text.splitlines()
+                    if line.strip().startswith("group: ")
+                )
+                self.assertTrue(
+                    group_line.removeprefix("group: ").endswith(EXPECTED_GROUP_SUFFIX),
+                    group_line,
+                )
                 self.assertIn(f"cancel-in-progress: {EXPECTED_CANCEL}", text)
 
         self.assertGreater(len(pr_workflows), 0)
