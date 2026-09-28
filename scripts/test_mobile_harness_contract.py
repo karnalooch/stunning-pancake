@@ -302,6 +302,12 @@ class MobileHarnessContractTests(unittest.TestCase):
         for token in ("START JAZDY", "PAUZA", "WZNÓW", "ZATRZYMAJ JAZDĘ", "Jazda ukończona", "POWRÓT"):
             with self.subTest(token=token):
                 self.assertIn(token, source)
+        self.assertIn('id: "home-open-start-ride"', source)
+        self.assertIn('id: "start-ride-primary"', source)
+        self.assertLess(
+            source.index('id: "home-open-start-ride"'),
+            source.index('id: "start-ride-primary"'),
+        )
 
     def test_full_audit_critical_ride_prefix_has_no_optional_steps(self):
         source = read("mobile/.maestro/flows/emulator-full-audit.yaml")
