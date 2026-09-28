@@ -11,7 +11,7 @@ export type RideControllerNotice = {
 
 export type RideStopResult = {
   navigated: boolean;
-  target?: 'Ride';
+  target?: 'Today';
 };
 
 export type RideControllerOptions = {
