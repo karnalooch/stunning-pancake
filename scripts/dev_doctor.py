@@ -15,9 +15,9 @@ import os
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Callable, Sequence
 
 ROOT = Path(__file__).resolve().parents[1]
 MIN_PYTHON = (3, 12)
