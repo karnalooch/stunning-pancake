@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Active |
 | **Owner role** | Developer onboarding |
-| **Last reviewed** | 2026-09-10 |
+| **Last reviewed** | 2026-09-28 |
 | **lang** | pl |
 | **translation** | [English](../en/GETTING_STARTED.md) |
 | **canonical_path** | docs/pl/GETTING_STARTED.md |
@@ -27,41 +27,44 @@ weryfikacji; lista adresów poniżej nie oznacza działających usług.
 git clone https://github.com/karnalooch/stunning-pancake.git 4velo
 cd 4velo
 corepack pnpm install --frozen-lockfile
-Copy-Item .env.example .env
+python scripts/home_lab.py init
 ```
 
-Kopiowanie `.env` wykonuj tylko przy pierwszym przygotowaniu. W Bash użyj
-`cp .env.example .env`. Zainstaluj zależności z root workspace.
-W lokalnym `.env` zastąp istniejące wartości, nie dopisuj drugiego `SECRET_KEY`.
-Ustaw własny losowy klucz, parametry bazy wymagane przez Compose oraz `DEBUG=1`
-wyłącznie lokalnie. Nie używaj dostępu do produkcji.
+Zainstaluj zależności z root workspace. `home_lab.py init` tworzy ignorowany,
+prywatny plik `.env.home` używany przez izolowany stos lokalny/pilot i odmawia
+nadpisania istniejącego pliku. Nie kopiuj do niego sekretów produkcyjnych. Jeżeli
+checkout ma już starszy `.env.home`, nie regeneruj go tylko po to, aby dodać nowsze
+klucze — użyj procedury z [runbooka home-labu](operations/HOME_LAB.md).
 
-Zachowaj `RUN_DEMO_SEED=0`. Konto administratora powstaje przy pierwszym starcie
-backendu bez seedowania demo. Domyślna nazwa to `global_owner`; jeśli hasło nie
-zostało przekazane do kontenera, jednorazowe hasło będzie w jego logu. Sam wpis
-w `.env` nie przekazuje automatycznie dowolnej zmiennej do kontenera — sprawdź
-sekcję `environment` usługi. Nie publikuj logu pierwszego startu.
+Wygenerowana konfiguracja utrzymuje wyłączony demo seed i zapewnia lokalne sekrety
+bazy, GLOBAL_OWNER-a, Django, telemetrii i backupu wymagane przez kanoniczną ścieżkę pilota.
 
 ## Start i kontrola
 
-```bash
-docker compose config --quiet
-docker compose up -d --build
-docker compose ps
+```powershell
+python scripts/home_lab.py config
+python scripts/home_lab.py up
+python scripts/home_lab.py status
+python scripts/home_lab.py check
 ```
 
-Compose obejmuje również BRouter, OSRM, Traccar i symulatory; pierwszy build oraz
-pobieranie map mogą trwać długo. Backend domyślnie wykonuje migracje, tworzy
-administratora, zbiera statyczne pliki i uruchamia Gunicorna. Nie generuje nowych
-migracji podczas startu. Workery i beat wykonują własne komendy bez inicjalizacji
-serwera WWW. Uruchom testy dopiero po gotowości bazy i migracji backendu.
+To jest kanoniczna ścieżka lokalna/pilot. **Nie** zastępuj jej gołym
+`docker compose up`: Docker Compose automatycznie dołącza wtedy
+`docker-compose.override.yml`, podczas gdy pilot home lab świadomie warstwuje tylko
+`docker-compose.yml` + `docker-compose.home.yml` w projekcie `4velo-home`.
+
+Domyślny rdzeń home-labu uruchamia PostGIS/TimescaleDB, Redis, Django, telemetry,
+panel GLOBAL_OWNER, główny worker Celery i beat. Routing, symulacja, tracking i
+dodatkowe panele admina są profilami opcjonalnymi; włączaj je przez
+`home_lab.py up --routing|--simulation|--tracking|--all-admin`. Pierwszy build i
+przygotowanie danych routingu mogą trwać dłużej niż start rdzenia.
 
 | Usługa | Oczekiwany lokalny adres |
 |---|---|
 | API / dokumentacja | http://localhost:8000/api/docs/ |
 | Global Admin | http://localhost:3001 |
-| Tenant Admin | http://localhost:3002 |
-| Moderator | http://localhost:3003 |
+| Tenant Admin (z `--all-admin`) | http://localhost:3002 |
+| Moderator (z `--all-admin`) | http://localhost:3003 |
 | Telemetry | http://localhost:8001 |
 
 Adresy wynikają z Compose, nie z wykonanego testu dostępności.
@@ -77,10 +80,11 @@ audytu. Testy PostGIS wymagają PostGIS, a nie zastępczej bazy SQLite.
 python scripts/check_docs_links.py
 corepack pnpm --filter admin typecheck
 corepack pnpm --filter admin test:run
-docker compose stop
+python scripts/home_lab.py down
 ```
 
-`stop` zachowuje dane i kontenery. Nie używaj `down -v` do zwykłego zakończenia pracy.
+`home_lab.py down` usuwa kontenery/sieć home-labu, ale zachowuje nazwany wolumen bazy.
+Nie używaj `docker compose down -v` do zwykłego zakończenia pracy.
 
 ## Wdrożenie i dalsze kroki
 
