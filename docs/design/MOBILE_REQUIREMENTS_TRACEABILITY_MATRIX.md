@@ -41,7 +41,7 @@ Use this file as the release gate for "are we really done?".
 | FR-05 | Explore map and POI flows | `DESIGN_SYSTEM_MOBILE` §4 | `mobile/src/screens/ExploreMapScreen.tsx`, `mobile/src/services/api.ts` (`POIService`) | manual map/POI validation | backend POI data completeness |
 | FR-06 | Marketplace shows balances/pools and redeem action | product/docs marketplace | `mobile/src/screens/MarketplaceScreen.tsx`, `mobile/src/services/api.ts` (`RewardsService`) | manual + API failure fallback | payment/reward backend edge behaviors |
 | FR-07 | Club owns city/community competition, challenges and global leaderboard entry | Product UX v2 / Club | `mobile/src/screens/CityHubScreen.tsx`, `mobile/src/screens/GlobalLeaderboardScreen.tsx` | manual + cache fallback + navigation contract | stale cache windows |
-| FR-08 | Profile, training log, and activity detail available | profile/training docs | `mobile/src/screens/AthleteProfileScreen.tsx`, `mobile/src/screens/TrainingLogScreen.tsx`, `mobile/src/screens/ActivityDetailScreen.tsx` | manual drilldown | detail screen partial placeholders |
+| FR-08 | You exposes truthful profile/stats, progression and entry to history/trends | Product UX v2 / You | `mobile/src/screens/AthleteProfileScreen.tsx`, `mobile/src/screens/TrainingLogScreen.tsx`, `mobile/src/screens/PerformanceTrendsScreen.tsx`, `mobile/src/screens/ActivityDetailScreen.tsx` | manual drilldown + screen contract | Training Log/Trends remain separate UI-3 destinations |
 | FR-09 | Settings include rider/sensor/privacy controls | full vision plan + ops | `mobile/src/screens/SettingsScreen.tsx`, `mobile/src/services/RiderPreferencesService.ts`, `mobile/src/services/api.ts` (`PrivacyService`, `WearableService`) | manual sections walkthrough | wearables external auth reliability |
 | FR-10 | Deep links route into critical screens | navigation contract | `mobile/src/navigation/linking.ts`, `mobile/src/navigation/routeContract.ts`, `mobile/src/navigation/types.ts` | unit test + manual URL open | platform-specific URI handling |
 | FR-11 | Voice cues support eyes-free use | `DESIGN_SYSTEM_MOBILE` §6 | `mobile/src/services/VoiceCueService.ts`, `mobile/src/screens/ActiveRideHUDScreen.tsx` | manual cue trigger | OS TTS differences |
@@ -77,7 +77,7 @@ Use this file as the release gate for "are we really done?".
 | `StartRideScreen` | owns sport selection, start errors/GPS recovery, GPS diagnostics entry and the primary ride-start action into the focused live ride flow |
 | `ExploreMapScreen` / Discover | map-first POI surface renders, fallback states work, Marketplace remains reachable without an intermediate hub |
 | `MarketplaceScreen` | balance/pools/redeem flow safe under API errors |
-| `AthleteProfileScreen` | profile stats visible, navigation to training/settings/trends works |
+| `AthleteProfileScreen` / You | identity/stats/progression remain truthful; Trends + Training Log are grouped with Progress; Settings + Logout are separate account actions; unavailable achievements are not rendered |
 | `TrainingLogScreen` | activity list loads and opens detail |
 | `ActivityDetailScreen` | valid detail rendering + fallback if data missing |
 | `GlobalLeaderboardScreen` | online load + offline cache fallback |
