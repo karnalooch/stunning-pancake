@@ -26,11 +26,13 @@ passwords, tokens, signing keys, backup keys, or other secret values.
 
 ## Preconditions
 
-Use the **exact candidate SHA** to build/install the Android pilot app. Before the matrix:
+Use the **exact candidate SHA** and the canonical CI runtime artifact for the Android pilot app. Before the matrix:
 
-- python scripts/home_lab.py init has already created .env.home;
-- python scripts/home_lab.py up is healthy;
-- the pilot app package com.sport.athlete is installed on one authorized physical device;
+- the exact candidate's Mobile Native Smoke / Full Release produced a `mobile-runtime-<run-id>` artifact;
+- that artifact was downloaded intact and contains `manifest.json` plus `app-release.apk`;
+- `python scripts/home_lab.py init` has already created `.env.home`;
+- `python scripts/home_lab.py up` is healthy;
+- the `app-release.apk` from that exact artifact is installed as `com.sport.athlete` on one authorized physical device;
 - USB debugging is enabled and adb devices reports the device as device;
 - the pilot account can start and finish an activity;
 - the pilot home lab still has TELEMETRY_INGEST_QUEUE=0, so durable ACK is the direct-DB
@@ -41,21 +43,31 @@ Do not run T76 against a production database.
 
 ## Start the evidence session
 
-From the repository root:
+From the repository root, point preflight at the downloaded exact-SHA runtime artifact directory:
 
 ~~~bash
-python scripts/t76_chaos.py preflight --installed-sha <full-git-sha-used-for-the-installed-build>
+python scripts/t76_chaos.py preflight --runtime-artifact <path-to-mobile-runtime-artifact>
 ~~~
 
 If more than one ADB device is attached:
 
 ~~~bash
-python scripts/t76_chaos.py preflight --serial <adb-serial> --installed-sha <full-git-sha-used-for-the-installed-build>
+python scripts/t76_chaos.py preflight --serial <adb-serial> --runtime-artifact <path-to-mobile-runtime-artifact>
 ~~~
 
-Preflight refuses to proceed unless the operator-supplied installed-build SHA exactly
-matches the checked-out repository SHA. It then verifies the installed package, creates
-these USB reverse mappings and checks the home lab:
+The canonical preflight is fail-closed and proves all of the following before any scenario starts:
+
+- `manifest.json.sourceHeadSha` and `builtGitSha` both equal the checked-out 40-character SHA;
+- the manifest identifies package `com.sport.athlete`, profile `pilot-local`, Expo updates disabled and runtime acceptance enabled;
+- the downloaded `app-release.apk` SHA-256 equals `manifest.json.apkSha256`;
+- Android Package Manager reports exactly one installed APK for the package;
+- ADB reads the installed APK bytes and their SHA-256 equals the same CI artifact hash.
+
+This last comparison binds the **actual installed bytes** to the CI artifact rather than trusting a typed SHA. If a hardened/vendor Android build refuses shell read access to the installed APK, exact-artifact proof is BLOCKED and T76 must not be finalized on that device.
+
+The legacy `--installed-sha` option remains only for troubleshooting older sessions. Evidence initialized through manual SHA attestation cannot pass `finalize` and therefore cannot close T76.
+
+After provenance verification, preflight creates these USB reverse mappings and checks the home lab:
 
 ~~~text
 tcp:8000 -> tcp:8000   Django API
@@ -143,11 +155,14 @@ After all eight physical scenarios:
 python scripts/t76_chaos.py finalize <evidence.json>
 ~~~
 
-The command fails closed when any scenario is NOT_RUN, BLOCKED or FAIL. Only eight
-explicit PASS observations produce overall_status=PASS.
+The command fails closed when any scenario is NOT_RUN, BLOCKED or FAIL. It also refuses
+to finalize evidence unless the recorded provenance proves that the installed APK SHA-256
+matches the exact CI runtime artifact. Only that provenance plus eight explicit PASS
+observations produces `overall_status=PASS`.
 
-A completed JSON plus the exact candidate SHA and relevant non-secret server/device
-observations is the T76 artifact to review. Until that exists, T76 remains incomplete.
+A completed JSON therefore binds the candidate Git SHA, CI workflow run, runtime APK hash,
+installed APK hash, hashed device serial and the non-secret server/device observations.
+Until that exists, T76 remains incomplete.
 
 ## Scope boundary
 
