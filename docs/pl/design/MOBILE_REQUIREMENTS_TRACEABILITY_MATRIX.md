@@ -69,13 +69,13 @@ To jest główna odpowiedź na pytanie "czy naprawdę jesteśmy gotowi?".
 | Ekran | Kryteria akceptacji must-have |
 |-------|-------------------------------|
 | `AuthScreen` | login/register działa, social callback ma bezpieczny fallback, error jest czytelny |
-| `RideDashboardScreen` | start ride działa, settings/gps wejścia działają, błąd startu jest widoczny |
+| `RideDashboardScreen` | Today pokazuje kontekst zawodnika/jazd, settings/gps wejścia działają, błąd startu jest widoczny |
+| `StartRideScreen` | wybór sportu uruchamia istniejący ride-start contract, aktywna jazda prowadzi do Tracking |
 | `ActiveRideHUDScreen` | mapa + metryki + status bar + action bar + recovery banner + motion-safe behavior |
 | `RidePausedScreen` | resume/stop flow poprawny, brak dead-end nawigacji |
 | `RideSummaryScreen` | wartości poprawne, share nie crashuje, powrót do hub działa |
 | `CityHubScreen` | city wars i leaderboard renderują się z fallback cache |
-| `ExploreHubScreen` | wejścia do mapy i marketplace prowadzą poprawnie |
-| `ExploreMapScreen` | mapa renderuje, POI i fallback states działają |
+| `ExploreMapScreen` | Discover jest map-first; mapa renderuje, POI/fallback states działają, Marketplace pozostaje osiągalny |
 | `MarketplaceScreen` | balance/pools/redeem bez crash przy API error |
 | `AthleteProfileScreen` | statystyki widoczne, nawigacja training/settings/trends działa |
 | `TrainingLogScreen` | lista aktywności ładuje się i otwiera detail |
