@@ -219,7 +219,7 @@ class HomeLabTests(unittest.TestCase):
         commands = [call.args[0] for call in run_mock.call_args_list]
         self.assertEqual(commands[0][-1], "ps")
         self.assertEqual(
-            commands[1][-6:],
+            commands[1][-5:],
             ["logs", "--no-color", "--tail", "120", "telemetry"],
         )
         self.assertTrue(all(call.kwargs["check"] is False for call in run_mock.call_args_list))
