@@ -9,7 +9,7 @@
 | **lang** | pl |
 | **translation** | [English](../../en/operations/MOBILE_STARTUP_HARDENING_PLAYBOOK.md) |
 | **canonical_path** | docs/pl/operations/MOBILE_STARTUP_HARDENING_PLAYBOOK.md |
-| **Powiązane** | [MOBILE.md](./MOBILE.md) · [MOBILE_FULL_VISION_VERIFICATION.md](./MOBILE_FULL_VISION_VERIFICATION.md) · [DATA_RESILIENCE.md](../../pl/DATA_RESILIENCE.md) · [ADR 012](../../adr/012-mobile-performance-budgets.md) · [ADR 014](../../adr/014-mobile-immersive-pixel-art-and-bike-computer.md) |
+| **Powiązane** | [MOBILE.md](./MOBILE.md) · [MOBILE_FULL_VISION_VERIFICATION.md](./MOBILE_FULL_VISION_VERIFICATION.md) · [DATA_RESILIENCE.md](../../pl/DATA_RESILIENCE.md) · [ADR 012](../../adr/016-mobile-performance-budgets.md) · [ADR 014](../../adr/014-mobile-immersive-pixel-art-and-bike-computer.md) |
 
 ---
 
@@ -57,7 +57,7 @@ Checklist i procedury prewencyjne na start przebudowy mobile full vision. Dokume
   - `docs/design/DESIGN_SYSTEM_MOBILE.md`
   - `docs/adr/014-mobile-immersive-pixel-art-and-bike-computer.md`
   - `docs/pl/DATA_RESILIENCE.md`
-  - `docs/adr/012-mobile-performance-budgets.md`
+  - `docs/adr/016-mobile-performance-budgets.md`
 - Potwierdzić env na lokalnym buildzie:
   - `EXPO_PUBLIC_API_URL`
   - `EXPO_PUBLIC_TELEMETRY_URL`

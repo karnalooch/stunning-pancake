@@ -25,7 +25,7 @@ Ten dokument przekłada plan full vision mobile na kontrakty implementacyjne w r
 1. `docs/design/DESIGN_SYSTEM_MOBILE.md`
 2. `docs/adr/014-mobile-immersive-pixel-art-and-bike-computer.md`
 3. `docs/pl/DATA_RESILIENCE.md`
-4. `docs/adr/012-mobile-performance-budgets.md`
+4. `docs/adr/016-mobile-performance-budgets.md`
 5. `docs/pl/CONSTITUTION.md`
 
 ## Referencje hardeningu operacyjnego

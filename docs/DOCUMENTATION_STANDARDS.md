@@ -4,7 +4,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-28 |
 | **lang** | pl |
 | **translation** | [English](en/DOCUMENTATION_STANDARDS.md) |
 | **canonical_path** | docs/pl/DOCUMENTATION_STANDARDS.md |
@@ -12,6 +12,8 @@
 
 > **Przekierowanie (faza 2):** Kanoniczna treść PL — [DOCUMENTATION_STANDARDS.md](pl/DOCUMENTATION_STANDARDS.md).  
 > English — [DOCUMENTATION_STANDARDS.md](en/DOCUMENTATION_STANDARDS.md).
+>
+> Klasy dokumentów i zasady archiwizacji: [DOCUMENTATION_LIFECYCLE.md](DOCUMENTATION_LIFECYCLE.md).
 
 ---
 

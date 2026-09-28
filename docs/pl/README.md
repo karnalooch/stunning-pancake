@@ -5,13 +5,13 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-28 |
 | **Audience** | See canonical document |
 | **lang** | pl |
 | **translation** | [English](../en/README.md) |
 | **canonical_path** | docs/pl/README.md |
 
-Legacy entry points (`docs/README.md`, `docs/GETTING_STARTED.md`, `docs/operations/`, …) are phase-2 redirect stubs (~19 lines) — edit content here or under `docs/en/`, not the stub.
+`docs/README.md` jest nadrzędnym hubem nawigacyjnym całej dokumentacji. Legacy ścieżki treści (`docs/GETTING_STARTED.md`, `docs/operations/`, …) pozostają redirectami — edytuj treść w `docs/pl/` lub `docs/en/`, nie w stubie.
 
 ---
 
@@ -19,7 +19,7 @@ Legacy entry points (`docs/README.md`, `docs/GETTING_STARTED.md`, `docs/operatio
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Tech Lead / Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-28 |
 | **Standard treści** | [DOCUMENTATION_STANDARDS.md](./DOCUMENTATION_STANDARDS.md) |
 | **Utrzymanie** | [MAINTENANCE.md](./MAINTENANCE.md) |
 
@@ -64,11 +64,11 @@ Szczegóły: [DOCUMENTATION_STANDARDS.md § Język](./DOCUMENTATION_STANDARDS.md
 | [SECURITY.md](../../SECURITY.md) | Zgłaszanie luk, wersje wspierane, zależności |
 | [DOCUMENTATION_STANDARDS.md](./DOCUMENTATION_STANDARDS.md) | Szablon sekcji, SSOT, bezpieczeństwo |
 | [MAINTENANCE.md](./MAINTENANCE.md) | Inwentarz świeżości, checklista po release |
-| CI link check | `.github/workflows/ci.yml` · `scripts/check_docs_links.py` |
+| CI dokumentacji | `.github/workflows/ci.yml` · `check_docs_links.py` · `check_docs_i18n.py` · `check_docs_structure.py` |
 
 ---
 
-## Pełne drzewo `docs/` (68+ plików .md)
+## Indeks językowy dokumentacji
 
 ### Korzeń `docs/`
 
@@ -152,7 +152,7 @@ Stare URL `docs/operations/*.md` przekierowują tutaj i do `docs/en/operations/`
 | [009](../adr/009-admin-user-management-and-event-matchmaking.md) | Admin users / events |
 | [010](../adr/010-simulator-redis-celery.md) | Simulator Redis/Celery |
 | [011](../adr/011-telemetry-ingest-durability-under-load.md) | Telemetry ingest durability (burst); mobile-side guarantees (P0/P1) |
-| [012](../adr/012-mobile-performance-budgets.md) | Budżety wydajności mobile (HUD/GPS) |
+| [012](../adr/016-mobile-performance-budgets.md) | Budżety wydajności mobile (HUD/GPS) |
 | [013](../adr/013-sim-lab-read-federation.md) | Sim-lab read federation (BFF prod → izolowany data plane) |
 | [014](../adr/014-mobile-immersive-pixel-art-and-bike-computer.md) | Immersive pixel-art jako skóra nawigacyjnego bike-computera |
 
@@ -213,6 +213,8 @@ Snapshoty audytów (datowane) — nie edytować na żywo; nowy plik przy kolejny
 
 ```powershell
 python scripts/check_docs_links.py
+python scripts/check_docs_i18n.py
+python scripts/check_docs_structure.py
 ```
 
 Oczekiwany wynik: `OK — checked N markdown files`.
