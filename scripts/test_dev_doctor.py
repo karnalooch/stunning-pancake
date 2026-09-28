@@ -22,6 +22,7 @@ class FakeRunner:
             ("git", "rev-parse", "--show-toplevel"): dev_doctor.CommandResult(
                 0, str(self.root)
             ),
+            ("git", "check-ignore", "-q", ".env.home"): dev_doctor.CommandResult(0, ""),
             ("node", "--version"): dev_doctor.CommandResult(0, f"v{self.node}"),
             ("corepack", "--version"): dev_doctor.CommandResult(0, "0.34.5"),
             ("pnpm", "--version"): dev_doctor.CommandResult(0, self.pnpm),
@@ -123,6 +124,29 @@ class DevDoctorTests(unittest.TestCase):
         daemon = next(check for check in checks if check.name == "docker daemon")
         self.assertEqual(daemon.status, "FAIL")
         self.assertIn("Start Docker", daemon.remediation)
+
+    def test_unignored_secret_file_fails_closed(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            make_repo(root)
+            base = FakeRunner(root)
+
+            def runner(args):
+                if tuple(args) == ("git", "check-ignore", "-q", ".env.home"):
+                    return dev_doctor.CommandResult(1, "")
+                return base(args)
+
+            checks = dev_doctor.collect_checks(
+                root=root,
+                runner=runner,
+                python_version=(3, 12),
+                memory_bytes=16 * dev_doctor.GIB,
+                free_disk_bytes=40 * dev_doctor.GIB,
+            )
+
+        ignore = next(check for check in checks if check.name == "secret-file ignore")
+        self.assertEqual(ignore.status, "FAIL")
+        self.assertIn(".gitignore", ignore.remediation)
 
     def test_resource_requirements_are_fail_closed(self):
         with tempfile.TemporaryDirectory() as folder:
