@@ -52,6 +52,8 @@ describe('Product UX v2 main shell contract', () => {
     expect(start).toContain('start-ride-primary');
     expect(start).toContain('ACTIVITY_SPORT_OPTIONS');
     expect(start).toContain('GpsRecoveryBanner');
+    expect(start).toContain('start-ride-gps-diagnostics');
+    expect(shell).toContain("onOpenGpsWizard={() => navRef.current?.navigate('GpsDiagnostics')}");
   });
 
   test('deep-link compatibility keeps established public paths behind new internal names', () => {
