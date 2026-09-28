@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## v0.3.6-dev (2026-09-28) — Expo SDK 55 native compatibility boundary
+
+### Mobile platform
+- Aligned `expo-updates` with the Expo SDK 55 compatibility requirement (`~55.0.32`).
+- Moved the numeric app/runtime boundary to `0.3.6` because `expo-updates` is a native-runtime dependency and Expo uses `runtimeVersion.policy = appVersion`.
+- Preserved the repository supply-chain minimum-release-age policy with an exact exception for the newly required `expo-updates@55.0.32` patch.
+
+
 ## v0.3.5-dev (2026-09-27) — Exact-SHA mobile runtime acceptance
 
 ### Mobile release engineering
