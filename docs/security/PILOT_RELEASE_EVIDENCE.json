@@ -5,9 +5,11 @@
   "notes": "Only PASS satisfies T58. Non-PASS states are intentional fail-closed blockers, not waivers.",
   "evidence": {
     "t28_security_inventory": {
-      "status": "PLANNED",
+      "status": "PASS",
       "evidence": [
-        "docs/TAKEOVER_PLAN_CURRENT.md#T28-T30"
+        "docs/security/T28_SECURITY_DEPENDENCY_INVENTORY_2026-09-28.md",
+        "https://github.com/karnalooch/stunning-pancake/actions/runs/36408178359",
+        "https://github.com/karnalooch/stunning-pancake/pull/327"
       ]
     },
     "t57_business_recovery": {
