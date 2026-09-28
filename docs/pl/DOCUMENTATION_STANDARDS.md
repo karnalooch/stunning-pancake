@@ -187,4 +187,4 @@ Skrót indeksu: [README.md § Polityka językowa](./README.md#polityka-językowa
 2. Nowy runbook → wpis w [operations/OPERATIONS_INDEX.md](./operations/OPERATIONS_INDEX.md) i [operations/README.md](./operations/README.md).
 3. Nowy dokument admin/compliance → odpowiedni `*_INDEX.md`.
 4. [MAINTENANCE.md](./MAINTENANCE.md) + data w [README.md](./README.md).
-5. Uruchom `python scripts/check_docs_links.py`, `python scripts/check_docs_i18n.py` i `python scripts/check_docs_structure.py`.
+5. Uruchom `python scripts/check_docs_links.py`, `python scripts/check_docs_i18n.py`, `python scripts/check_docs_structure.py` i `python scripts/check_docs_freshness.py`.

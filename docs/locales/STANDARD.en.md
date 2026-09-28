@@ -4,7 +4,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Tech Lead |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-28 |
 | **Audience** | Doc authors, reviewers |
 | **Polish version** | [STANDARD.pl.md](./STANDARD.pl.md) |
 
@@ -73,7 +73,7 @@ Legacy Polish-only paths include the same row; **translation** points to `docs/e
 2. Update the **paired** file in the same PR when the change is user-facing (ops steps, UI labels, env toggles).
 3. Bump **Last reviewed** on both.
 4. Register new docs in [MIGRATION_REGISTRY.md](./MIGRATION_REGISTRY.md) before merge.
-5. Run `python scripts/check_docs_links.py` and `python scripts/check_docs_i18n.py`.
+5. Run `python scripts/check_docs_links.py`, `python scripts/check_docs_i18n.py`, `python scripts/check_docs_structure.py`, and `python scripts/check_docs_freshness.py`.
 
 If only one language is updated, set registry status to `translation-debt` until the pair is synced.
 

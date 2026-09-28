@@ -57,6 +57,10 @@ Nie usuwaj dowodów historycznych tylko dlatego, że są stare.
 
 `PROJECT_TAKEOVER.md`, `TAKEOVER_*`, `PARTIAL_TAKEOVER_PILOT_PLAN.md` oraz podobne materiały opisują fazę stabilizacji i plan pracy. Zachowują wartość historyczną, ale **nie są domyślnym źródłem bieżącej konfiguracji lub procedury release**. W nowych dokumentach linkuj do aktualnego SSOT domenowego.
 
+## Freshness / review SLA
+
+Nie próbujemy automatycznie oznaczać każdego starego pliku jako błędnego. Tylko wybrane dokumenty **CURRENT/SSOT** są objęte jawnym SLA z [`DOCUMENTATION_FRESHNESS.json`](DOCUMENTATION_FRESHNESS.json). `scripts/check_docs_freshness.py` blokuje merge, gdy taki dokument nie ma daty `Last reviewed`, ma datę z przyszłości albo przekroczy przypisany limit wieku. Snapshoty, audyty, evidence i archiwum są z tego gate'u celowo wyłączone.
+
 ## ADR
 
 Każdy ADR ma unikalny trzycyfrowy numer. Kolizje numerów są błędem struktury dokumentacji i blokują CI przez `scripts/check_docs_structure.py`.
@@ -69,4 +73,5 @@ Po zmianach dokumentacji:
 python scripts/check_docs_links.py
 python scripts/check_docs_i18n.py
 python scripts/check_docs_structure.py
+python scripts/check_docs_freshness.py
 ```

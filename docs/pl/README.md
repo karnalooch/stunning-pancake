@@ -64,7 +64,7 @@ Szczegóły: [DOCUMENTATION_STANDARDS.md § Język](./DOCUMENTATION_STANDARDS.md
 | [SECURITY.md](../../SECURITY.md) | Zgłaszanie luk, wersje wspierane, zależności |
 | [DOCUMENTATION_STANDARDS.md](./DOCUMENTATION_STANDARDS.md) | Szablon sekcji, SSOT, bezpieczeństwo |
 | [MAINTENANCE.md](./MAINTENANCE.md) | Inwentarz świeżości, checklista po release |
-| CI dokumentacji | `.github/workflows/ci.yml` · `check_docs_links.py` · `check_docs_i18n.py` · `check_docs_structure.py` |
+| CI dokumentacji | `.github/workflows/ci.yml` · `check_docs_links.py` · `check_docs_i18n.py` · `check_docs_structure.py` · `check_docs_freshness.py` |
 
 ---
 
@@ -215,6 +215,7 @@ Snapshoty audytów (datowane) — nie edytować na żywo; nowy plik przy kolejny
 python scripts/check_docs_links.py
 python scripts/check_docs_i18n.py
 python scripts/check_docs_structure.py
+python scripts/check_docs_freshness.py
 ```
 
 Oczekiwany wynik: `OK — checked N markdown files`.
