@@ -77,7 +77,7 @@ Komenda działa fail-closed: wymaga zainicjalizowanej konfiguracji pilota i zach
 
 Evidence zawiera SHA commita, znaczniki czasu, zsanityzowane wyniki invariantów, endpointy, wynik migracji, nazwę/hash zaszyfrowanego backupu oraz wynik izolowanego restore. Nie zawiera haseł, kluczy podpisujących, Django secret ani klucza szyfrowania backupu.
 
-Repo-side T87 po zielonym CI nadal ma status **PARTIAL**, dopóki ta komenda nie zostanie wykonana na dokładnym docelowym środowisku pilota i evidence nie zostanie przejrzane.
+T87 ma status **DONE**: operator gate wykonano na docelowym home-labie pilota dla czystego commita `5085b5215e6ff82a7397685252a42525f86113b8`. Health HTTP i migracje przeszły, utworzono zaszyfrowany backup `4velo-home-20260927-235157.dump.enc`, izolowany restore przeszedł, a evidence powiązane z commitem zapisano w `backups/home-lab/evidence/t87-operator-20260927-235202.json`.
 
 ## Backup i próba odtworzenia
 
