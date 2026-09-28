@@ -263,15 +263,12 @@ class FullReleaseLaneContractTests(unittest.TestCase):
 
     def test_home_lab_runtime_proof_checks_out_exact_source_head(self):
         raw = text(HOME_LAB)
-        self.assertIn(
-            "ref: ${{ github.event.pull_request.head.sha || github.sha }}",
-            raw,
+        source_expression = (
+            "${{ inputs.source_sha || github.event.pull_request.head.sha || github.sha }}"
         )
+        self.assertIn(f"ref: {source_expression}", raw)
         self.assertIn("Assert exact source checkout", raw)
-        self.assertIn(
-            "EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}",
-            raw,
-        )
+        self.assertIn(f"EXPECTED_HEAD_SHA: {source_expression}", raw)
         self.assertIn('ACTUAL_HEAD_SHA="$(git rev-parse HEAD)"', raw)
 
     def test_home_lab_runtime_proof_has_one_heavy_owner_on_workflow_edits(self):
