@@ -10,10 +10,11 @@ export const stringsPl = {
     english: 'English',
   },
   tabs: {
-    ride: 'Jazda',
-    compete: 'Rywalizacja',
-    explore: 'Odkrywaj',
-    profile: 'Profil',
+    today: 'Dzisiaj',
+    discover: 'Odkrywaj',
+    startRide: 'Start',
+    club: 'Klub',
+    you: 'Ty',
   },
   marketplace: {
     title: 'Marketplace',
