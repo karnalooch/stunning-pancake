@@ -12,6 +12,11 @@ on:
         required: false
         default: "none"
         type: string
+      source_sha:
+        description: "Optional exact source SHA for reusable exact-candidate validation"
+        required: false
+        default: ""
+        type: string
   pull_request:
     branches: [main]
     paths:
@@ -72,6 +77,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.source_sha || github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -107,6 +114,8 @@ jobs:
     needs: [build_and_test]
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.source_sha || github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
@@ -116,7 +125,7 @@ jobs:
         with:
           context: ./backend
           push: false
-          tags: ${{ env.IMAGE_REPOSITORY }}-backend:ci-${{ github.sha }}
+          tags: ${{ env.IMAGE_REPOSITORY }}-backend:ci-${{ inputs.source_sha || github.event.pull_request.head.sha || github.sha }}
 
       - name: Build admin image (no push)
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
@@ -124,7 +133,7 @@ jobs:
           context: .
           file: ./admin/Dockerfile
           push: false
-          tags: ${{ env.IMAGE_REPOSITORY }}-admin:ci-${{ github.sha }}
+          tags: ${{ env.IMAGE_REPOSITORY }}-admin:ci-${{ inputs.source_sha || github.event.pull_request.head.sha || github.sha }}
 
       - name: Publish placeholder (safe by default)
         if: ${{ false }}
@@ -142,6 +151,8 @@ jobs:
     needs: [build_and_test]
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.source_sha || github.event.pull_request.head.sha || github.sha }}
 
       - name: Install kubeconform
         run: |
@@ -214,6 +225,8 @@ jobs:
     needs: [docker_build_publish_placeholder, k8s_manifest_validation]
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.source_sha || github.event.pull_request.head.sha || github.sha }}
       - name: Validate release gate artifacts
         run: python scripts/release/pre_release_check.py
       - name: Gate references
@@ -231,6 +244,8 @@ jobs:
       name: production
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.source_sha || github.event.pull_request.head.sha || github.sha }}
 
       - name: Deploy preconditions (placeholder)
         run: |
