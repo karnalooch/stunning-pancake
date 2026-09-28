@@ -59,6 +59,7 @@ The reusable workflows keep their existing PR/push behaviour when `source_sha` i
 In parallel with Full Release, T92 executes non-selective application regression on the same
 candidate:
 
+- canonical guarded backend coverage gate with the existing phased 40% threshold;
 - full Django legacy suite with PostGIS + Redis;
 - Admin ESLint + TypeScript + all Vitest unit tests + production bundle;
 - Admin Chromium Playwright E2E on a managed preview server.
