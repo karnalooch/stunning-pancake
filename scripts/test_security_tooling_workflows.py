@@ -240,6 +240,22 @@ class FullReleaseLaneContractTests(unittest.TestCase):
             with self.subTest(path=path.name):
                 self.assertIn("workflow_call", self._trigger(path))
 
+    def test_reused_workflow_concurrency_is_namespaced(self):
+        expected = {
+            NATIVE_SMOKE: "mobile-native-smoke-",
+            HOME_LAB: "home-lab-",
+            K8S: "k8s-release-gate-",
+        }
+        for path, prefix in expected.items():
+            with self.subTest(path=path.name):
+                group = load(path)["concurrency"]["group"]
+                self.assertTrue(group.startswith(prefix))
+                self.assertIn("${{ github.workflow }}", group)
+                self.assertIn(
+                    "${{ github.event.pull_request.number || github.run_id }}",
+                    group,
+                )
+
     def test_release_orchestrator_is_read_only_and_cannot_deploy(self):
         release = load(FULL_RELEASE)
         self.assertEqual(release["permissions"], {"contents": "read"})
