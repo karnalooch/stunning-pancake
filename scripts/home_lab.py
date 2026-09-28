@@ -451,6 +451,22 @@ def check_health() -> None:
     print("Home lab core services and HTTP health endpoints are ready")
 
 
+def print_startup_diagnostics() -> None:
+    """Print bounded local diagnostics when Compose cannot reach healthy state."""
+    print("Home Lab startup failed; bounded telemetry diagnostics follow")
+    run(compose_command("ps"), check=False)
+    run(
+        compose_command(
+            "logs",
+            "--no-color",
+            "--tail",
+            "120",
+            "telemetry",
+        ),
+        check=False,
+    )
+
+
 def check_runtime_dependencies() -> dict[str, str]:
     """Prove the core stateful services and worker path are actually responsive."""
     require_environment()
@@ -509,7 +525,11 @@ def cold_start_smoke() -> Path:
     # retry proves the same canonical startup path from a known process state.
     run(compose_command("down", "--remove-orphans"))
     run(compose_command("config", "--quiet"))
-    run(compose_command("up", "-d", "--build", "--wait"))
+    try:
+        run(compose_command("up", "-d", "--build", "--wait"))
+    except subprocess.CalledProcessError:
+        print_startup_diagnostics()
+        raise
 
     check_health()
     check_migrations()
