@@ -219,7 +219,7 @@ Security inventory work keeps its original IDs `T28–T30`; release gate/RC keep
 | ID | Tranche | Status | Evidence / acceptance |
 | --- | --- | --- | --- |
 | T88 | DX0: fix/verify home-lab Compose layering + one canonical startup path | DONE | #313 closed / PR #314 merged (`2b6feffe`). `home_lab.py` is now the single explicit local/pilot Compose control path; CI runs `init` + canonical `config` (including optional profiles) through that same entrypoint; T76 reuses the shared Compose builder; tests lock exactly base `docker-compose.yml` + `docker-compose.home.yml` and exclude implicit `docker-compose.override.yml`. Home Lab validation, Scripts, Backend, Mobile, Admin, Telemetry, E2E/Audit, CodeQL/Trivy and required Aggregate CI were GREEN. |
-| T89 | DX0: doctor/preflight + init/up + dev env/toolchain contract | PLANNED | Fresh machine reports actionable checks; local secrets generated safely; no undocumented magic steps. |
+| T89 | DX0: doctor/preflight + init/up + dev env/toolchain contract | ACTIVE | #317 / PR #318. Read-only `scripts/dev_doctor.py` validates the repo/toolchain/host prerequisites and emits actionable remediation; EN/PL onboarding is reconciled to Node 24.21.0 + pnpm 12.4.2 + Python 3.12+. It does not claim runtime readiness; `DEV ENV READY` remains T90. |
 | T90 | DX0: cold-start smoke → `DEV ENV READY` | PLANNED | Migrations, backend, telemetry, admin and required workers verified automatically after clean start. |
 | T91 | Final UI validation on exact pilot candidate | BLOCKED | ENVIRONMENT REQUIRED. Repeat critical mobile flow on exact release candidate, real Android and real failure states. |
 | T92 | Full pre-pilot regression on exact SHA | PLANNED | P3 failure matrix, core mobile journey, tenant negatives, admin/GLOBAL_OWNER, recovery invariants, security gate and required CI all green. T94 selective PR execution does not replace this full exact-SHA regression. |
@@ -264,7 +264,7 @@ This is the only short sequence worth remembering:
 
 6. pre-pilot:
    T28 -> T29/T30 only where findings require them
-   T88 DONE (#313/#314) -> T89 -> T90
+   T88 DONE (#313/#314) -> T89 ACTIVE (#317/#318) -> T90
    T58
    T91 -> T92
    T59
