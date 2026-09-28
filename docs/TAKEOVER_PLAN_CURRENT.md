@@ -149,7 +149,7 @@ These retain their original IDs. Only statuses/notes below are refreshed where l
 | T65 | Fail closed on cross-tenant activity detail/GPX reads | DONE | PR #100. |
 | T66 | Prevent public/profile self-service tenant rebinding | DONE | PR #101. |
 | T67 | Enforce club tenant isolation | DONE | PR #102. |
-| T68 | Signing-key rotation/revocation proof | BLOCKED | OWNER ACTION REQUIRED. Confirm external persistent key; prove old exposed value never active or rotate/revoke it. No secret value in evidence. |
+| T68 | Signing-key rotation/revocation proof | BLOCKED | #343 owns the remaining OWNER ACTION REQUIRED. Confirm external persistent key; prove old exposed value never active or rotate/revoke it. No secret value in evidence. |
 | T69 | Encrypt GPS data at rest on Android | DONE | PR #106 implements the protected storage boundary. Runtime evidence is strengthened by #256 encrypted GPS recovery, #258 lost-key fail-closed behavior and #259 locked/background durability/process-death recovery. |
 | T70 | Audit log append-only/tamper-resistant contract + critical-action coverage | DONE | PR #108. |
 | T71 | Central PII/token/GPS log redaction | DONE | PR #109. |
@@ -157,7 +157,7 @@ These retain their original IDs. Only statuses/notes below are refreshed where l
 | T73 | Database runtime-role + worker tenant-context hardening | DONE | PR #111. |
 | T74 | Critical-write idempotency inventory | DONE | PR #112. Critical retries use durable request identities/constraints where business effects could duplicate. |
 | T75 | TLS/transport + backup confidentiality verification | DONE | PR #113. Loopback-only pilot transport plus AES-256-GCM backup confidentiality/retention are repo-gated; no external TLS/provider claim is inferred. |
-| T76 | Android/home-lab chaos and restart matrix | PARTIAL | Harness foundation exists and #259 accepts locked/background GPS durability plus activity-identity recovery after process death. The residual harness now requires the exact CI `mobile-runtime` artifact and verifies the SHA-256 of the APK actually installed on the device before evidence can finalize. Remaining PASS evidence is still physical: offline, screen-off, kill/restart and finish/finalization/commit-response scenarios not already proven by #256/#258/#259. |
+| T76 | Android/home-lab chaos and restart matrix | PARTIAL | #344 owns the remaining physical matrix. Harness foundation exists and #259 accepts locked/background GPS durability plus activity-identity recovery after process death. The residual harness requires the exact CI `mobile-runtime` artifact and verifies the SHA-256 of the APK actually installed on the device before evidence can finalize. Remaining PASS evidence is still physical: offline, screen-off, kill/restart and finish/finalization/commit-response scenarios not already proven by #256/#258/#259. |
 
 **Data-safety exit:** repo-side implementation is complete through T76 and T57 runtime recovery evidence is now accepted. Final exit still requires external evidence for T68 (owner signing-key rotation/revocation proof) and T76 (physical Android/home-lab matrix). Already-DONE T57 and T60–T75 are retained as evidence, not reopened mechanically.
 
