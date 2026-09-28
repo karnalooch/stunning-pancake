@@ -81,6 +81,7 @@ describe('Product UX v2 Today context contract', () => {
     expect(startRide).toContain('start-ride-primary');
     expect(startRide).toContain('GpsRecoveryBanner');
     expect(startRide).toContain('startRideError');
+    expect(startRide).toContain('start-ride-gps-diagnostics');
   });
 
   test('refreshes rider history when Today regains focus', () => {
