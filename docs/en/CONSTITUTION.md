@@ -4,7 +4,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-28 |
 | **Audience** | See canonical document |
 | **lang** | en |
 | **translation** | [Polski](../CONSTITUTION.md) |
@@ -15,7 +15,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Product/Tech Lead |
-| **Last reviewed** | 2026-06-03 |
+| **Last reviewed** | 2026-09-28 |
 | **Audience** | The whole team |
 
 > **Version:** v0.2.0-rc.1 · **Adoption date:** 2026-05-15  
@@ -41,7 +41,7 @@
 
 ## 1. Preamble
 
-The **4VELO** platform is an open-source, self-hosted ecosystem for endurance sports - from amateur training to professional competitions. It combines GPS activity tracking, gamification, anti-cheat system and advanced analytics in one coherent environment.
+The **4VELO** platform is a self-hosted endurance-sports platform in active pre-production development. The repository is public, but no project-wide software license is declared as of 2026-09-28; public source availability must not be interpreted as an open-source license grant. The platform combines GPS activity tracking, gamification, anti-cheat and advanced analytics in one coherent environment.
 
 This Constitution defines immutable rules that apply to all project contributors - from developers to DevOps to UX designers. Every architectural decision, every pull request and every implementation must comply with the spirit and letter of this document.
 
@@ -73,7 +73,7 @@ Five pillars on which the 4VELO platform is based. No compromise is allowed in t
 
 - **Row-Level Security (RLS)** at the database level - each tenant only sees his own data
 - **Privacy Zones** - masking GPS coordinates in user private zones
-- Full compliance with **GDPR**:
+- **GDPR readiness is pre-production and gate-controlled**; the current legal baseline is defined by [RCP](compliance/RCP.md) and the [platform DPIA](compliance/DPIA_PLATFORM_CURRENT.md). Product capabilities intended to support data-subject rights include:
   - The right to be forgotten (hard delete + anonymization)
   - Right to transfer data (JSON/GPX export)
   - Transparent privacy and user consent policy
@@ -402,10 +402,12 @@ Each implementation must have a **documented and tested** rollback plan:
 | Activities (rides, training) | **Account lifespan + 1 year** after deletion |
 | Raw telemetry (GPS points) | **Anonymized after 90 days** (aggregated statistics only) |
 | User account details | Until the account is deleted + 30 days (grace period) |
-| Audit logs | **Minimum 3 years** (GDPR requirement) |
+| Audit logs | Policy-defined; must be justified and verified in the current retention matrix (no universal three-year GDPR minimum is claimed) |
 | Application logs | 30 days (rotated) |
 
-### 8.3 GDPR/GDPR Compliance
+> These retention values are policy targets, not proof of complete enforcement. Where this Constitution conflicts with the current legal baseline, [RCP](compliance/RCP.md) and the [platform DPIA](compliance/DPIA_PLATFORM_CURRENT.md) control the pre-pilot readiness assessment.
+
+### 8.3 GDPR readiness
 
 | User rights | Implementation |
 |---|---|

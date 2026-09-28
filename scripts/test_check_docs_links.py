@@ -91,3 +91,25 @@ def test_t71_redaction_is_wired_before_external_log_sinks() -> None:
     assert "analytics.logEvent(safeName, safeParams)" in firebase
     assert "recordError(err" not in firebase
     assert "analytics.logEvent(name, params)" not in firebase
+
+def test_legal_metadata_does_not_overclaim_project_license_or_gdpr() -> None:
+    """Public source availability and product controls must not masquerade as legal proof."""
+
+    settings = (REPO / "backend" / "core" / "settings.py").read_text(encoding="utf-8")
+    constitution_en = (REPO / "docs" / "en" / "CONSTITUTION.md").read_text(encoding="utf-8")
+    constitution_pl = (REPO / "docs" / "pl" / "CONSTITUTION.md").read_text(encoding="utf-8")
+
+    assert '"LICENSE": {"name": "MIT License"}' not in settings
+
+    assert "open-source, self-hosted ecosystem" not in constitution_en
+    assert "Full compliance with **GDPR**" not in constitution_en
+    assert "Minimum 3 years** (GDPR requirement)" not in constitution_en
+    assert "no project-wide software license is declared" in constitution_en
+    assert "GDPR readiness is pre-production and gate-controlled" in constitution_en
+
+    assert "otwartoźródłowy, samohostowany ekosystem" not in constitution_pl
+    assert "Pełna zgodność z **RODO/GDPR**" not in constitution_pl
+    assert "Minimum 3 lata** (wymóg RODO)" not in constitution_pl
+    assert "nie deklaruje licencji obejmującej cały projekt" in constitution_pl
+    assert "Gotowość RODO/GDPR ma status pre-production" in constitution_pl
+

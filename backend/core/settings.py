@@ -271,7 +271,6 @@ SPECTACULAR_SETTINGS = {
         "persistAuthorization": True,
         "displayOperationId": True,
     },
-    "LICENSE": {"name": "MIT License"},
     "CONTACT": {"name": "akarn", "url": "https://github.com/akarn"},
 }
 
