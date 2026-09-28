@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Active |
 | **Owner role** | Developer onboarding |
-| **Last reviewed** | 2026-09-10 |
+| **Last reviewed** | 2026-09-28 |
 | **lang** | en |
 | **translation** | [Polski](../pl/GETTING_STARTED.md) |
 | **canonical_path** | docs/en/GETTING_STARTED.md |
@@ -27,41 +27,45 @@ See the [takeover guide](../PROJECT_TAKEOVER.md) for project limitations.
 git clone https://github.com/karnalooch/stunning-pancake.git 4velo
 cd 4velo
 corepack pnpm install --frozen-lockfile
-Copy-Item .env.example .env
+python scripts/home_lab.py init
 ```
 
-Copy `.env` only on first setup. In Bash, use `cp .env.example .env`.
-Install JavaScript dependencies from the workspace root. Replace existing values
-in `.env` rather than appending a duplicate `SECRET_KEY`. Set a private random key,
-the database variables required by Compose, and `DEBUG=1` for local use only.
-Do not use production credentials.
+Install JavaScript dependencies from the workspace root. `home_lab.py init` creates
+the ignored private `.env.home` used by the isolated local/pilot stack and refuses
+to overwrite an existing file. Do not copy production credentials into it. If this
+checkout already has a legacy `.env.home`, do not regenerate it just to add newer
+keys; follow the [home-lab runbook](operations/HOME_LAB.md) instead.
 
-Keep `RUN_DEMO_SEED=0`. The backend creates an initial administrator without demo
-seeding. The default username is `global_owner`; if no password reaches the container,
-the first startup log contains a generated password. Adding a variable to `.env`
-does not automatically pass it into a container: inspect the service's `environment`.
-Do not publish the first-start log.
+The generated home-lab configuration keeps demo seeding disabled and provides the
+dedicated local database, GLOBAL_OWNER, Django, telemetry and backup secrets required
+by the canonical pilot path.
 
 ## Startup and verification
 
-```bash
-docker compose config --quiet
-docker compose up -d --build
-docker compose ps
+```powershell
+python scripts/home_lab.py config
+python scripts/home_lab.py up
+python scripts/home_lab.py status
+python scripts/home_lab.py check
 ```
 
-Compose also includes BRouter, OSRM, Traccar and simulators; image builds and map
-downloads can take time. By default the backend migrates, creates the administrator,
-collects static files and starts Gunicorn. It does not generate migrations at startup.
-Workers and beat run their own commands without web initialization. Wait for the
-database and backend migrations before running integration tests.
+This is the canonical local/pilot startup path. Do **not** substitute bare
+`docker compose up`: Docker Compose automatically loads `docker-compose.override.yml`
+for that form, while the pilot home lab deliberately layers only
+`docker-compose.yml` + `docker-compose.home.yml` under project `4velo-home`.
+
+The default home-lab core starts PostGIS/TimescaleDB, Redis, Django, telemetry,
+GLOBAL_OWNER admin, the main Celery worker and beat. Routing, simulation, tracking
+and the extra admin surfaces are optional profiles; enable them through
+`home_lab.py up --routing|--simulation|--tracking|--all-admin`. Image builds and
+routing-data preparation can take longer than the core startup.
 
 | Service | Expected local address |
 |---|---|
 | API documentation | http://localhost:8000/api/docs/ |
 | Global Admin | http://localhost:3001 |
-| Tenant Admin | http://localhost:3002 |
-| Moderator | http://localhost:3003 |
+| Tenant Admin (with `--all-admin`) | http://localhost:3002 |
+| Moderator (with `--all-admin`) | http://localhost:3003 |
 | Telemetry | http://localhost:8001 |
 
 These addresses come from Compose, not a live availability test. Inspect local
@@ -76,10 +80,11 @@ and audit results. PostGIS tests require PostGIS, not substitute SQLite storage.
 python scripts/check_docs_links.py
 corepack pnpm --filter admin typecheck
 corepack pnpm --filter admin test:run
-docker compose stop
+python scripts/home_lab.py down
 ```
 
-`stop` preserves containers and data. Do not use `down -v` for routine shutdown.
+`home_lab.py down` removes the home-lab containers/network but preserves the named
+database volume. Do not use `docker compose down -v` for routine shutdown.
 
 ## Deployment and next steps
 

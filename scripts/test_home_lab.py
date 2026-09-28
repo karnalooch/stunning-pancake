@@ -21,6 +21,8 @@ class HomeLabTests(unittest.TestCase):
         base_pair = ["-f", str(home_lab.BASE_COMPOSE_FILE)]
         home_pair = ["-f", str(home_lab.HOME_COMPOSE_FILE)]
         self.assertEqual(command[6:10], [*base_pair, *home_pair])
+        self.assertEqual(command.count("-f"), 2)
+        self.assertNotIn(str(home_lab.ROOT / "docker-compose.override.yml"), command)
         self.assertEqual(
             command[-6:], ["--profile", "routing", "--profile", "simulation", "config", "--quiet"]
         )

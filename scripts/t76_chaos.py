@@ -16,9 +16,11 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
+import home_lab
+
 ROOT = Path(__file__).resolve().parents[1]
 EVIDENCE_DIR = ROOT / "backups" / "home-lab" / "evidence"
-HOME_ENV = ROOT / ".env.home"
+HOME_ENV = home_lab.ENV_FILE
 PACKAGE = "com.sport.athlete"
 ADB_REVERSE_PORTS = (8000, 8001, 8081)
 FAULT_SERVICES = ("backend", "telemetry", "redis", "db")
@@ -288,38 +290,8 @@ def restart_service(service: str) -> None:
         raise T76Error(f"Unsupported fault service: {service}")
     if not HOME_ENV.is_file():
         raise T76Error("Missing .env.home; initialize the home lab first")
-    command = [
-        "docker",
-        "compose",
-        "-p",
-        "4velo-home",
-        "--env-file",
-        str(HOME_ENV),
-        "-f",
-        str(ROOT / "docker-compose.yml"),
-        "-f",
-        str(ROOT / "docker-compose.home.yml"),
-        "restart",
-        service,
-    ]
-    run_visible(command)
-    run_visible(
-        [
-            "docker",
-            "compose",
-            "-p",
-            "4velo-home",
-            "--env-file",
-            str(HOME_ENV),
-            "-f",
-            str(ROOT / "docker-compose.yml"),
-            "-f",
-            str(ROOT / "docker-compose.home.yml"),
-            "up",
-            "-d",
-            "--wait",
-        ]
-    )
+    run_visible(home_lab.compose_command("restart", service))
+    run_visible(home_lab.compose_command("up", "-d", "--wait"))
     check_home_lab()
     print(f"Injected and recovered service restart: {service}")
 
