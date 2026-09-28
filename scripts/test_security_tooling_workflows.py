@@ -14,6 +14,7 @@ K8S = ROOT / ".github" / "workflows" / "k8s-release-gate.yml"
 SCORECARD = ROOT / ".github" / "workflows" / "scorecard.yml"
 MOBSF = ROOT / ".github" / "workflows" / "mobsf.yml"
 FULL_RELEASE = ROOT / ".github" / "workflows" / "full-release.yml"
+QUALITY_BASELINE_SH = ROOT / "scripts" / "run-quality-baseline.sh"
 HOME_LAB = ROOT / ".github" / "workflows" / "home-lab.yml"
 NATIVE_SMOKE = ROOT / ".github" / "workflows" / "mobile-native-smoke.yml"
 
@@ -175,6 +176,25 @@ class FullReleaseLaneContractTests(unittest.TestCase):
 
         ci_trigger = self._trigger(CI)
         self.assertNotIn("schedule", ci_trigger)
+
+    def test_quality_baseline_is_triggered_and_uses_non_django_test_isolation(self):
+        trigger = self._trigger(FULL_RELEASE)
+        self.assertIn(
+            "scripts/run-quality-baseline.sh",
+            trigger["pull_request"]["paths"],
+        )
+
+        baseline = text(QUALITY_BASELINE_SH)
+        self.assertIn(
+            "env PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest scripts/test_check_docs_links.py -q",
+            baseline,
+        )
+        self.assertIn(
+            "cd telemetry && PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -p pytest_asyncio.plugin -q --tb=no",
+            baseline,
+        )
+        self.assertIn("pnpm --dir mobile test --ci", baseline)
+        self.assertNotIn("pnpm --dir mobile test -- --ci", baseline)
 
     def test_heavy_proofs_reuse_canonical_workflows(self):
         wf = load(FULL_RELEASE)
