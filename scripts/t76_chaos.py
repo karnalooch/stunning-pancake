@@ -115,6 +115,129 @@ def exact_git_sha() -> str:
     return run_capture(["git", "rev-parse", "HEAD"]).strip()
 
 
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _full_git_sha(value: object, field: str) -> str:
+    if not isinstance(value, str):
+        raise T76Error(f"Runtime artifact {field} must be a Git SHA string")
+    normalized = value.strip().lower()
+    if len(normalized) != 40 or any(ch not in "0123456789abcdef" for ch in normalized):
+        raise T76Error(f"Runtime artifact {field} must be a full 40-character Git SHA")
+    return normalized
+
+
+def validate_runtime_artifact(artifact_dir: Path, repo_sha: str) -> dict:
+    root = artifact_dir.expanduser().resolve()
+    manifest_path = root / "manifest.json"
+    apk_path = root / "app-release.apk"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise T76Error(f"Cannot read runtime artifact manifest: {manifest_path}") from exc
+    if not isinstance(manifest, dict):
+        raise T76Error("Runtime artifact manifest must be a JSON object")
+    if not apk_path.is_file():
+        raise T76Error(f"Runtime artifact is missing APK: {apk_path}")
+
+    source_sha = _full_git_sha(manifest.get("sourceHeadSha"), "sourceHeadSha")
+    built_sha = _full_git_sha(manifest.get("builtGitSha"), "builtGitSha")
+    expected_sha = repo_sha.strip().lower()
+    if source_sha != expected_sha or built_sha != expected_sha:
+        raise T76Error(
+            "Runtime artifact source does not match the checked-out candidate: "
+            f"source={source_sha} built={built_sha} repo={expected_sha}"
+        )
+    if manifest.get("packageId") != PACKAGE:
+        raise T76Error(f"Runtime artifact packageId must be {PACKAGE}")
+    if manifest.get("buildProfile") != "pilot-local":
+        raise T76Error("Runtime artifact buildProfile must be pilot-local")
+    if manifest.get("updatesEnabled") is not False:
+        raise T76Error("Runtime artifact must have Expo updates disabled")
+    if manifest.get("runtimeAcceptance") != "true":
+        raise T76Error("Runtime artifact must be built with MOBILE_RUNTIME_ACCEPTANCE=true")
+
+    expected_apk_hash = manifest.get("apkSha256")
+    if (
+        not isinstance(expected_apk_hash, str)
+        or len(expected_apk_hash) != 64
+        or any(ch not in "0123456789abcdef" for ch in expected_apk_hash.lower())
+    ):
+        raise T76Error("Runtime artifact apkSha256 must be a 64-character SHA-256")
+    expected_apk_hash = expected_apk_hash.lower()
+    local_apk_hash = sha256_file(apk_path)
+    if local_apk_hash != expected_apk_hash:
+        raise T76Error(
+            "Runtime artifact APK hash mismatch: "
+            f"manifest={expected_apk_hash} local={local_apk_hash}"
+        )
+
+    workflow_run_id = str(manifest.get("workflowRunId", "")).strip()
+    if not workflow_run_id:
+        raise T76Error("Runtime artifact workflowRunId is required")
+
+    return {
+        "mode": "ci-runtime-artifact",
+        "source_head_sha": source_sha,
+        "built_git_sha": built_sha,
+        "workflow_run_id": workflow_run_id,
+        "apk_sha256": expected_apk_hash,
+        "package_id": PACKAGE,
+        "build_profile": "pilot-local",
+        "updates_enabled": False,
+        "runtime_acceptance": True,
+    }
+
+
+def installed_apk_sha256(serial: str) -> str:
+    output = adb(serial, "shell", "pm", "path", PACKAGE)
+    paths = [
+        line.split("package:", 1)[1].strip()
+        for line in output.splitlines()
+        if line.strip().startswith("package:")
+    ]
+    if len(paths) != 1 or not paths[0].endswith(".apk"):
+        raise T76Error(
+            "Exact-artifact proof requires one installed APK path; "
+            f"package manager returned {len(paths)} paths"
+        )
+
+    result = subprocess.run(
+        ["adb", "-s", serial, "exec-out", "cat", paths[0]],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        detail = result.stderr.decode("utf-8", errors="replace").strip()
+        raise T76Error(
+            "Cannot read installed APK bytes for exact-artifact proof; "
+            f"device returned exit {result.returncode}: {detail}"
+        )
+    if not result.stdout:
+        raise T76Error("Installed APK read returned no bytes")
+    return hashlib.sha256(result.stdout).hexdigest()
+
+
+def verify_installed_runtime_artifact(serial: str, provenance: dict) -> dict:
+    installed_hash = installed_apk_sha256(serial)
+    expected_hash = provenance["apk_sha256"]
+    if installed_hash != expected_hash:
+        raise T76Error(
+            "Installed APK does not match the CI runtime artifact: "
+            f"installed={installed_hash} expected={expected_hash}"
+        )
+    verified = dict(provenance)
+    verified["mode"] = "ci-runtime-artifact-installed-apk-sha256"
+    verified["installed_apk_sha256"] = installed_hash
+    return verified
+
+
 def serial_fingerprint(serial: str) -> str:
     return hashlib.sha256(serial.encode("utf-8")).hexdigest()
 
@@ -146,9 +269,9 @@ def evidence_path() -> Path:
     return EVIDENCE_DIR / f"t76-chaos-{stamp}.json"
 
 
-def new_evidence(serial: str) -> dict:
+def new_evidence(serial: str, artifact_provenance: dict) -> dict:
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "tranche": "T76",
         "contract": "physical-android-home-lab-chaos",
         "overall_status": "INCOMPLETE",
@@ -168,6 +291,7 @@ def new_evidence(serial: str) -> dict:
             "home_lab_loopback_only": True,
             "telemetry_ack_mode": "direct-db",
         },
+        "artifact_provenance": artifact_provenance,
         "operator_attestation_required": True,
         "scenarios": {
             scenario_id: {
@@ -195,6 +319,8 @@ def load_evidence(path: Path) -> dict:
         raise T76Error(f"Cannot read T76 evidence: {path}") from exc
     if evidence.get("tranche") != "T76" or not isinstance(evidence.get("scenarios"), dict):
         raise T76Error("Not a T76 evidence file")
+    if evidence.get("schema_version") != 2:
+        raise T76Error("T76 evidence must use schema_version=2 exact-artifact provenance")
     if set(evidence["scenarios"]) != set(SCENARIOS):
         raise T76Error("T76 evidence scenario set does not match the required matrix")
     return evidence
@@ -240,6 +366,17 @@ def record_result(
 
 def finalize_evidence(path: Path) -> dict:
     evidence = load_evidence(path)
+    provenance = evidence.get("artifact_provenance")
+    if not isinstance(provenance, dict):
+        raise T76Error("T76 finalization requires exact runtime artifact provenance")
+    if provenance.get("mode") != "ci-runtime-artifact-installed-apk-sha256":
+        raise T76Error(
+            "T76 finalization requires the installed APK SHA-256 to match "
+            "the exact CI runtime artifact"
+        )
+    if provenance.get("installed_apk_sha256") != provenance.get("apk_sha256"):
+        raise T76Error("T76 installed APK hash does not match recorded runtime artifact")
+
     statuses = [item.get("status") for item in evidence["scenarios"].values()]
     if any(status == "FAIL" for status in statuses):
         evidence["overall_status"] = "FAIL"
@@ -263,24 +400,43 @@ def finalize_evidence(path: Path) -> dict:
     return evidence
 
 
-def preflight(serial: str | None, output: Path | None, installed_sha: str) -> Path:
-    repo_sha = exact_git_sha()
-    if installed_sha.strip() != repo_sha:
-        raise T76Error(
-            "Installed-build SHA attestation does not match the checked-out candidate: "
-            f"installed={installed_sha.strip()} repo={repo_sha}"
-        )
+def preflight(
+    serial: str | None,
+    output: Path | None,
+    *,
+    runtime_artifact: Path | None,
+    installed_sha: str | None,
+) -> Path:
+    repo_sha = exact_git_sha().strip().lower()
+    artifact_provenance: dict
+    if runtime_artifact is not None:
+        artifact_provenance = validate_runtime_artifact(runtime_artifact, repo_sha)
+    else:
+        assert installed_sha is not None
+        if installed_sha.strip().lower() != repo_sha:
+            raise T76Error(
+                "Installed-build SHA attestation does not match the checked-out candidate: "
+                f"installed={installed_sha.strip()} repo={repo_sha}"
+            )
+        artifact_provenance = {
+            "mode": "operator-sha-attestation",
+            "source_head_sha": repo_sha,
+        }
 
     devices = parse_adb_devices(run_capture(["adb", "devices"]))
     selected = select_device(devices, serial)
     verify_package(selected)
+    if runtime_artifact is not None:
+        artifact_provenance = verify_installed_runtime_artifact(
+            selected, artifact_provenance
+        )
     setup_adb_reverse(selected)
     check_home_lab()
 
     target = (output or evidence_path()).expanduser().resolve()
     if target.exists():
         raise T76Error(f"Refusing to overwrite existing evidence: {target}")
-    write_evidence(target, new_evidence(selected))
+    write_evidence(target, new_evidence(selected, artifact_provenance))
     print(f"T76 preflight PASS; evidence initialized: {target}")
     return target
 
@@ -317,10 +473,21 @@ def parse_args() -> argparse.Namespace:
     pre = sub.add_parser("preflight")
     pre.add_argument("--serial")
     pre.add_argument("--evidence", type=Path)
-    pre.add_argument(
+    provenance = pre.add_mutually_exclusive_group(required=True)
+    provenance.add_argument(
+        "--runtime-artifact",
+        type=Path,
+        help=(
+            "Directory from the exact-SHA mobile-runtime CI artifact containing "
+            "manifest.json and app-release.apk"
+        ),
+    )
+    provenance.add_argument(
         "--installed-sha",
-        required=True,
-        help="Full Git SHA used to build the APK installed on the physical device",
+        help=(
+            "Legacy/manual SHA attestation for diagnostics only; evidence created "
+            "this way cannot finalize T76"
+        ),
     )
 
     fault = sub.add_parser("restart-service")
@@ -349,7 +516,12 @@ def main() -> None:
     args = parse_args()
     try:
         if args.action == "preflight":
-            preflight(args.serial, args.evidence, args.installed_sha)
+            preflight(
+                args.serial,
+                args.evidence,
+                runtime_artifact=args.runtime_artifact,
+                installed_sha=args.installed_sha,
+            )
         elif args.action == "restart-service":
             restart_service(args.service)
         elif args.action == "force-stop":
