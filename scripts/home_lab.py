@@ -199,8 +199,9 @@ print("P3 restored critical ORM/telemetry path OK")
 def compose_command(*args: str, profiles: tuple[str, ...] = ()) -> list[str]:
     command = ["docker", "compose", "-p", PROJECT, "--env-file", str(ENV_FILE)]
     # Home lab is an override fragment, so always name the canonical base first
-    # and then the loopback/pilot overlay. Passing only the override via -f
-    # would disable Compose's automatic default-file discovery.
+    # and then the loopback/pilot overlay. Passing explicit -f files is intentional:
+    # it also prevents Compose from auto-loading docker-compose.override.yml, which
+    # belongs to the legacy/default local stack and is not part of the pilot topology.
     command.extend(("-f", str(BASE_COMPOSE_FILE)))
     if HOME_COMPOSE_FILE.is_file():
         command.extend(("-f", str(HOME_COMPOSE_FILE)))
