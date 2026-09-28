@@ -14,7 +14,7 @@
 
 ## 0. Authority and supersession
 
-This document is the highest-authority source for **mobile visual implementation and visual-governance decisions**.
+This document **was** the takeover-era HARD VISUAL FREEZE authority through Frozen UI v1.2. As of 2026-09-28, [Product UX v2](./PRODUCT_UX_V2.md) is the highest-authority source for mobile product direction, shell, IA and visual migration. This file remains historical evidence plus a reference for still-valid safety/legibility constraints.
 
 All mobile UI/design/art-direction/mockup decisions authored **before the takeover master plan T00 / PR #60** are historical evidence only. They do not constrain new implementation and must not override this architecture.
 
@@ -36,12 +36,12 @@ Those sources may still explain history or preserve independently valid function
 
 When sources conflict, use this order:
 
-1. **This document — UI Visual Protection Architecture v1**.
-2. **`MOBILE_UI_DESIGN_CONTRACT_V1.md` — Frozen UI v1.2 visual intent**.
+1. **[Product UX v2](./PRODUCT_UX_V2.md)** for product direction, shell, IA, migration and legacy retirement.
+2. **`MOBILE_UI_DESIGN_CONTRACT_V1.md`** only as the subordinate Frozen UI v1.2 visual/reference baseline where it does not conflict with UX v2.
 3. **Asset governance:** `MOBILE_ASSET_BIBLE_V1.md`, `PLACE_IDENTITY_POLICY_V1.md`, `MOBILE_ASSET_PRODUCTION_LIST_V1.md`, `assets/ASSET_GOVERNANCE_V1.json`.
-4. **`TAKEOVER_PLAN_CURRENT.md`** for implementation scope/order.
-5. Post-takeover UI audits as evidence.
-6. Pre-takeover design documents only as historical context.
+4. **`TAKEOVER_PLAN_CURRENT.md`** for non-UI implementation/release scope where still applicable.
+5. **This document** as historical Frozen UI v1.2 evidence and retained safety/legibility rationale.
+6. Dated audits and pre-takeover design documents as historical evidence only.
 
 A pre-takeover document can become normative again only through an explicit post-takeover decision that copies or re-adopts the rule into a current source.
 
