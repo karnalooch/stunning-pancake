@@ -22,6 +22,7 @@ const ROLE_SPECS = [
     paths: [
       '/owner/dashboard',
       '/owner/users',
+      '/owner/analytics/audit-log',
       '/owner/analytics/simulator',
       '/owner/analytics/revenue',
       '/owner/control-plane/inbox',
@@ -34,6 +35,7 @@ const ROLE_SPECS = [
     paths: [
       '/owner/dashboard',
       '/owner/users',
+      '/owner/activities',
       '/owner/white-label',
       '/owner/moderation',
       '/owner/analytics/feedback',
