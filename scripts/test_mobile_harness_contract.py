@@ -311,7 +311,7 @@ class MobileHarnessContractTests(unittest.TestCase):
 
     def test_full_audit_critical_ride_prefix_has_no_optional_steps(self):
         source = read("mobile/.maestro/flows/emulator-full-audit.yaml")
-        critical, _, _secondary = source.partition('text: "KREATOR GPS"')
+        critical, _, _secondary = source.partition('id: "start-ride-gps-diagnostics"')
         self.assertNotIn("optional: true", critical)
         for token in ("START JAZDY", "PAUZA", "WZNÓW", "ZATRZYMAJ JAZDĘ", "Jazda ukończona"):
             with self.subTest(token=token):
