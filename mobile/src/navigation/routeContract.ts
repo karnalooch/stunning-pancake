@@ -2,24 +2,25 @@ import type { RootStackParamList } from './types';
 
 /**
  * UX v2 route contract for primary tabs, stack destinations and deep-link helpers.
+ * Public path strings intentionally preserve the pre-v2 URLs for backward compatibility.
  */
 export const ROUTE_PATHS = {
-  today: 'today',
-  discover: 'discover',
+  today: 'ride',
+  discover: 'explore',
   startRide: 'ride/start',
-  club: 'club',
-  you: 'you',
+  club: 'compete',
+  you: 'profile',
   tracking: 'ride/live',
-  settings: 'you/settings',
-  trainingLog: 'you/training-log',
+  settings: 'settings',
+  trainingLog: 'profile/training-log',
   gpsDiagnostics: 'ride/gps-diagnostics',
-  clubs: 'club/clubs',
-  segments: 'discover/segments',
-  exploreMap: 'discover/map',
-  marketplace: 'discover/marketplace',
-  activityDetail: 'you/activity/:activityId',
-  performanceTrends: 'you/trends',
-  globalLeaderboard: 'club/global-leaderboard',
+  clubs: 'compete/clubs',
+  segments: 'compete/segments',
+  exploreMap: 'explore/map',
+  marketplace: 'explore/marketplace',
+  activityDetail: 'profile/activity/:activityId',
+  performanceTrends: 'profile/trends',
+  globalLeaderboard: 'compete/global-leaderboard',
   ridePaused: 'ride/paused',
   visionGallery: 'vision-gallery',
 } as const;
