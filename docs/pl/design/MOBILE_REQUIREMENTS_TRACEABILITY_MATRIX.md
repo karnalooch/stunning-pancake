@@ -74,7 +74,7 @@ To jest główna odpowiedź na pytanie "czy naprawdę jesteśmy gotowi?".
 | `RidePausedScreen` | resume/stop flow poprawny, brak dead-end nawigacji |
 | `RideSummaryScreen` | wartości poprawne, share nie crashuje, powrót do hub działa |
 | `CityHubScreen` | city wars i leaderboard renderują się z fallback cache |
-| `StartRideScreen` | posiada wybór sportu, błędy startu/GPS recovery i główną akcję uruchomienia jazdy do skupionego live ride flow |
+| `StartRideScreen` | posiada wybór sportu, błędy startu/GPS recovery, wejście do diagnostyki GPS i główną akcję uruchomienia jazdy do skupionego live ride flow |
 | `ExploreMapScreen` / Discover | mapa-first POI działa, fallback states są czytelne, Marketplace pozostaje dostępny bez pośredniego huba |
 | `MarketplaceScreen` | balance/pools/redeem bez crash przy API error |
 | `AthleteProfileScreen` | statystyki widoczne, nawigacja training/settings/trends działa |
