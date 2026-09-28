@@ -69,6 +69,20 @@ class HomeLabTests(unittest.TestCase):
         self.assertIn("MIGRATION_DATABASE_URL:", content)
         self.assertIn("APP_DB_USER:-4velo_runtime", content)
 
+    def test_privileged_bootstrap_owns_postgis_extension_before_runtime_role(self):
+        home = home_lab.HOME_COMPOSE_FILE.read_text(encoding="utf-8")
+        extension = "CREATE EXTENSION IF NOT EXISTS postgis;"
+        role = "CREATE ROLE %I LOGIN PASSWORD %L NOSUPERUSER NOBYPASSRLS NOREPLICATION"
+        self.assertIn(extension, home)
+        self.assertIn(role, home)
+        self.assertLess(home.index(extension), home.index(role))
+
+        telemetry_lifecycle = (
+            home_lab.ROOT / "telemetry" / "lifecycle.py"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("CREATE EXTENSION IF NOT EXISTS postgis", telemetry_lifecycle)
+        self.assertIn("NOSUPERUSER runtime role", telemetry_lifecycle)
+
     def test_pilot_core_ports_replace_base_bindings_with_loopback_only(self):
         content = home_lab.HOME_COMPOSE_FILE.read_text(encoding="utf-8")
         self.assertEqual(content.count("ports: !override"), 5)
