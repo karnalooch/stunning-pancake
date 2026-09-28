@@ -1,11 +1,13 @@
-# Admin Panel — World-Class Dashboard Redesign
+# 4VELO CONTROL — Admin/Web Current-State Reference
+
+> **CURRENT UX AUTHORITY (2026-09-28):** [Product UX v2](../design/PRODUCT_UX_V2.md). The shell, sidebar grouping, gradient-heavy styling and dashboard descriptions below document the current implementation and are migration inventory, not protected product direction. Functional capabilities and RBAC remain authoritative until code changes replace them.
 
 
 | | |
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-28 |
 | **Audience** | See canonical document |
 | **lang** | en |
 | **translation** | [Polski](../pl/admin/README.md) |
