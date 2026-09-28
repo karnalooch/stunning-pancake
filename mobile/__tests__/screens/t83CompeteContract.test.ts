@@ -4,58 +4,70 @@ import path from 'path';
 const SRC = path.resolve(__dirname, '../../src');
 const read = (relative: string) => fs.readFileSync(path.join(SRC, relative), 'utf8');
 
-describe('T83-C Compete truth contract', () => {
-  test('Compete uses Frozen UI product chrome instead of routine game chrome', () => {
-    const compete = read('screens/CityHubScreen.tsx');
+describe('Product UX v2 Club truth contract', () => {
+  test('Club uses product chrome instead of routine game chrome', () => {
+    const club = read('screens/CityHubScreen.tsx');
 
-    expect(compete).toContain('<ProductCard');
-    expect(compete).toContain('<Metric');
-    expect(compete).toContain('<PrimaryButton');
-    expect(compete).toContain('PRODUCT_TYPOGRAPHY');
-    expect(compete).toContain('getSemanticColors');
+    expect(club).toContain('<ProductCard');
+    expect(club).toContain('<Metric');
+    expect(club).toContain('<PrimaryButton');
+    expect(club).toContain('PRODUCT_TYPOGRAPHY');
+    expect(club).toContain('getSemanticColors');
 
-    expect(compete).not.toContain('SceneBackground');
-    expect(compete).not.toContain('LevelXpBar');
-    expect(compete).not.toContain('OrnateFrame');
-    expect(compete).not.toContain('LaurelHeader');
-    expect(compete).not.toContain('VersusBar');
-    expect(compete).not.toContain('SpeechBubble');
-    expect(compete).not.toContain('FONTS.display');
-    expect(compete).not.toContain('showMoo');
-    expect(compete).not.toContain('t.compete.moo');
+    expect(club).not.toContain('SceneBackground');
+    expect(club).not.toContain('LevelXpBar');
+    expect(club).not.toContain('OrnateFrame');
+    expect(club).not.toContain('LaurelHeader');
+    expect(club).not.toContain('VersusBar');
+    expect(club).not.toContain('SpeechBubble');
+    expect(club).not.toContain('FONTS.display');
+    expect(club).not.toContain('showMoo');
+    expect(club).not.toContain('t.compete.moo');
   });
 
-  test('live failure is distinct from truthful empty competition sections', () => {
-    const compete = read('screens/CityHubScreen.tsx');
+  test('live failure is distinct from truthful empty Club sections', () => {
+    const club = read('screens/CityHubScreen.tsx');
 
-    expect(compete).toContain('setLoadError(true)');
-    expect(compete).toContain('compete-load-error');
-    expect(compete).toContain('compete-retry');
-    expect(compete).toContain('compete-city-of-week-empty');
-    expect(compete).toContain('compete-city-wars-empty');
-    expect(compete).toContain('compete-quests-empty');
+    expect(club).toContain('setLoadError(true)');
+    expect(club).toContain('club-load-error');
+    expect(club).toContain('club-retry');
+    expect(club).toContain('club-city-of-week-empty');
+    expect(club).toContain('club-city-wars-empty');
+    expect(club).toContain('club-quests-empty');
 
-    expect(compete).not.toContain("city_of_week?.name ?? '—'");
-    expect(compete).not.toContain('const leftScore');
-    expect(compete).not.toContain('const rightScore');
+    expect(club).not.toContain("city_of_week?.name ?? '—'");
+    expect(club).not.toContain('const leftScore');
+    expect(club).not.toContain('const rightScore');
   });
 
   test('fresh cache remains visible but is explicitly marked as cached', () => {
-    const compete = read('screens/CityHubScreen.tsx');
+    const club = read('screens/CityHubScreen.tsx');
 
-    expect(compete).toContain('OfflineCacheService.getCityHub()');
-    expect(compete).toContain('OfflineCacheService.setCityHub(summary)');
-    expect(compete).toContain('usingCached');
-    expect(compete).toContain('compete-cached-state');
-    expect(compete).toContain('t.compete.cachedOfflineTitle');
-    expect(compete).toContain('t.compete.refreshingCached');
+    expect(club).toContain('OfflineCacheService.getCityHub()');
+    expect(club).toContain('OfflineCacheService.setCityHub(summary)');
+    expect(club).toContain('usingCached');
+    expect(club).toContain('club-cached-state');
+    expect(club).toContain('t.compete.cachedOfflineTitle');
+    expect(club).toContain('t.compete.refreshingCached');
   });
 
-  test('vision fixtures stay behind the existing vision-only switch', () => {
-    const compete = read('screens/CityHubScreen.tsx');
+  test('Club vision fixtures stay behind the existing vision-only switch', () => {
+    const club = read('screens/CityHubScreen.tsx');
 
-    expect(compete).toContain('getVisionCityHubFixture(fixturesEnabled)');
-    expect(compete).toContain('fixturesEnabled ? fixtureSummary : cityHubLive');
-    expect(compete).not.toContain('leaderboardLive');
+    expect(club).toContain('getVisionCityHubFixture(fixturesEnabled)');
+    expect(club).toContain('fixturesEnabled ? fixtureSummary : cityHubLive');
+    expect(club).not.toContain('leaderboardLive');
   });
+
+  test('Club owns leaderboard navigation and routes challenge rides through Start Ride', () => {
+    const club = read('screens/CityHubScreen.tsx');
+
+    expect(club).toContain('onOpenStartRide');
+    expect(club).toContain('onOpenLeaderboard');
+    expect(club).toContain('club-open-global-leaderboard');
+    expect(club).toContain('club-challenge-start-');
+    expect(club).not.toContain('onStartQuest');
+    expect(club).not.toContain('compete-');
+  });
+
 });
