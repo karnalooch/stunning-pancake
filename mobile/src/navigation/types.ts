@@ -2,10 +2,11 @@ import type { RideFinishState } from '../features/ride/model/RideFinishState';
 import type { NavigatorScreenParams } from '@react-navigation/native';
 
 export type MainTabParamList = {
-  Ride: undefined;
-  Compete: undefined;
-  Explore: undefined;
-  Profile: undefined;
+  Today: undefined;
+  Discover: undefined;
+  StartRide: undefined;
+  Club: undefined;
+  You: undefined;
   Tracking: undefined;
 };
 
