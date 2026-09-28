@@ -41,7 +41,7 @@ To jest główna odpowiedź na pytanie "czy naprawdę jesteśmy gotowi?".
 | FR-05 | Mapa Explore i POI | `DESIGN_SYSTEM_MOBILE` §4 | `mobile/src/screens/ExploreMapScreen.tsx`, `mobile/src/services/api.ts` (`POIService`) | manual mapa/POI | kompletność danych POI backend |
 | FR-06 | Marketplace pokazuje balance/pools i redeem | docs produktowe marketplace | `mobile/src/screens/MarketplaceScreen.tsx`, `mobile/src/services/api.ts` (`RewardsService`) | manual + fallback przy API error | edge-case reward backend |
 | FR-07 | Club obejmuje rywalizację miasta/społeczności, wyzwania i wejście do globalnego rankingu | Product UX v2 / Club | `mobile/src/screens/CityHubScreen.tsx`, `mobile/src/screens/GlobalLeaderboardScreen.tsx` | manual + cache fallback + kontrakt nawigacji | okno starych danych cache |
-| FR-08 | Profil, dziennik i szczegóły aktywności | docs profile/training | `mobile/src/screens/AthleteProfileScreen.tsx`, `mobile/src/screens/TrainingLogScreen.tsx`, `mobile/src/screens/ActivityDetailScreen.tsx` | manual drilldown | częściowo placeholderowe sekcje detail |
+| FR-08 | You pokazuje prawdziwy profil/statystyki, postęp i wejście do historii/trendów | Product UX v2 / You | `mobile/src/screens/AthleteProfileScreen.tsx`, `mobile/src/screens/TrainingLogScreen.tsx`, `mobile/src/screens/PerformanceTrendsScreen.tsx`, `mobile/src/screens/ActivityDetailScreen.tsx` | manual drilldown + kontrakt ekranu | Dziennik/Trendy pozostają osobnymi ekranami UI-3 |
 | FR-09 | Ustawienia mają sekcje rider/sensory/privacy | full vision plan + ops | `mobile/src/screens/SettingsScreen.tsx`, `mobile/src/services/RiderPreferencesService.ts`, `mobile/src/services/api.ts` (`PrivacyService`, `WearableService`) | manual sekcje settings | stabilność zewnętrznych flow wearables |
 | FR-10 | Deep linki prowadzą do kluczowych ekranów | kontrakt nawigacji | `mobile/src/navigation/linking.ts`, `mobile/src/navigation/routeContract.ts`, `mobile/src/navigation/types.ts` | unit test + manual open URL | różnice URI per platforma |
 | FR-11 | Voice cues wspierają eyes-free | `DESIGN_SYSTEM_MOBILE` §6 | `mobile/src/services/VoiceCueService.ts`, `mobile/src/screens/ActiveRideHUDScreen.tsx` | manual trigger cue | różnice TTS OS |
@@ -77,7 +77,7 @@ To jest główna odpowiedź na pytanie "czy naprawdę jesteśmy gotowi?".
 | `StartRideScreen` | posiada wybór sportu, błędy startu/GPS recovery, wejście do diagnostyki GPS i główną akcję uruchomienia jazdy do skupionego live ride flow |
 | `ExploreMapScreen` / Discover | mapa-first POI działa, fallback states są czytelne, Marketplace pozostaje dostępny bez pośredniego huba |
 | `MarketplaceScreen` | balance/pools/redeem bez crash przy API error |
-| `AthleteProfileScreen` | statystyki widoczne, nawigacja training/settings/trends działa |
+| `AthleteProfileScreen` / You | tożsamość/statystyki/postęp są prawdziwe; Trendy + Dziennik są przy Postępie; Ustawienia + Wyloguj są osobnymi akcjami konta; niedostępne osiągnięcia nie są renderowane |
 | `TrainingLogScreen` | lista aktywności ładuje się i otwiera detail |
 | `ActivityDetailScreen` | poprawny render detail + fallback bez danych |
 | `GlobalLeaderboardScreen` | ładowanie online + fallback offline cache |

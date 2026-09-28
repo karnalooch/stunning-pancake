@@ -4,8 +4,8 @@ import path from 'path';
 const SRC = path.resolve(__dirname, '../../src');
 const read = (relative: string) => fs.readFileSync(path.join(SRC, relative), 'utf8');
 
-describe('T83-A Athlete Profile truth contract', () => {
-  test('Profile uses Frozen UI product chrome and real data sources', () => {
+describe('Product UX v2 You truth contract', () => {
+  test('You uses product chrome and real data sources', () => {
     const profile = read('screens/AthleteProfileScreen.tsx');
 
     expect(profile).toContain('AuthService.getProfile()');
@@ -24,17 +24,33 @@ describe('T83-A Athlete Profile truth contract', () => {
     expect(profile).not.toContain('LevelXpBar');
   });
 
-  test('Profile does not derive achievements or KOM claims from ride counters', () => {
+  test('You does not render fake or unavailable achievement modules', () => {
     const profile = read('screens/AthleteProfileScreen.tsx');
 
-    expect(profile).toContain('profile-achievements-unavailable');
-    expect(profile).toContain('t.profile.achievementsUnavailable');
+    expect(profile).not.toContain('profile-achievements-unavailable');
+    expect(profile).not.toContain('t.profile.achievementsUnavailable');
     expect(profile).not.toContain("label: '100 KM'");
     expect(profile).not.toContain("label: 'KOM'");
     expect(profile).not.toContain('1000 KCAL');
     expect(profile).not.toContain('PASJA');
     expect(profile).not.toContain('verified >= 1');
     expect(profile).not.toContain('displayRides - displayVerified');
+  });
+
+  test('You groups Progress actions separately from Settings and account actions', () => {
+    const profile = read('screens/AthleteProfileScreen.tsx');
+
+    expect(profile).toContain('testID="you-open-trends"');
+    expect(profile).toContain('testID="you-open-training-log"');
+    expect(profile).toContain('testID="profile-settings-button"');
+    expect(profile).toContain('testID="profile-logout-button"');
+
+    expect(profile.indexOf('testID="you-open-trends"')).toBeLessThan(
+      profile.indexOf('testID="profile-settings-button"'),
+    );
+    expect(profile.indexOf('testID="you-open-training-log"')).toBeLessThan(
+      profile.indexOf('testID="profile-settings-button"'),
+    );
   });
 
   test('Profile keeps account and ride failure states explicit', () => {
