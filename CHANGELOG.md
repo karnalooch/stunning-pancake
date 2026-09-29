@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## v0.3.8-dev (2026-09-29) — Expo SDK 55 compatibility refresh
+
+### Mobile platform
+- Aligned `expo-updates` with the current Expo SDK 55 compatibility requirement (`~55.0.33`).
+- Moved the numeric app/runtime boundary to `0.3.8` because `expo-updates` is a native-runtime dependency and Expo uses `runtimeVersion.policy = appVersion`.
+- Extended the repository minimum-release-age exception to accept the required `expo-updates@55.0.33` patch alongside the previous `55.0.32` boundary.
+
+
 ## v0.3.7-dev (2026-09-28) — MapLibre native runtime boundary
 
 ### Mobile platform
