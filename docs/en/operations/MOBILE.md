@@ -37,6 +37,62 @@
 
 ---
 
+## Canonical Windows Android preflight / new-PC bootstrap
+
+`scripts/android-env.ps1` is the only Android SDK/JDK resolver for local Windows tooling. `scripts/android-preflight.ps1` is the fail-closed verification layer above it. The preflight **does not build or install an APK**.
+
+On a newly prepared Windows machine:
+
+1. Install the repository toolchain: Node.js **24.21.0**, pnpm **12.4.2**, Git, Android Studio with JDK 17/JBR, Android SDK Platform Tools and an emulator image if required.
+2. Clone the repository to a reasonably short path and run the toolchain-only check:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/android-preflight.ps1 -ToolchainOnly
+```
+
+3. Resolve any reported duplicate SDK/ADB authority before continuing. `ANDROID_SDK_ROOT`, `ANDROID_HOME`, PATH `adb.exe` and any running adb server must all agree on the same SDK.
+4. Start exactly one emulator or connect one authorized device. If more than one is online, pass `-DeviceId <serial>`.
+5. Install an approved dev/pilot artifact using the normal EAS/CI evidence path. Preflight does not create an APK.
+6. For `pilot-local`, configure localhost transport:
+
+```powershell
+adb reverse tcp:8000 tcp:8000
+adb reverse tcp:8001 tcp:8001
+# optional when Metro must be reached through USB:
+adb reverse tcp:8081 tcp:8081
+```
+
+7. Run the strict device/package/reverse check:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/android-preflight.ps1 -RequirePilotReverse
+```
+
+The strict check validates:
+- Node/pnpm/JDK versions;
+- canonical Android SDK and `adb.exe` path;
+- stale/foreign adb processes and duplicate PATH authorities;
+- exactly one selected Android target (or explicit `-DeviceId`);
+- installed package identity `com.sport.athlete`;
+- listeners on adb/Metro/backend/telemetry ports `5037/8081/8000/8001`;
+- Metro ownership when port 8081 is already occupied;
+- current `adb reverse` state;
+- exact Git SHA and tool paths/versions.
+
+Every external command is bounded by `-TimeoutSeconds` (default 15 s). Successful runs write a secret-free provenance JSON under ignored `artifacts/android-preflight/`; the raw adb serial is not recorded, only a short SHA-256-derived device identifier.
+
+### Fast Refresh vs Apply Changes vs full native rebuild
+
+| Change | Use |
+|---|---|
+| JS/TS screen, state, copy or styling only | **Fast Refresh** / reload from Metro. Do not rebuild native code. |
+| Temporary hand-edited generated Android debug code while diagnosing a native problem | Android Studio **Apply Changes** may be used only as a local diagnostic. Generated `mobile/android/**` is not release authority and must not become the proof source. |
+| Expo config plugin, `app.config.js`, native dependency, committed native/plugin path, package/runtime boundary or any other native-affecting input | Use a **full clean native rebuild/reinstall** through the approved exact-SHA proof path (Gumball broker / explicit release proof / EAS). |
+| Unsure whether a change is native-affecting | Treat it as native-affecting and use the explicit proof path; do not broaden automatic PR/main APK builds. |
+
+Before any runtime acceptance or Maestro session, run the strict preflight again if SDK/JDK/ADB/device/ports changed since the last proof.
+
+---
 ## Environment variables (names only)
 
 | Variable | Purpose |
