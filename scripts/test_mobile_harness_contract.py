@@ -30,7 +30,8 @@ class MobileHarnessContractTests(unittest.TestCase):
             "scripts\\android-env.ps1",
             "function Invoke-BoundedProcess",
             "WaitForExit($Timeout * 1000)",
-            "$process.Kill($true)",
+            "$process.Kill()",
+            "$psi.Arguments = ($quotedArguments -join ' ')",
             "Conflicting Android SDK roots detected before resolution",
             "PATH exposes adb outside the canonical SDK",
             "A stale/foreign adb server is running from",
@@ -55,6 +56,8 @@ class MobileHarnessContractTests(unittest.TestCase):
         self.assertNotIn("G:\\android-sdk", source)
         self.assertNotIn("emulator-5554", source)
         self.assertNotIn("serial = $selectedDevice", source)
+        self.assertNotIn("command = $process.CommandLine", source)
+        self.assertNotIn(".ArgumentList.Add", source)
         self.assertIn("artifacts/android-preflight/", gitignore)
         self.assertIn("mobile:android:preflight", root_package["scripts"])
         self.assertIn("scripts/android-preflight.ps1", root_package["scripts"]["mobile:android:preflight"])
