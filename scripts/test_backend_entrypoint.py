@@ -35,7 +35,7 @@ class EntrypointTests(unittest.TestCase):
         self.assertEqual(
             calls[:4],
             [
-                "python manage.py migrate --no-input",
+                "python manage.py migrate --check --no-input",
                 "python manage.py check --deploy",
                 "python manage.py create_admin",
                 "python manage.py collectstatic --no-input",
@@ -49,7 +49,7 @@ class EntrypointTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("python seed_data.py", calls)
 
-    def test_failed_migration_stops_web_start(self):
+    def test_pending_migration_stops_web_start(self):
         code, calls = self.run_entrypoint(fail_migrate=True)
         self.assertEqual(code, 7)
-        self.assertEqual(calls, ["python manage.py migrate --no-input"])
+        self.assertEqual(calls, ["python manage.py migrate --check --no-input"])
