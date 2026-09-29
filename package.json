@@ -1,5 +1,5 @@
 {
-  "name": "4velo",
+  "name": "@4velo/workspace",
   "version": "0.3.7-dev",
   "private": true,
   "packageManager": "pnpm@12.4.2",

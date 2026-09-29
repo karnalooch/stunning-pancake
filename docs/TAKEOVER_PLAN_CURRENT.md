@@ -108,7 +108,7 @@ These retain their original IDs. Only statuses/notes below are refreshed where l
 | T29 | Backend Python runtime remediation | NOT REQUIRED | T28 found no backend runtime vulnerability requiring pre-pilot remediation. Reopen only for a new confirmed runtime HIGH/CRITICAL or another concrete blocker. |
 | T30 | Node dependency remediation | NOT REQUIRED | T28 found no Node workspace HIGH/CRITICAL vulnerability requiring pre-pilot remediation. Reopen only for a new confirmed runtime blocker. |
 | T31 | DRF/GIS direction decision + prototype | PLANNED | Post-pilot unless concrete blocker. |
-| T32 | Mobile overrides → pnpm root overrides | PLANNED | Post-pilot unless required by dependency remediation. |
+| T32 | Mobile overrides → pnpm workspace authority | ACTIVE | #263 / PR #365 disambiguates root/mobile package names, makes `pnpm-workspace.yaml` the single override authority and adds selector/identity guards. Full frozen-install + mobile/Expo + Aggregate CI evidence is required before DONE. |
 | T33 | Expo/EAS canonical configuration + E2E secrets | PARTIAL | Pilot-local/profile prerequisites landed across #85/#86/#88; #257 adds generated-native provenance validation; #264 makes Windows raw native builds diagnostic-only and keeps EAS as artifact authority. Remaining canonical runtime/appVersion closure is tracked by #156/#157. |
 | T34 | Firebase gate + platform config safety | PARTIAL | Pilot Firebase-off/platform gating landed across #88/#90; broader release contract remains. |
 | T35 | Conservative admin dead-code/export cleanup | PLANNED | Post-pilot cleanup. |

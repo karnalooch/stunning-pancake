@@ -10,6 +10,8 @@ nodeLinker: isolated
 # Windows so React Native CMake/Ninja object paths stay within safe limits.
 virtualStoreDirMaxLength: 40
 
+# Single dependency-override authority for the monorepo. Package-local
+# `overrides` blocks are forbidden because pnpm workspace resolution is owned here.
 overrides:
   shell-quote: 1.10.0
   tar: 7.5.21

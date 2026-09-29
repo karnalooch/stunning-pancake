@@ -4,7 +4,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Mobile Lead / Release Manager |
-| **Last reviewed** | 2026-06-14 |
+| **Last reviewed** | 2026-09-29 |
 | **Audience** | Mobile engineers, QA, release, on-call |
 | **lang** | en |
 | **translation** | [Polski](../../pl/operations/MOBILE_STARTUP_HARDENING_PLAYBOOK.md) |
@@ -160,7 +160,7 @@ If metrics exceed budget, PR must include mitigation plan.
 
 ## 9) Start-release gate (before preview/prod)
 
-- [ ] `pnpm --filter 4velo lint` has no errors.
+- [ ] `pnpm --filter @4velo/mobile lint` has no errors.
 - [ ] Critical unit/integration tests pass.
 - [ ] Critical Maestro smoke passes.
 - [ ] Manual P0 QA pass (auth/ride/gps/deep-link/settings).
