@@ -99,6 +99,16 @@ services:
       db_runtime_role_init:
         condition: service_completed_successfully
 
+  telemetry_migrate:
+    # Telemetry DDL uses the same privileged local schema owner as Django
+    # migrations, but the long-running telemetry service receives only the
+    # non-privileged runtime role below.
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:?err_POSTGRES_USER_not_set}:${DB_PASSWORD:?err_DB_PASSWORD_not_set}@db:5432/${POSTGRES_DB:?err_POSTGRES_DB_not_set}
+    depends_on:
+      db_runtime_role_init:
+        condition: service_completed_successfully
+
   backend:
     # The backend issues the activity-scoped telemetry JWT, so it MUST use
     # the same signing key as the telemetry verifier in this isolated pilot.
