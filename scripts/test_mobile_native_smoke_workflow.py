@@ -55,13 +55,17 @@ class MobileNativeSmokeWorkflowTests(unittest.TestCase):
         )
         self.assertIn("FORCE_RELEASE: ${{ inputs.release || false }}", text)
 
-    def test_non_pr_runs_can_force_native_release_proof(self):
+    def test_explicit_non_pr_runs_can_force_native_release_proof(self):
         text = workflow_text()
         self.assertIn('if [ "$FORCE_RELEASE" = "true" ]; then', text)
         self.assertIn('echo "run=true" >> "$GITHUB_OUTPUT"', text)
         self.assertIn('echo "release=true" >> "$GITHUB_OUTPUT"', text)
         self.assertIn("  workflow_call:", text)
-        self.assertIn("    branches: [main]", text)
+        self.assertIn("  workflow_dispatch:", text)
+
+    def test_main_push_never_triggers_mobile_native_smoke(self):
+        text = workflow_text()
+        self.assertNotIn("\n  push:\n    branches: [main]\n", text)
 
     def test_full_build_still_proves_exact_sha_and_artifact(self):
         text = workflow_text()
