@@ -12,25 +12,25 @@ class ValidationSuite(unittest.TestCase):
     def test_stripe_logic(self, mock_create):
         mock_create.return_value.url = "https://checkout.stripe.com/test_success"
 
-        # Simulating StripeService.create_b2c_checkout logic
-        customer_id = "user_123"
-        success_url = "http://localhost/success"
-        cancel_url = "http://localhost/cancel"
-
-        # The logic we are testing:
-        url = f"https://checkout.stripe.com/mock?customer={customer_id}"  # Simplified mock
-
-        # Real call simulation
         from rewards.stripe_service import StripeService
 
-        with patch.dict(os.environ, {"STRIPE_SECRET_KEY": "sk_test_123"}):
-            try:
-                # This might still fail on import if stripe is not configured,
-                # but we've patched the create method.
-                res = StripeService.create_b2c_checkout(customer_id, success_url, cancel_url)
-                self.assertIn("stripe.com", res)
-            except Exception as e:
-                self.skipTest(f"Stripe import/init failed: {e}")
+        with patch.dict(
+            os.environ,
+            {
+                "STRIPE_SECRET_KEY": "sk_test_123",
+                "STRIPE_B2C_PRICE_ID": "price_test",
+                "FRONTEND_URL": "http://localhost:5173",
+            },
+        ):
+            res = StripeService.create_b2c_checkout(123, "rider@example.com")
+
+        self.assertIn("stripe.com", res)
+        kwargs = mock_create.call_args.kwargs
+        self.assertEqual(
+            kwargs["success_url"],
+            "http://localhost:5173/success?session_id={CHECKOUT_SESSION_ID}",
+        )
+        self.assertEqual(kwargs["cancel_url"], "http://localhost:5173/cancel")
 
     # ---------------------------------------------------------------------------
     # 2. Matrix Notification Logic

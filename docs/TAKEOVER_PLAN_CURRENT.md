@@ -88,7 +88,7 @@ These retain their original IDs. Only statuses/notes below are refreshed where l
 | T09 | Tenant webhook admin / SSRF | DONE | PR #71 |
 | T10 | Department / moderation / heatmap tenant scope | DONE | PR #72 |
 | T11 | Real PostgreSQL RLS enforcement | DONE | PR #83 |
-| T12 | B2B billing isolate or disable | PLANNED | Outside core pilot unless endpoint is active; active endpoint must fail closed. |
+| T12 | B2B billing isolate or disable | ACTIVE | #368 / PR #369 makes rewards B2B billing default-OFF, fail-closed without Stripe config, binds checkout to TENANT_ADMIN/GLOBAL_OWNER + authoritative tenant scope, removes mock-success billing paths and consolidates Stripe configuration authority. Final replay + CI after #365/#367 remain before DONE. |
 | T13 | Telemetry packet/batch contract validation | DONE | PR #95 |
 | T14 | Telemetry durable ACK lifecycle | DONE | PR #95; pilot mode qualification strengthened by T62. |
 | T15 | Telemetry multi-worker broadcast via Redis | NOT REQUIRED | T06 / #367 retires the only FastAPI live-read WebSocket consumer and keeps authenticated Django SSE/HTTP/replay as read authority. Cross-worker FastAPI fanout has no current consumer; reopen only if a FastAPI live subscriber surface is deliberately reintroduced. Remaining inert broadcaster code is cleanup debt, not a release requirement. |
