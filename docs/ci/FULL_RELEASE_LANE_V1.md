@@ -54,12 +54,13 @@ succeeds.
 Periodic Android drift validation is owned by this nightly Full / Release lane.
 The standalone Mobile Native Smoke remains:
 
-- path-aware on pull requests;
-- native-affecting on pushes to `main`;
+- path-aware on pull requests, with APK compilation deferred to explicit proof;
+- not triggered by ordinary pushes or merges to `main`;
 - manually runnable;
 - reusable by Full / Release Validation.
 
-This prevents duplicate scheduled Gradle builds.
+This prevents duplicate scheduled Gradle builds and accidental post-merge APK
+compilation.
 
 ## Relationship to PR CI
 
