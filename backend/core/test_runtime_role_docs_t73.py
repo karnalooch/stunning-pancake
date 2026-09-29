@@ -22,14 +22,17 @@ class T73PilotWiringTests(unittest.TestCase):
         self.assertIn("backend_migrate:", content)
         self.assertNotIn("MIGRATION_DATABASE_URL", content)
 
-    def test_k8s_privileged_migration_secret_is_not_mounted_by_api_runtime(self):
+    def test_k8s_privileged_migration_secret_is_not_mounted_by_runtime_workloads(self):
         job = (ROOT / "infrastructure" / "k8s" / "jobs" / "migrate-job.yaml").read_text(
-            encoding="utf-8"
-        )
-        api = (ROOT / "infrastructure" / "k8s" / "workloads" / "api.yaml").read_text(
             encoding="utf-8"
         )
         self.assertIn("sport-migration-secrets", job)
         self.assertIn("MIGRATION_DATABASE_URL", job)
-        self.assertNotIn("sport-migration-secrets", api)
-        self.assertNotIn("MIGRATION_DATABASE_URL", api)
+
+        for filename in ("api.yaml", "worker.yaml", "worker-simulation.yaml", "beat.yaml"):
+            runtime = (
+                ROOT / "infrastructure" / "k8s" / "workloads" / filename
+            ).read_text(encoding="utf-8")
+            with self.subTest(filename=filename):
+                self.assertNotIn("sport-migration-secrets", runtime)
+                self.assertNotIn("MIGRATION_DATABASE_URL", runtime)
