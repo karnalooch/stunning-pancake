@@ -66,20 +66,30 @@ function Invoke-BoundedProcess {
   )
 
   $psi = New-Object System.Diagnostics.ProcessStartInfo
-  $psi.FileName = $FilePath
+  $extension = [System.IO.Path]::GetExtension($FilePath).ToLowerInvariant()
+  $quotedArguments = ($Arguments | ForEach-Object {
+    if ($_ -match '[\s"]') { '"' + ($_ -replace '"','\"') + '"' } else { $_ }
+  }) -join ' '
+
+  if ($extension -eq ".cmd" -or $extension -eq ".bat") {
+    $psi.FileName = $env:ComSpec
+    $escapedFile = '"' + ($FilePath -replace '"','""') + '"'
+    $psi.Arguments = '/d /s /c "' + $escapedFile + $(if ($quotedArguments) { ' ' + $quotedArguments } else { '' }) + '"'
+  } elseif ($extension -eq ".ps1") {
+    $powershellExe = Join-Path $PSHOME "powershell.exe"
+    $escapedFile = '"' + ($FilePath -replace '"','\"') + '"'
+    $psi.FileName = $powershellExe
+    $psi.Arguments = '-NoProfile -ExecutionPolicy Bypass -File ' + $escapedFile + $(if ($quotedArguments) { ' ' + $quotedArguments } else { '' })
+  } else {
+    $psi.FileName = $FilePath
+    $psi.Arguments = $quotedArguments
+  }
+
+  $psi.WorkingDirectory = $repoRoot
   $psi.UseShellExecute = $false
   $psi.RedirectStandardOutput = $true
   $psi.RedirectStandardError = $true
   $psi.CreateNoWindow = $true
-  $quotedArguments = @()
-  foreach ($arg in $Arguments) {
-    if ($arg -match '[\s"]') {
-      $quotedArguments += ('"' + ($arg -replace '"', '\"') + '"')
-    } else {
-      $quotedArguments += $arg
-    }
-  }
-  $psi.Arguments = ($quotedArguments -join ' ')
 
   $process = New-Object System.Diagnostics.Process
   $process.StartInfo = $psi
@@ -91,6 +101,7 @@ function Invoke-BoundedProcess {
   $stderrTask = $process.StandardError.ReadToEndAsync()
   if (-not $process.WaitForExit($Timeout * 1000)) {
     try { $process.Kill() } catch {}
+    try { $process.WaitForExit() } catch {}
     throw "Timed out after $($Timeout)s: $FilePath $($Arguments -join ' ')"
   }
 
@@ -109,11 +120,14 @@ function Invoke-BoundedProcess {
 
 function Resolve-CommandPath {
   param([Parameter(Mandatory=$true)][string]$Name)
-  $command = Get-Command $Name -ErrorAction SilentlyContinue | Select-Object -First 1
-  if (-not $command -or -not $command.Source) {
-    throw "Required command not found: $Name"
+
+  foreach ($candidate in @("$Name.exe", "$Name.cmd", "$Name.bat", "$Name.ps1", $Name)) {
+    $command = Get-Command $candidate -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($command -and $command.Source) {
+      return $command.Source
+    }
   }
-  return $command.Source
+  throw "Required command not found: $Name"
 }
 
 function Get-ValidSdkCandidates {
@@ -165,22 +179,15 @@ function Get-ListeningPorts {
 }
 
 function Get-ProcessEvidence {
-  param([int]$Pid)
-  if ($Pid -le 0) { return $null }
+  param([int]$ProcessId)
+  if ($ProcessId -le 0) { return $null }
   try {
     $process = Get-CimInstance Win32_Process -Filter "ProcessId = $ProcessId" -ErrorAction Stop
     if (-not $process) { return $null }
     return [ordered]@{
-      pid = $Pid
+      pid = $ProcessId
       name = $process.Name
       executable = Normalize-PathText $process.ExecutablePath
-      command = if ($process.CommandLine) {
-        if ($env:USERPROFILE) {
-          $process.CommandLine.Replace($env:USERPROFILE, "%USERPROFILE%")
-        } else {
-          $process.CommandLine
-        }
-      } else { $null }
     }
   } catch {
     return [ordered]@{ pid = $ProcessId; name = $null; executable = $null }
