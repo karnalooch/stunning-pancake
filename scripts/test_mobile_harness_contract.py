@@ -21,6 +21,44 @@ class MobileHarnessContractTests(unittest.TestCase):
         self.assertIn("ANDROID_SDK_ROOT", source)
         self.assertIn("LOCALAPPDATA", source)
 
+    def test_android_preflight_is_fail_closed_bounded_and_provenanced(self):
+        source = read("scripts/android-preflight.ps1")
+        root_package = json.loads(read("package.json"))
+        gitignore = read(".gitignore")
+
+        for token in (
+            "scripts\\android-env.ps1",
+            "function Invoke-BoundedProcess",
+            "WaitForExit($Timeout * 1000)",
+            "$process.Kill($true)",
+            "Conflicting Android SDK roots detected before resolution",
+            "PATH exposes adb outside the canonical SDK",
+            "A stale/foreign adb server is running from",
+            '$expectedNode = "24.21.0"',
+            '$expectedPnpm = "12.4.2"',
+            "JDK 17 is required",
+            "5037, 8081, 8000, 8001",
+            "Multiple Android devices are online",
+            'ExpectedPackage = "com.sport.athlete"',
+            '"reverse", "--list"',
+            "tcp:8000",
+            "tcp:8001",
+            "[switch]$ToolchainOnly",
+            "[switch]$RequirePilotReverse",
+            "serialHash",
+            "ConvertTo-Json -Depth 8",
+            "artifacts\\android-preflight",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, source)
+
+        self.assertNotIn("G:\\android-sdk", source)
+        self.assertNotIn("emulator-5554", source)
+        self.assertNotIn("serial = $selectedDevice", source)
+        self.assertIn("artifacts/android-preflight/", gitignore)
+        self.assertIn("mobile:android:preflight", root_package["scripts"])
+        self.assertIn("scripts/android-preflight.ps1", root_package["scripts"]["mobile:android:preflight"])
+
     def test_legacy_gdrive_helper_is_only_a_wrapper(self):
         source = read("scripts/android-sdk-gdrive.ps1")
         self.assertIn("deprecated", source.lower())
