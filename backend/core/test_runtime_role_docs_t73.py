@@ -7,9 +7,11 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class T73PilotWiringTests(unittest.TestCase):
-    def test_backend_entrypoint_separates_migration_and_runtime_database_urls(self):
+    def test_backend_entrypoint_checks_migrations_without_privileged_url(self):
         content = (ROOT / "backend" / "docker-entrypoint.sh").read_text(encoding="utf-8")
-        self.assertIn("MIGRATION_DATABASE_URL", content)
+        self.assertNotIn("MIGRATION_DATABASE_URL", content)
+        self.assertIn("python manage.py migrate --check --no-input", content)
+        self.assertNotIn("python manage.py migrate --no-input", content)
         self.assertIn("python manage.py check --deploy", content)
 
     def test_home_lab_declares_non_bypass_runtime_role(self):
@@ -17,3 +19,5 @@ class T73PilotWiringTests(unittest.TestCase):
         self.assertIn("NOSUPERUSER NOBYPASSRLS", content)
         self.assertIn("APP_DB_USER", content)
         self.assertIn("RLS_RUNTIME_ROLE_GUARD", content)
+        self.assertIn("backend_migrate:", content)
+        self.assertNotIn("MIGRATION_DATABASE_URL", content)
