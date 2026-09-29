@@ -57,7 +57,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U fourvelo_ci -d fourvelo_ci"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -143,7 +143,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://fourvelo_ci:fourvelo_ci_pass@localhost:5432/fourvelo_ci
       REDIS_URL: redis://localhost:6379/0
-      SECRET_KEY: ci-insecure-key
+      SECRET_KEY: ci-insecure-key-for-telemetry-t20-proof
       TELEMETRY_INGEST_JWT_REQUIRED: "1"
       TELEMETRY_INGEST_AUDIENCE_REQUIRED: "1"
       TELEMETRY_INGEST_AUDIENCE: telemetry
