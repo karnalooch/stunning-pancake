@@ -231,6 +231,34 @@ class FullReleaseLaneContractTests(unittest.TestCase):
         )
         self.assertLess(rls_index, baseline_index)
 
+    def test_full_release_runs_real_telemetry_integration_gate(self):
+        wf = load(FULL_RELEASE)
+        trigger_paths = self._trigger(FULL_RELEASE)["pull_request"]["paths"]
+        self.assertIn("telemetry/integration_durable_ingest.py", trigger_paths)
+
+        job = wf["jobs"]["telemetry-integration"]
+        self.assertEqual(job["services"]["postgres"]["image"], "postgis/postgis:15-3.3")
+        self.assertEqual(job["services"]["redis"]["image"], "redis:7-alpine")
+        self.assertTrue(job["env"]["DATABASE_URL"].startswith("postgresql://"))
+        self.assertEqual(job["env"]["REDIS_URL"], "redis://localhost:6379/0")
+        self.assertEqual(job["env"]["TELEMETRY_INGEST_JWT_REQUIRED"], "1")
+        self.assertEqual(job["env"]["TELEMETRY_INGEST_AUDIENCE_REQUIRED"], "1")
+        self.assertEqual(job["env"]["GLOBAL_PROTECTION_MODE"], "off")
+        self.assertEqual(job["env"]["TELEMETRY_INGEST_QUEUE"], "0")
+
+        source = "${{ inputs.source_sha || github.event.pull_request.head.sha || github.sha }}"
+        checkout = next(
+            step
+            for step in job["steps"]
+            if str(step.get("uses", "")).startswith("actions/checkout@")
+        )
+        self.assertEqual(checkout["with"]["ref"], source)
+        raw = text(FULL_RELEASE)
+        self.assertIn("Bootstrap telemetry-owned schema", raw)
+        self.assertIn("python schema_bootstrap.py", raw)
+        self.assertIn("integration_durable_ingest.py -v", raw)
+        self.assertNotIn("continue-on-error", "\n".join(str(step) for step in job["steps"]))
+
     def test_heavy_proofs_reuse_canonical_workflows(self):
         wf = load(FULL_RELEASE)
         jobs = wf["jobs"]
@@ -261,11 +289,18 @@ class FullReleaseLaneContractTests(unittest.TestCase):
         self.assertIn("always()", gate["if"])
         self.assertEqual(
             set(gate["needs"]),
-            {"repo-regression", "android-native", "home-lab", "k8s-release"},
+            {
+                "repo-regression",
+                "telemetry-integration",
+                "android-native",
+                "home-lab",
+                "k8s-release",
+            },
         )
         raw = text(FULL_RELEASE)
         for label in (
             "Full monorepo regression",
+            "Telemetry durable ingest integration",
             "Full Android native smoke",
             "Home Lab configuration proof",
             "Kubernetes + release proof",
