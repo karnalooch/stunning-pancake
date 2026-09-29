@@ -8,7 +8,7 @@
 | **lang** | pl |
 | **translation** | [English](../../en/operations/HOME_LAB.md) |
 | **translation_status** | reviewed |
-| **translation_reviewed** | 2026-09-28 |
+| **translation_reviewed** | 2026-09-29 |
 | **canonical_path** | docs/pl/operations/HOME_LAB.md |
 
 ---
