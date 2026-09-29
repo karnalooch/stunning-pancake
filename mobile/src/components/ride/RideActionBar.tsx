@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useI18n } from '../../i18n/useI18n';
@@ -6,11 +6,15 @@ import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
 import { getSemanticColors } from '../../theme/semantic';
 import { PRODUCT_TYPOGRAPHY } from '../../theme/typography';
+
 interface RideActionBarProps {
   isPaused: boolean;
-  onPause: () => void;
-  onResume: () => void;
+  onPause?: () => void;
+  onResume?: () => void;
   onStop: () => void;
+  pauseTestID?: string;
+  resumeTestID?: string;
+  stopTestID?: string;
 }
 
 const STOP_HOLD_MS = 900;
@@ -56,6 +60,9 @@ export const RideActionBar: React.FC<RideActionBarProps> = ({
   onPause,
   onResume,
   onStop,
+  pauseTestID = 'ride-pause-button',
+  resumeTestID = 'ride-resume-button',
+  stopTestID = 'ride-stop-button',
 }) => {
   const { theme } = useUnistyles();
   const { t } = useI18n();
@@ -65,6 +72,13 @@ export const RideActionBar: React.FC<RideActionBarProps> = ({
   const hudOutline = semantic.text.primary;
   const stopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [stopArmed, setStopArmed] = useState(false);
+
+  useEffect(
+    () => () => {
+      if (stopTimer.current) clearTimeout(stopTimer.current);
+    },
+    [],
+  );
 
   const clearStopTimer = () => {
     if (stopTimer.current) {
@@ -79,6 +93,7 @@ export const RideActionBar: React.FC<RideActionBarProps> = ({
     setStopArmed(true);
     HapticService.trigger('button_press');
     stopTimer.current = setTimeout(() => {
+      stopTimer.current = null;
       setStopArmed(false);
       void SoundService.play('ui_confirm');
       HapticService.trigger('error');
@@ -88,48 +103,28 @@ export const RideActionBar: React.FC<RideActionBarProps> = ({
 
   return (
     <View style={styles.row}>
-      <Pressable
-        style={({ pressed }) => [
-          styles.btn,
-          {
-            backgroundColor: semantic.ride.stopAction,
-            borderColor: semantic.ride.stopAction,
-            flex: 1,
-          },
-          stopArmed && { opacity: 0.72 },
-          pressed && { opacity: 0.9 },
-        ]}
-        onPressIn={startStopHold}
-        onPressOut={clearStopTimer}
-        testID="ride-stop-button"
-        accessibilityRole="button"
-        accessibilityLabel={t.ride.actions.stopConfirm}
-      >
-        <RideActionIcon type="stop" color={onError} />
-        <Text style={[styles.label, { color: onError, }]} allowFontScaling>
-          {stopArmed ? '…' : t.ride.actions.stop}
-        </Text>
-      </Pressable>
-
       {isPaused ? (
         <Pressable
           style={({ pressed }) => [
             styles.btn,
+            styles.primaryAction,
             {
               backgroundColor: semantic.action.primary,
               borderColor: semantic.action.primary,
-              flex: 1,
             },
             pressed && { opacity: 0.9 },
           ]}
           onPress={() => {
             HapticService.trigger('button_press');
             void SoundService.play('ui_confirm');
-            onResume();
+            onResume?.();
           }}
+          testID={resumeTestID}
+          accessibilityRole="button"
+          accessibilityLabel={t.ride.actions.resume}
         >
           <RideActionIcon type="play" color={onBackground} />
-          <Text style={[styles.label, { color: onBackground, }]}>
+          <Text style={[styles.label, { color: onBackground }]}>
             {t.ride.actions.resume}
           </Text>
         </Pressable>
@@ -137,28 +132,52 @@ export const RideActionBar: React.FC<RideActionBarProps> = ({
         <Pressable
           style={({ pressed }) => [
             styles.btn,
+            styles.primaryAction,
             {
               backgroundColor: semantic.selection.background,
               borderColor: semantic.selection.border,
-              flex: 1,
             },
             pressed && { opacity: 0.9 },
           ]}
           onPress={() => {
             HapticService.trigger('button_press');
             void SoundService.play('ui_click');
-            onPause();
+            onPause?.();
           }}
-          testID="ride-pause-button"
+          testID={pauseTestID}
           accessibilityRole="button"
           accessibilityLabel={t.ride.actions.pause}
         >
           <RideActionIcon type="pause" color={hudOutline} />
-          <Text style={[styles.label, { color: hudOutline, }]}>
+          <Text style={[styles.label, { color: hudOutline }]}>
             {t.ride.actions.pause}
           </Text>
         </Pressable>
       )}
+
+      <Pressable
+        style={({ pressed }) => [
+          styles.btn,
+          styles.stopAction,
+          {
+            backgroundColor: semantic.ride.stopAction,
+            borderColor: semantic.ride.stopAction,
+          },
+          stopArmed && { opacity: 0.72 },
+          pressed && { opacity: 0.9 },
+        ]}
+        onPressIn={startStopHold}
+        onPressOut={clearStopTimer}
+        testID={stopTestID}
+        accessibilityRole="button"
+        accessibilityLabel={t.ride.actions.stopConfirm}
+        accessibilityHint={t.ride.actions.stopConfirm}
+      >
+        <RideActionIcon type="stop" color={onError} />
+        <Text style={[styles.label, { color: onError }]} allowFontScaling>
+          {stopArmed ? '…' : t.ride.actions.stop}
+        </Text>
+      </Pressable>
     </View>
   );
 };
@@ -176,6 +195,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
+  },
+  primaryAction: {
+    flex: 1.6,
+  },
+  stopAction: {
+    flex: 1,
   },
   iconBox: {
     width: 22,
