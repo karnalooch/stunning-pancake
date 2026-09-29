@@ -9,9 +9,9 @@ function source(relative: string): string {
 
 describe('T80-D deterministic Ride vertical slice contract', () => {
   test('critical screens expose stable automation ids', () => {
-    expect(source('screens/StartRideScreen.tsx')).toContain(
-      'testID="start-ride-primary"',
-    );
+    const startRide = source('screens/StartRideScreen.tsx');
+    expect(startRide).toContain('testID="start-ride-primary"');
+    expect(startRide).toContain('disabled={isStarting}');
     expect(source('screens/RideDashboardScreen.tsx')).toContain(
       'testID="home-open-start-ride"',
     );
