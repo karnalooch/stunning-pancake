@@ -298,6 +298,13 @@ foreach ($port in @(5037, 8081, 8000, 8001)) {
   $portEvidence["$port"] = $owners
 }
 
+$adbPortOwners = @($portEvidence["5037"])
+foreach ($owner in $adbPortOwners) {
+  if ($owner.name -and $owner.name -notmatch "^adb(?:\.exe)?$") {
+    throw "ADB server port 5037 is occupied by non-adb process PID $($owner.pid) ($($owner.name))."
+  }
+}
+
 $metroOwners = @($portEvidence["8081"])
 if ($metroOwners.Count -gt 0) {
   foreach ($owner in $metroOwners) {
