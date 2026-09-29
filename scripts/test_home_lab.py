@@ -89,8 +89,14 @@ class HomeLabTests(unittest.TestCase):
         telemetry_lifecycle = (
             home_lab.ROOT / "telemetry" / "lifecycle.py"
         ).read_text(encoding="utf-8")
-        self.assertNotIn("CREATE EXTENSION IF NOT EXISTS postgis", telemetry_lifecycle)
-        self.assertIn("NOSUPERUSER runtime role", telemetry_lifecycle)
+        self.assertIn("assert_schema_ready", telemetry_lifecycle)
+        for ddl_token in ("CREATE TABLE", "ALTER TABLE", "CREATE INDEX", "create_hypertable"):
+            self.assertNotIn(ddl_token, telemetry_lifecycle)
+
+        telemetry_bootstrap = (
+            home_lab.ROOT / "telemetry" / "schema_bootstrap.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("bootstrap_schema", telemetry_bootstrap)
 
     def test_pilot_core_ports_replace_base_bindings_with_loopback_only(self):
         content = home_lab.HOME_COMPOSE_FILE.read_text(encoding="utf-8")
@@ -241,7 +247,7 @@ class HomeLabTests(unittest.TestCase):
             patch.object(home_lab, "require_environment"),
             patch.object(home_lab, "checked_out_commit", return_value="e" * 40),
             patch.object(home_lab, "validate_pilot_configuration", return_value={}),
-            patch.object(home_lab, "run", side_effect=[None, None, None, failure]),
+            patch.object(home_lab, "run", side_effect=[None, None, None, None, failure]),
             patch.object(home_lab, "print_startup_diagnostics") as diagnostics,
             self.assertRaises(home_lab.subprocess.CalledProcessError),
         ):
