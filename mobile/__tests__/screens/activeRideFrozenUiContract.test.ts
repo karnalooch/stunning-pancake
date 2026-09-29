@@ -29,6 +29,8 @@ describe('Frozen UI v1.2 Active Ride contract', () => {
     expect(hud).toContain('<RideStatusBar');
     expect(hud).toContain('<DataFieldGrid metrics={metrics} hudMode');
     expect(hud).toContain('<RideActionBar');
+    expect(hud).toContain('testID="active-ride-map"');
+    expect(hud).toContain('testID="active-ride-metrics"');
     expect(hud).toContain("edges={['top', 'bottom']}");
   });
 
@@ -41,6 +43,22 @@ describe('Frozen UI v1.2 Active Ride contract', () => {
     expect(actions).toContain('testID="ride-stop-button"');
     expect(actions).toContain('testID="ride-pause-button"');
     expect(actions).toContain('minHeight: 56');
+  });
+
+  test('active recording cannot enter the data-field editor and pause stays primary', () => {
+    const grid = source('components/ride/DataFieldGrid.tsx');
+    const actions = source('components/ride/RideActionBar.tsx');
+    const paused = source('screens/RidePausedScreen.tsx');
+
+    expect(grid).toContain('onLongPress={hudMode ? undefined : toggleEdit}');
+    expect(actions.indexOf('testID={pauseTestID}')).toBeLessThan(
+      actions.indexOf('testID={stopTestID}'),
+    );
+    expect(actions).toContain('styles.primaryAction');
+    expect(paused).toContain('ProductCard');
+    expect(paused).toContain('<RideActionBar');
+    expect(paused).toContain('resumeTestID="ride-paused-resume"');
+    expect(paused).toContain('stopTestID="ride-paused-stop"');
   });
 
   test('metric presentation uses semantic product typography', () => {
