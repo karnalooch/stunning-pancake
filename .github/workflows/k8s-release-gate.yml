@@ -171,6 +171,7 @@ jobs:
             infrastructure/k8s/namespace.yaml \
             infrastructure/k8s/config/app-configmap.yaml \
             infrastructure/k8s/config/app-secrets.template.yaml \
+            infrastructure/k8s/config/migration-secrets.template.yaml \
             infrastructure/k8s/workloads/api.yaml \
             infrastructure/k8s/workloads/worker.yaml \
             infrastructure/k8s/workloads/worker-simulation.yaml \
