@@ -25,7 +25,7 @@ rollout, but an ordinary merge/push must not rebuild an Android APK.
 
 ## Heavyweight evidence
 
-The lane is fail-closed and requires all four proofs:
+The lane is fail-closed and requires all five proofs:
 
 1. **Full monorepo regression** — canonical repository quality baseline on
    PostgreSQL/PostGIS + Redis with Python and pnpm dependencies installed, plus
@@ -34,13 +34,19 @@ The lane is fail-closed and requires all four proofs:
    skip, or `continue-on-error`. The existing limited `fourvelo_rls_test`
    role remains the behavioral proof boundary so the Postgres service's
    superuser does not bypass RLS during the isolation assertions.
-2. **Full Android native smoke** — reusable Mobile Native Smoke, including
+2. **Telemetry durable ingest integration** — authenticated/scoped pilot batch
+   ingest against real PostgreSQL/PostGIS-compatible storage and Redis. The T20
+   proof verifies transactional GPS + receipt persistence, exact retry/dedupe,
+   privacy-drop accounting, and fail-closed behavior when receipt storage is
+   unavailable. The job checks out the exact requested source SHA; T92 inherits
+   it by reusing this Full Release workflow.
+3. **Full Android native smoke** — reusable Mobile Native Smoke, including
    clean Expo prebuild and APK packaging. On pull requests this heavyweight
    proof is intentionally **deferred** by the Gumball CI Cost Governor; it is
    required on manual/nightly/tag/reusable release execution.
-3. **Home Lab configuration proof** — reusable home-lab control/crypto tests and
+4. **Home Lab configuration proof** — reusable home-lab control/crypto tests and
    layered Compose validation.
-4. **Kubernetes + release proof** — reusable K8s manifest/build/release gate.
+5. **Kubernetes + release proof** — reusable K8s manifest/build/release gate.
 
 A final job named **Full Release Gate** succeeds only when every proof above
 succeeds.
