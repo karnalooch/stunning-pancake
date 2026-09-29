@@ -238,7 +238,7 @@ def _age_days(value: str | None, now: dt.datetime) -> float:
 
 
 def gather_snapshot(repo: str, token: str) -> dict[str, Any]:
-    now = dt.datetime.now(dt.timezone.utc)
+    now = dt.datetime.now(dt.UTC)
     branches = paginate(token, f"/repos/{repo}/branches")
     prs = paginate(token, f"/repos/{repo}/pulls?state=all")
     issues_raw = paginate(token, f"/repos/{repo}/issues?state=open")
