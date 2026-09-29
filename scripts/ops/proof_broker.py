@@ -955,7 +955,6 @@ def reconcile(
             proof_id = proof_for_label(policy, label)
             if not proof_id:
                 continue
-            actor = label_actor(repo, token, number, label)
             try:
                 result = evaluate_proof(
                     repo=repo,
