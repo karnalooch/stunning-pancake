@@ -79,9 +79,7 @@ async def bootstrap_schema(conn: Any) -> None:
         await conn.execute(statement)
 
     try:
-        await conn.execute(
-            "SELECT create_hypertable('gps_points', 'time', if_not_exists => TRUE);"
-        )
+        await conn.execute("SELECT create_hypertable('gps_points', 'time', if_not_exists => TRUE);")
     except Exception as exc:
         # Preserve the existing optional Timescale behavior: plain PostgreSQL
         # remains supported, while a configured Timescale instance is upgraded
