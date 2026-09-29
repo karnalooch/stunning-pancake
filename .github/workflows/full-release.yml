@@ -17,6 +17,7 @@ on:
       - ".github/workflows/t92-exact-sha-regression.yml"
       - "scripts/run-quality-baseline.sh"
       - "scripts/test_security_tooling_workflows.py"
+      - "backend/test_rls.py"
   workflow_dispatch:
     inputs:
       reason:
@@ -108,6 +109,10 @@ jobs:
       - name: Release tag/version contract
         if: startsWith(github.ref, 'refs/tags/')
         run: python scripts/versioning.py check --tag "${GITHUB_REF_NAME}"
+
+      - name: T19 PostgreSQL/PostGIS RLS integration gate
+        working-directory: backend
+        run: python -m pytest test_rls.py -v
 
       - name: Canonical full quality baseline
         run: bash scripts/run-quality-baseline.sh
