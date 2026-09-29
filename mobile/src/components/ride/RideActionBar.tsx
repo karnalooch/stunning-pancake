@@ -68,7 +68,7 @@ export const RideActionBar: React.FC<RideActionBarProps> = ({
   const { t } = useI18n();
   const semantic = getSemanticColors(theme.colors);
   const onError = semantic.text.onDestructive;
-  const onBackground = semantic.text.primary;
+  const onAction = semantic.text.onAction;
   const hudOutline = semantic.text.primary;
   const stopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [stopArmed, setStopArmed] = useState(false);
@@ -123,8 +123,8 @@ export const RideActionBar: React.FC<RideActionBarProps> = ({
           accessibilityRole="button"
           accessibilityLabel={t.ride.actions.resume}
         >
-          <RideActionIcon type="play" color={onBackground} />
-          <Text style={[styles.label, { color: onBackground }]}>
+          <RideActionIcon type="play" color={onAction} />
+          <Text style={[styles.label, { color: onAction }]}>
             {t.ride.actions.resume}
           </Text>
         </Pressable>
