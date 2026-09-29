@@ -4,7 +4,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-29 |
 | **Audience** | See canonical document |
 | **lang** | en |
 | **translation** | [Polski](../DEPLOYMENT.md) |
@@ -15,7 +15,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Platform Operator / DevOps |
-| **Last reviewed** | 2026-06-03 |
+| **Last reviewed** | 2026-09-29 |
 | **Audience** | DevOps, release |
 
 A complete guide to implementing the 4VELO platform in a production environment - Railway, Docker Compose, SSL, backups and monitoring.
@@ -69,9 +69,15 @@ GARMIN_CLIENT_ID=...
 GARMIN_CLIENT_SECRET=...
 OPENAI_API_KEY=sk-...
 SENTRY_DSN=https://...
-```### Step 6: Migrations and seed data```bash
-# Przez Railway Shell
+```### Step 6: Migrations and seed data
+
+Django web replicas do **not** apply schema changes during startup. Run migrations once as an explicit deployment/bootstrap step **before** rolling out or scaling the backend revision. If migrations are pending, web startup fails closed at `python manage.py migrate --check --no-input` instead of mutating the schema.
+
+```bash
+# Run once with schema-owner credentials before backend rollout.
 railway run python manage.py migrate
+
+# Separate bootstrap/data tasks remain explicit operator actions.
 railway run python manage.py create_admin
 railway run python manage.py seed_rbac
 railway run python manage.py seed_data
