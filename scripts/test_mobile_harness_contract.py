@@ -52,6 +52,8 @@ class MobileHarnessContractTests(unittest.TestCase):
             "[switch]$ToolchainOnly",
             "[switch]$RequirePilotReverse",
             "serialHash",
+            '$reverseEvidenceSafe = @($reverseEvidence | ForEach-Object {',
+            '$_.Replace($selectedDevice, "<device>")',
             "ConvertTo-Json -Depth 8",
             "artifacts\\android-preflight",
         ):
@@ -61,6 +63,8 @@ class MobileHarnessContractTests(unittest.TestCase):
         self.assertNotIn("G:\\android-sdk", source)
         self.assertNotIn("emulator-5554", source)
         self.assertNotIn("serial = $selectedDevice", source)
+        self.assertNotIn("adbReverse = $reverseEvidence", source)
+        self.assertIn("adbReverse = $reverseEvidenceSafe", source)
         self.assertNotIn("command = $process.CommandLine", source)
         self.assertNotIn(".ArgumentList.Add", source)
         self.assertIn("artifacts/android-preflight/", gitignore)
