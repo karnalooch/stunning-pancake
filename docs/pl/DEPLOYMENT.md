@@ -5,7 +5,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-29 |
 | **Audience** | See canonical document |
 | **lang** | pl |
 | **translation** | [English](../en/DEPLOYMENT.md) |
@@ -17,7 +17,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Platform Operator / DevOps |
-| **Last reviewed** | 2026-06-03 |
+| **Last reviewed** | 2026-09-29 |
 | **Audience** | DevOps, release |
 
 Kompletny przewodnik wdrożenia platformy 4VELO na środowisko produkcyjne — Railway, Docker Compose, SSL, backupy i monitoring.
@@ -81,9 +81,13 @@ SENTRY_DSN=https://...
 
 ### Krok 6: Migracje i seed data
 
+Repliki webowe Django **nie** wykonują już zmian schematu podczas startu. Migracje uruchamiaj jeden raz jako jawny krok deployment/bootstrap **przed** rolloutem lub skalowaniem nowej rewizji backendu. Gdy migracje są oczekujące, start weba kończy się fail-closed na `python manage.py migrate --check --no-input`, zamiast modyfikować schemat.
+
 ```bash
-# Przez Railway Shell
+# Uruchom raz z credentialami właściciela schematu przed rolloutem backendu.
 railway run python manage.py migrate
+
+# Pozostałe kroki bootstrap/data nadal są jawnymi akcjami operatora.
 railway run python manage.py create_admin
 railway run python manage.py seed_rbac
 railway run python manage.py seed_data
