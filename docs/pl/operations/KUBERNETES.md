@@ -5,12 +5,12 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-29 |
 | **Audience** | See canonical document |
 | **lang** | pl |
 | **translation** | [English](../../en/operations/KUBERNETES.md) |
 | **translation_status** | reviewed |
-| **translation_reviewed** | 2026-06-04 |
+| **translation_reviewed** | 2026-09-29 |
 | **canonical_path** | docs/pl/operations/KUBERNETES.md |
 
 ---
@@ -19,7 +19,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | DevOps |
-| **Last reviewed** | 2026-06-03 |
+| **Last reviewed** | 2026-09-29 |
 | **Audience** | DevOps |
 
 > **Produkcja na Railway?** Railway nie uruchamia tych manifestów — [RAILWAY_KUBERNETES.md](./RAILWAY_KUBERNETES.md).
@@ -55,10 +55,11 @@ Path: `infrastructure/k8s/`
 Before first deployment, copy and edit:
 
 1. `infrastructure/k8s/config/app-secrets.template.yaml` (or map from `railway-to-k8s.env.template` if migrating from Railway Variables)
-2. Replace at least:
+2. Uzupełnij co najmniej:
    - `SECRET_KEY`
-   - `DATABASE_URL` (external PostgreSQL)
-3. Optionally set integrations (`SENTRY_DSN`, Stripe, email, Matrix).
+   - `DATABASE_URL` rolą runtime PostgreSQL bez uprawnień uprzywilejowanych (`NOSUPERUSER`, `NOBYPASSRLS`)
+3. Skopiuj `infrastructure/k8s/config/migration-secrets.template.yaml` i ustaw `MIGRATION_DATABASE_URL` na uprzywilejowanego właściciela schematu/migracji. Ten Secret jest używany wyłącznie przez jednorazowy migration Job i nie może być montowany w Deploymentach API/workera.
+4. Opcjonalnie ustaw integracje (`SENTRY_DSN`, Stripe, email, Matrix).
 
 Also update `infrastructure/k8s/config/app-configmap.yaml`:
 - `ALLOWED_HOSTS`
@@ -76,10 +77,12 @@ Run from repo root:
 kubectl apply -f infrastructure/k8s/namespace.yaml
 kubectl apply -f infrastructure/k8s/config/app-configmap.yaml
 kubectl apply -f infrastructure/k8s/config/app-secrets.template.yaml
+kubectl apply -f infrastructure/k8s/config/migration-secrets.template.yaml
 kubectl apply -f infrastructure/k8s/workloads/redis.yaml
 kubectl apply -f infrastructure/k8s/workloads/brouter.yaml
 kubectl apply -f infrastructure/k8s/jobs/migrate-job.yaml
 kubectl wait --for=condition=complete job/sport-backend-migrate -n sport --timeout=300s
+# Dopiero po sukcesie migration Joba uruchom/rolluj workloady runtime.
 kubectl apply -f infrastructure/k8s/workloads/api.yaml
 kubectl apply -f infrastructure/k8s/workloads/worker.yaml
 kubectl apply -f infrastructure/k8s/workloads/worker-simulation.yaml
@@ -181,9 +184,11 @@ kubectl rollout restart deployment/sport-celery-beat -n sport
 - Check env/secret mismatch:
   - `kubectl describe pod <pod> -n sport`
 - Validate DB connectivity from `DATABASE_URL`.
-- Re-run migration job:
+- Jeżeli `migrate --check` zgłasza oczekujące migracje, najpierw sprawdź `sport-migration-secrets`, a potem ponownie uruchom jednorazowy migration job:
   - `kubectl delete job sport-backend-migrate -n sport`
   - `kubectl apply -f infrastructure/k8s/jobs/migrate-job.yaml`
+  - `kubectl wait --for=condition=complete job/sport-backend-migrate -n sport --timeout=300s`
+- Nie dodawaj `sport-migration-secrets` ani `MIGRATION_DATABASE_URL` do Deploymentów API/workera.
 
 ### B) Worker backlog growing
 - Scale workers quickly:
