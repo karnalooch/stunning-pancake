@@ -94,6 +94,7 @@ Każde zewnętrzne polecenie ma ograniczenie `-TimeoutSeconds` (domyślnie 15 s)
 Przed runtime acceptance lub sesją Maestro uruchom ścisły preflight ponownie, jeśli od ostatniego proofa zmienił się SDK/JDK/ADB/urządzenie/porty.
 
 ---
+
 ## Zmienne środowiskowe (nazwy)
 
 | Zmienna | Cel |
