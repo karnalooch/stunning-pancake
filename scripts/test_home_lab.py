@@ -66,7 +66,8 @@ class HomeLabTests(unittest.TestCase):
         self.assertIn("db_runtime_role_init:", content)
         self.assertIn("NOSUPERUSER NOBYPASSRLS", content)
         self.assertIn('RLS_RUNTIME_ROLE_GUARD: "1"', content)
-        self.assertIn("MIGRATION_DATABASE_URL:", content)
+        self.assertIn("backend_migrate:", content)
+        self.assertNotIn("MIGRATION_DATABASE_URL:", content)
         self.assertIn("APP_DB_USER:-4velo_runtime", content)
 
     def test_privileged_bootstrap_owns_postgis_extension_before_runtime_role(self):
@@ -166,6 +167,17 @@ class HomeLabTests(unittest.TestCase):
         ), self.assertRaises(SystemExit):
             home_lab.checked_out_commit()
 
+    def test_apply_migrations_uses_dedicated_bootstrap_service(self):
+        with patch.object(home_lab, "require_environment"), patch.object(
+            home_lab, "run"
+        ) as run_mock:
+            home_lab.apply_migrations()
+
+        command = run_mock.call_args.args[0]
+        self.assertIn("--profile", command)
+        self.assertIn("bootstrap", command)
+        self.assertEqual(command[-4:], ["run", "--rm", "--build", "backend_migrate"])
+
     def test_check_migrations_uses_django_non_mutating_check(self):
         with patch.object(home_lab, "require_environment"), patch.object(
             home_lab, "run"
@@ -226,7 +238,7 @@ class HomeLabTests(unittest.TestCase):
             patch.object(home_lab, "require_environment"),
             patch.object(home_lab, "checked_out_commit", return_value="e" * 40),
             patch.object(home_lab, "validate_pilot_configuration", return_value={}),
-            patch.object(home_lab, "run", side_effect=[None, None, failure]),
+            patch.object(home_lab, "run", side_effect=[None, None, None, failure]),
             patch.object(home_lab, "print_startup_diagnostics") as diagnostics,
             self.assertRaises(home_lab.subprocess.CalledProcessError),
         ):
@@ -297,7 +309,9 @@ class HomeLabTests(unittest.TestCase):
             self.assertEqual(commands[0][-2:], ["down", "--remove-orphans"])
             self.assertNotIn("-v", commands[0])
             self.assertEqual(commands[1][-2:], ["config", "--quiet"])
-            self.assertEqual(commands[2][-4:], ["up", "-d", "--build", "--wait"])
+            self.assertEqual(commands[2][-4:], ["run", "--rm", "--build", "backend_migrate"])
+            self.assertIn("bootstrap", commands[2])
+            self.assertEqual(commands[3][-4:], ["up", "-d", "--build", "--wait"])
             printed = [call.args[0] for call in print_mock.call_args_list]
             self.assertEqual(printed[-1], "DEV ENV READY")
 
