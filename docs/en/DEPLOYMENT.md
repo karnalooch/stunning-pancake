@@ -73,15 +73,17 @@ SENTRY_DSN=https://...
 
 Django web replicas do **not** apply schema changes during startup. Run migrations once as an explicit deployment/bootstrap step **before** rolling out or scaling the backend revision. If migrations are pending, web startup fails closed at `python manage.py migrate --check --no-input` instead of mutating the schema.
 
-```bash
-# Run once with schema-owner credentials before backend rollout.
-railway run python manage.py migrate
+For Railway, the migration owner must live in an **independently scoped one-shot execution context** (for example a dedicated migration service/job configured in the Railway project). Do **not** add `MIGRATION_DATABASE_URL` to the long-running backend service and do not treat `railway run` against that backend service as a privileged migration path: `railway run` injects the selected service's variables, so it would either use the non-privileged runtime `DATABASE_URL` or require exposing the owner credential to the web service.
 
-# Separate bootstrap/data tasks remain explicit operator actions.
-railway run python manage.py create_admin
-railway run python manage.py seed_rbac
-railway run python manage.py seed_data
-```### Step 7: Implementation of the admin panel
+The one-shot migration process runs:
+
+```bash
+python manage.py migrate --no-input
+```
+
+Only after that process exits successfully should the backend revision be rolled out/scaled. Separate bootstrap/data tasks such as `create_admin`, `seed_rbac`, and `seed_data` remain explicit operator actions and must use credentials appropriate to their scope.
+
+> Repository CI proves the fail-closed startup and the Home Lab/Kubernetes one-shot model. Provisioning and verifying the separately scoped Railway migration execution context is an environment prerequisite and must be completed before a migration-bearing Railway rollout.### Step 7: Implementation of the admin panel
 
 1. In the Railway Dashboard, add a new service
 2. Select **"Deploy from GitHub repo"**
