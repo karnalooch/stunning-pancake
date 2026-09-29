@@ -368,6 +368,10 @@ if (-not $ToolchainOnly) {
   }
 }
 
+$reverseEvidenceSafe = @($reverseEvidence | ForEach-Object {
+  if ($selectedDevice) { $_.Replace($selectedDevice, "<device>") } else { $_ }
+})
+
 if (-not $OutputPath) {
   $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
   $shortSha = $gitSha.Substring(0, 12)
@@ -397,7 +401,7 @@ $provenance = [ordered]@{
   }
   ports = $portEvidence
   device = $deviceEvidence
-  adbReverse = $reverseEvidence
+  adbReverse = $reverseEvidenceSafe
   modes = [ordered]@{
     toolchainOnly = [bool]$ToolchainOnly
     requirePilotReverse = [bool]$RequirePilotReverse
