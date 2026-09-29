@@ -120,7 +120,7 @@ export const ActiveRideHUDScreen: React.FC<Props> = ({
 
   return (
     <View testID="active-ride-screen" style={s.container}>
-      <View style={s.mapLayer}>
+      <View testID="active-ride-map" style={s.mapLayer}>
         <RideMapView
           userCoordinate={liveCoord}
           cyclistState={cyclistState}
@@ -139,7 +139,9 @@ export const ActiveRideHUDScreen: React.FC<Props> = ({
             busy={gpsRecoveryBusy}
             onPress={() => onGpsRecoveryPress?.()}
           />
-          <DataFieldGrid metrics={metrics} hudMode />
+          <View testID="active-ride-metrics">
+            <DataFieldGrid metrics={metrics} hudMode />
+          </View>
         </View>
         <View style={s.bottom}>
           <RideActionBar
