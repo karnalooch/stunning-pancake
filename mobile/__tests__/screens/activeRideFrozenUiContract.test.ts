@@ -40,8 +40,8 @@ describe('Frozen UI v1.2 Active Ride contract', () => {
     expect(actions).toContain('const STOP_HOLD_MS = 900');
     expect(actions).toContain('onPressIn={startStopHold}');
     expect(actions).toContain('onPressOut={clearStopTimer}');
-    expect(actions).toContain('testID="ride-stop-button"');
-    expect(actions).toContain('testID="ride-pause-button"');
+    expect(actions).toContain("pauseTestID = 'ride-pause-button'");
+    expect(actions).toContain("stopTestID = 'ride-stop-button'");
     expect(actions).toContain('minHeight: 56');
   });
 
