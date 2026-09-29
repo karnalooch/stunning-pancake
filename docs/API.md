@@ -429,6 +429,14 @@ Content-Type: application/json
 }
 ```
 
+### Canonical B2B billing boundary
+
+B2B billing authority lives under `/api/rewards/stripe/b2b/`. It is **disabled by default** and requires `STRIPE_B2B_BILLING_ENABLED=1`, valid server-side Stripe configuration, and `TENANT_ADMIN` or `GLOBAL_OWNER` authorization. Tenant admins are bound to their own tenant; a global owner may target only an existing active tenant.
+
+Billing redirect URLs are server-owned through `FRONTEND_URL`; clients do not supply trusted checkout redirects. Missing Stripe configuration returns service unavailable rather than a mock-success URL.
+
+The legacy `/api/activities/payments/*` surface is B2C compatibility only and is not the B2B authority.
+
 ---
 
 ## 📡 Infrastructure Health

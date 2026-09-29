@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import logging
 
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import serializers, status
@@ -27,7 +27,8 @@ from rest_framework.response import Response
 from rewards.models import Sponsor, SponsorCampaign, Voucher, VoucherPool
 from rewards.services import RewardsService
 from rewards.stripe_service import StripeService
-from users.permissions import IsGlobalOwner
+from users.models import Tenant
+from users.permissions import IsGlobalOwner, IsTenantAdmin
 
 logger = logging.getLogger(__name__)
 
@@ -227,8 +228,6 @@ def stripe_b2c_checkout_view(request: Request) -> Response:
     url = StripeService.create_b2c_checkout(
         user_id=request.user.pk,
         email=request.user.email,
-        success_url=request.data.get("success_url", ""),
-        cancel_url=request.data.get("cancel_url", ""),
     )
     if not url:
         return Response(
@@ -237,18 +236,53 @@ def stripe_b2c_checkout_view(request: Request) -> Response:
     return Response({"checkout_url": url})
 
 
+def _authoritative_b2b_tenant_id(request: Request) -> str | None:
+    role = getattr(request.user, "role", None)
+    if role == "TENANT_ADMIN":
+        tenant_id = getattr(request.user, "tenant_id", None)
+        return str(tenant_id) if tenant_id else None
+
+    if role != "GLOBAL_OWNER":
+        return None
+
+    requested = str(request.data.get("tenant_id", "")).strip()
+    if not requested:
+        return None
+    try:
+        tenant = Tenant.objects.only("id").get(pk=requested, is_active=True)
+    except (Tenant.DoesNotExist, ValidationError, ValueError):
+        return None
+    return str(tenant.pk)
+
+
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsTenantAdmin])
 def stripe_b2b_checkout_view(request: Request) -> Response:
-    """Creates a Stripe Checkout session for a B2B corporate plan."""
-    tenant_id = request.data.get("tenant_id", "")
-    seats = int(request.data.get("seats", 1))
+    """Creates a B2B checkout only for an authoritative tenant context."""
+    if not StripeService.b2b_available():
+        return Response(
+            {"error": "B2B billing unavailable."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    tenant_id = _authoritative_b2b_tenant_id(request)
+    if not tenant_id:
+        return Response(
+            {"error": "Authorized tenant context required."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    try:
+        seats = int(request.data.get("seats", 1))
+    except (TypeError, ValueError):
+        return Response({"error": "Invalid seat count."}, status=status.HTTP_400_BAD_REQUEST)
+    if not 1 <= seats <= 10000:
+        return Response({"error": "Invalid seat count."}, status=status.HTTP_400_BAD_REQUEST)
+
     url = StripeService.create_b2b_checkout(
         tenant_id=tenant_id,
         email=request.user.email,
         seats=seats,
-        success_url=request.data.get("success_url", ""),
-        cancel_url=request.data.get("cancel_url", ""),
     )
     if not url:
         return Response(
@@ -264,10 +298,12 @@ def stripe_portal_view(request: Request) -> Response:
     stripe_customer_id = getattr(request.user, "stripe_customer_id", None)
     if not stripe_customer_id:
         return Response({"error": "No billing account found."}, status=status.HTTP_404_NOT_FOUND)
-    url = StripeService.create_customer_portal(
-        stripe_customer_id=stripe_customer_id,
-        return_url=request.data.get("return_url", "/"),
-    )
+    url = StripeService.create_customer_portal(stripe_customer_id=stripe_customer_id)
+    if not url:
+        return Response(
+            {"error": "Billing portal unavailable."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
     return Response({"portal_url": url})
 
 
@@ -275,9 +311,11 @@ def stripe_portal_view(request: Request) -> Response:
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def stripe_webhook_view(request: Request) -> Response:
-    """Stripe webhook receiver — validates signature and processes events."""
+    """Stripe webhook receiver — validates signature and fails closed when unconfigured."""
     sig = request.META.get("HTTP_STRIPE_SIGNATURE", "")
     result = StripeService.handle_webhook(request.body, sig)
+    if result.get("status") == "unavailable":
+        return Response(result, status=status.HTTP_503_SERVICE_UNAVAILABLE)
     if result.get("status") == "invalid_signature":
         return Response(result, status=status.HTTP_400_BAD_REQUEST)
     return Response(result)
@@ -412,6 +450,8 @@ def platform_revenue_summary_view(request: Request) -> Response:
             "premium_users": premium_count,
             "active_sponsors": sponsor_count,
             "mrr_estimate_usd": premium_count * 9.99,
-            "stripe_webhook_status": "configured",
+            "stripe_webhook_status": (
+                "configured" if StripeService.webhook_available() else "unavailable"
+            ),
         }
     )

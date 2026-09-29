@@ -297,32 +297,39 @@ GEOS_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/libgeos_c.so
 
 ## 💳 Stripe Integration
 
+Stripe działa fail-closed. Pusta lub niepełna konfiguracja oznacza niedostępny checkout/webhook; backend nigdy nie zwraca udawanych „mock success” URL-i płatności.
+
 ### Konfiguracja
 
 ```bash
-# Klucz API Stripe (płatności)
-STRIPE_SECRET_KEY=sk_test_...
+# Wymagany dla każdego wywołania Stripe API.
+STRIPE_SECRET_KEY=
 
-# Webhook secret (weryfikacja zdarzeń)
-STRIPE_WEBHOOK_SECRET=whsec_...
+# Wymagany do podpisanego webhooka.
+STRIPE_WEBHOOK_SECRET=
+
+# Opcjonalna cena subskrypcji B2C.
+STRIPE_B2C_PRICE_ID=
+
+# B2B jest wyłączone, dopóki jawnie nie podniesiemy tej bramy launch.
+STRIPE_B2B_BILLING_ENABLED=0
+STRIPE_B2B_PRICE_ID=
+
+# Serwerowe redirecty checkout/portal. Klient nie wybiera redirectów billingowych.
+FRONTEND_URL=https://admin.example.com
 ```
 
-### Endpointy Stripe
+### Authority
 
-| Endpoint | Metoda | Opis |
-|----------|--------|------|
-| `/api/activities/payments/checkout/` | POST | Utworzenie sesji checkout |
-| `/api/activities/payments/webhook/` | POST | Webhook Stripe (eventy) |
+| Surface | Authority |
+|----------|-----------|
+| `/api/rewards/stripe/b2b/` | Kanoniczny B2B checkout. Wymaga TENANT_ADMIN/GLOBAL_OWNER i autorytatywnego scope tenant. |
+| `/api/rewards/stripe/b2c/` | Rewards B2C checkout; fail-closed bez Stripe/B2C price. |
+| `/api/rewards/stripe/portal/` | Portal Stripe własnego zalogowanego użytkownika. |
+| `/api/rewards/stripe/webhook/` | Podpisany rewards webhook; niedostępny bez webhook secret. |
+| `/api/activities/payments/*` | Legacy compatibility B2C; nie jest authority dla B2B. |
 
-### Payouts dla sponsorów
-
-```python
-# Tenant - konto Stripe Connect
-stripe_account_id = models.CharField(max_length=100, null=True, blank=True)
-
-# User - konto Stripe Connect
-stripe_connect_id = models.CharField(max_length=100, null=True, blank=True)
-```
+Nigdy nie umieszczaj sekretów Stripe w kliencie ani zmiennych `EXPO_PUBLIC_*`.
 
 ---
 

@@ -356,7 +356,17 @@ Content-Type: application/json
   "session_id": "cs_test_xxx",
   "url": "https://checkout.stripe.com/pay/cs_test_xxx"
 }
-```---
+```
+
+### Kanoniczna granica billing B2B
+
+Authority dla B2B znajduje się pod `/api/rewards/stripe/b2b/`. Endpoint jest **domyślnie wyłączony** i wymaga `STRIPE_B2B_BILLING_ENABLED=1`, kompletnej serwerowej konfiguracji Stripe oraz roli `TENANT_ADMIN` albo `GLOBAL_OWNER`. Tenant admin jest zawsze przypięty do własnego tenantu, a global owner może wskazać tylko istniejący aktywny tenant.
+
+Redirecty checkout/portal pochodzą z serwerowego `FRONTEND_URL`; klient nie wybiera zaufanych redirectów billingowych. Brak konfiguracji Stripe zwraca niedostępność usługi, nigdy mock-success URL.
+
+Legacy `/api/activities/payments/*` pozostaje wyłącznie compatibility B2C i nie jest authority dla B2B.
+
+---
 
 ## 📡 Zdrowie infrastruktury
 

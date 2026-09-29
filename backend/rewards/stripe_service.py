@@ -1,19 +1,4 @@
-"""
-Stripe Subscription Service (Milestone 4)
-==========================================
-Constitution §18: Financial and Social Ecosystem
-
-Handles:
-- B2C Freemium → Premium subscription checkout.
-- B2B Corporate plan management via Stripe Customer Portal.
-- Webhook processing for subscription lifecycle events.
-
-Env vars required:
-    STRIPE_SECRET_KEY    — sk_live_... or sk_test_...
-    STRIPE_WEBHOOK_SECRET — whsec_... (from Stripe Dashboard)
-    STRIPE_B2C_PRICE_ID  — Price ID for individual Premium plan
-    STRIPE_B2B_PRICE_ID  — Price ID for corporate seat plan
-"""
+"""Fail-closed Stripe boundary for rewards and B2B billing."""
 
 from __future__ import annotations
 
@@ -24,50 +9,69 @@ import stripe
 
 logger = logging.getLogger(__name__)
 
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY") or None
-WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
-B2C_PRICE_ID = os.getenv("STRIPE_B2C_PRICE_ID", "")
-B2B_PRICE_ID = os.getenv("STRIPE_B2B_PRICE_ID", "")
 
-_IS_CONFIGURED = bool(stripe.api_key)
+def _env(name: str) -> str:
+    return os.getenv(name, "").strip()
+
+
+def _truthy(name: str) -> bool:
+    return _env(name).lower() in {"1", "true", "yes", "on"}
+
+
+def _configure_api_key() -> bool:
+    key = _env("STRIPE_SECRET_KEY")
+    stripe.api_key = key or None
+    return bool(key)
+
+
+def _frontend_base_url() -> str | None:
+    value = _env("FRONTEND_URL").rstrip("/")
+    if value.startswith(("https://", "http://")):
+        return value
+    return None
 
 
 class StripeService:
-    """
-    Wrapper for Stripe API operations.
-
-    All methods degrade gracefully when STRIPE_SECRET_KEY is not configured
-    (returns None/False), ensuring tests and local dev are unaffected.
-    """
+    """Stripe operations with explicit configuration and no mock-success paths."""
 
     @classmethod
-    def create_b2c_checkout(
-        cls, user_id: int, email: str, success_url: str, cancel_url: str
-    ) -> str | None:
-        """
-        Creates a Stripe Checkout Session for B2C Premium subscription.
+    def b2c_available(cls) -> bool:
+        return (
+            _configure_api_key()
+            and bool(_env("STRIPE_B2C_PRICE_ID"))
+            and _frontend_base_url() is not None
+        )
 
-        Args:
-            user_id: Django User PK (stored as metadata for webhook processing).
-            email: User's email address.
-            success_url: Redirect URL on payment success.
-            cancel_url: Redirect URL on payment cancel.
+    @classmethod
+    def b2b_available(cls) -> bool:
+        return (
+            _truthy("STRIPE_B2B_BILLING_ENABLED")
+            and _configure_api_key()
+            and bool(_env("STRIPE_B2B_PRICE_ID"))
+            and _frontend_base_url() is not None
+        )
 
-        Returns:
-            Checkout Session URL, or None if Stripe is not configured.
-        """
-        if not _IS_CONFIGURED:
-            logger.debug("stripe: not configured — returning mock checkout URL")
-            return f"{success_url}?mock=1"
+    @classmethod
+    def webhook_available(cls) -> bool:
+        return bool(_env("STRIPE_WEBHOOK_SECRET"))
 
+    @classmethod
+    def create_b2c_checkout(cls, user_id: int, email: str) -> str | None:
+        if not cls.b2c_available():
+            logger.warning("stripe.b2c_unavailable")
+            return None
+
+        base = _frontend_base_url()
+        price_id = _env("STRIPE_B2C_PRICE_ID")
+        assert base is not None
         try:
             session = stripe.checkout.Session.create(
                 customer_email=email,
                 payment_method_types=["card"],
-                line_items=[{"price": B2C_PRICE_ID, "quantity": 1}],
+                line_items=[{"price": price_id, "quantity": 1}],
                 mode="subscription",
-                success_url=success_url + "?session_id={CHECKOUT_SESSION_ID}",
-                cancel_url=cancel_url,
+                success_url=base + "/success?session_id={CHECKOUT_SESSION_ID}",
+                cancel_url=base + "/cancel",
                 metadata={"user_id": str(user_id), "plan": "B2C_PREMIUM"},
             )
             logger.info("stripe.checkout_created user=%d session=%s", user_id, session.id)
@@ -77,80 +81,60 @@ class StripeService:
             return None
 
     @classmethod
-    def create_b2b_checkout(
-        cls, tenant_id: str, email: str, seats: int, success_url: str, cancel_url: str
-    ) -> str | None:
-        """
-        Creates a Stripe Checkout Session for B2B corporate subscription.
+    def create_b2b_checkout(cls, tenant_id: str, email: str, seats: int) -> str | None:
+        if not cls.b2b_available():
+            logger.warning("stripe.b2b_unavailable")
+            return None
 
-        Args:
-            tenant_id: The corporate tenant identifier.
-            email: Billing contact email.
-            seats: Number of seats to purchase.
-            success_url: Redirect on success.
-            cancel_url: Redirect on cancel.
-
-        Returns:
-            Checkout Session URL, or None on failure.
-        """
-        if not _IS_CONFIGURED:
-            return f"{success_url}?mock=1"
-
+        base = _frontend_base_url()
+        price_id = _env("STRIPE_B2B_PRICE_ID")
+        assert base is not None
         try:
             session = stripe.checkout.Session.create(
                 customer_email=email,
                 payment_method_types=["card"],
-                line_items=[{"price": B2B_PRICE_ID, "quantity": seats}],
+                line_items=[{"price": price_id, "quantity": seats}],
                 mode="subscription",
-                success_url=success_url + "?session_id={CHECKOUT_SESSION_ID}",
-                cancel_url=cancel_url,
+                success_url=base + "/success?session_id={CHECKOUT_SESSION_ID}",
+                cancel_url=base + "/cancel",
                 metadata={"tenant_id": tenant_id, "plan": "B2B_CORPORATE", "seats": str(seats)},
             )
-            logger.info("stripe.b2b_checkout_created seats=%d", seats)
+            logger.info("stripe.b2b_checkout_created tenant=%s seats=%d", tenant_id, seats)
             return session.url
         except stripe.StripeError:
-            logger.exception("stripe.b2b_checkout_error")
+            logger.exception("stripe.b2b_checkout_error tenant=%s", tenant_id)
             return None
 
     @classmethod
-    def create_customer_portal(cls, stripe_customer_id: str, return_url: str) -> str | None:
-        """
-        Creates a Stripe Customer Portal session for self-service billing management.
-
-        Args:
-            stripe_customer_id: Stripe Customer ID (cus_xxx).
-            return_url: URL to redirect to after portal session.
-
-        Returns:
-            Portal Session URL, or None on failure.
-        """
-        if not _IS_CONFIGURED:
-            return return_url
+    def create_customer_portal(cls, stripe_customer_id: str) -> str | None:
+        if not _configure_api_key():
+            logger.warning("stripe.portal_unavailable")
+            return None
+        base = _frontend_base_url()
+        if base is None:
+            logger.warning("stripe.portal_frontend_unavailable")
+            return None
 
         try:
             session = stripe.billing_portal.Session.create(
                 customer=stripe_customer_id,
-                return_url=return_url,
+                return_url=base,
             )
             return session.url
         except stripe.StripeError as exc:
             logger.error("stripe.portal_error customer=%s err=%s", stripe_customer_id, exc)
             return None
 
-    # --- STRIPE CONNECT (Milestone 4: Multi-Sponsor Payouts) ---
-
     @classmethod
     def create_connect_account(
         cls, user_id: int, email: str, refresh_url: str, return_url: str
     ) -> dict | None:
-        """
-        Creates a Stripe Express account and an onboarding link for an athlete.
-        """
-        if not _IS_CONFIGURED:
-            return {"url": f"{return_url}?mock=1", "account_id": "acct_mock"}
+        """Create a Stripe Express account. Never synthesize a success when disabled."""
+        if not _configure_api_key():
+            logger.warning("stripe.connect_unavailable")
+            return None
 
         try:
-            # 1. Create the Express account
             account = stripe.Account.create(
                 type="express",
                 email=email,
@@ -160,15 +144,12 @@ class StripeService:
                 },
                 metadata={"user_id": str(user_id)},
             )
-
-            # 2. Create an Account Link for onboarding
             account_link = stripe.AccountLink.create(
                 account=account.id,
                 refresh_url=refresh_url,
                 return_url=return_url,
                 type="account_onboarding",
             )
-
             return {"url": account_link.url, "account_id": account.id}
         except stripe.StripeError as exc:
             logger.error("stripe.connect_error user=%d err=%s", user_id, exc)
@@ -178,12 +159,10 @@ class StripeService:
     def create_transfer(
         cls, amount_cents: int, destination_acct: str, description: str = "Reward payout"
     ) -> str | None:
-        """
-        Transfers funds from the platform to a connected athlete account.
-        """
-        if not _IS_CONFIGURED:
-            logger.info("stripe.transfer_mock amount=%d to=%s", amount_cents, destination_acct)
-            return "tr_mock_123"
+        """Create a payout transfer. Never return a fake transfer identifier."""
+        if not _configure_api_key():
+            logger.warning("stripe.transfer_unavailable")
+            return None
 
         try:
             transfer = stripe.Transfer.create(
@@ -199,22 +178,13 @@ class StripeService:
 
     @classmethod
     def handle_webhook(cls, payload: bytes, sig_header: str) -> dict:
-        """
-        Validates and processes a Stripe webhook event.
+        secret = _env("STRIPE_WEBHOOK_SECRET")
+        if not secret:
+            logger.error("stripe.webhook_unavailable")
+            return {"status": "unavailable"}
 
-        Handles:
-        - `checkout.session.completed` → activate subscription.
-        - `customer.subscription.deleted` → downgrade to free tier.
-
-        Args:
-            payload: Raw request body bytes.
-            sig_header: Value of Stripe-Signature HTTP header.
-
-        Returns:
-            dict with 'status' and optional 'event_type'.
-        """
         try:
-            event = stripe.Webhook.construct_event(payload, sig_header, WEBHOOK_SECRET)
+            event = stripe.Webhook.construct_event(payload, sig_header, secret)
         except (stripe.SignatureVerificationError, ValueError) as exc:
             logger.error("stripe.webhook_invalid err=%s", exc)
             return {"status": "invalid_signature"}
@@ -231,16 +201,10 @@ class StripeService:
                 cls._activate_user_subscription(int(user_id), data.get("subscription"))
             elif tenant_id:
                 cls._activate_tenant_subscription(tenant_id, data.get("subscription"))
-
         elif etype == "customer.subscription.deleted":
-            customer_id = data.get("customer")
-            cls._deactivate_subscription(customer_id)
+            cls._deactivate_subscription(data.get("customer"))
 
         return {"status": "ok", "event_type": etype}
-
-    # -------------------------------------------------------------------------
-    # Internal helpers
-    # -------------------------------------------------------------------------
 
     @classmethod
     def _activate_user_subscription(cls, user_id: int, subscription_id: str | None) -> None:
@@ -252,10 +216,9 @@ class StripeService:
 
     @classmethod
     def _activate_tenant_subscription(cls, tenant_id: str, subscription_id: str | None) -> None:
-        # Hook for future TenantConfig model
+        # Billing remains disabled by default until tenant subscription persistence is implemented.
         logger.info("stripe.tenant_activated tenant=%s sub=%s", tenant_id, subscription_id)
 
     @classmethod
     def _deactivate_subscription(cls, customer_id: str | None) -> None:
         logger.info("stripe.subscription_cancelled customer=%s", customer_id)
-        # Hook: set is_premium=False for user with matching stripe_customer_id

@@ -61,12 +61,18 @@ class TestExternalIntegrations:
         assert mock_post.called
 
     @patch("stripe.checkout.Session.create")
-    def test_stripe_checkout_session(self, mock_stripe, db):
+    def test_stripe_checkout_session(self, mock_stripe, db, monkeypatch):
         mock_stripe.return_value.url = "https://checkout.stripe.com/test"
+        monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_123")
+        monkeypatch.setenv("STRIPE_B2C_PRICE_ID", "price_test")
+        monkeypatch.setenv("FRONTEND_URL", "https://admin.example.com")
 
-        url = StripeService.create_b2c_checkout("athlete-123", "success-url", "cancel-url")
+        url = StripeService.create_b2c_checkout(123, "athlete@example.com")
+
         assert urlparse(url).hostname == "checkout.stripe.com"
         assert mock_stripe.called
+        kwargs = mock_stripe.call_args.kwargs
+        assert kwargs["success_url"].startswith("https://admin.example.com/")
 
 
 # ---------------------------------------------------------------------------

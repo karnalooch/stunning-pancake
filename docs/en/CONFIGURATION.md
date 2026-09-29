@@ -247,26 +247,41 @@ GEOS_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/libgeos_c.so
 
 ## 💳 Stripe Integration
 
-### Configuration```bash
-# Klucz API Stripe (płatności)
-STRIPE_SECRET_KEY=sk_test_...
+Stripe is fail-closed. Empty or incomplete configuration makes checkout/webhook operations unavailable; the backend never returns mock-success billing URLs.
 
-# Webhook secret (weryfikacja zdarzeń)
-STRIPE_WEBHOOK_SECRET=whsec_...
-```### Stripe Endpoints
+### Configuration
 
-| Endpoint | Method | Description |
-|----------|--------|------|
-| `/api/activities/payments/checkout/` | POST | Creating a checkout session |
-| `/api/activities/payments/webhook/` | POST | Stripe webhook (events) |
+```bash
+# Required for any Stripe API call.
+STRIPE_SECRET_KEY=
 
-### Payouts for sponsors```python
-# Tenant - konto Stripe Connect
-stripe_account_id = models.CharField(max_length=100, null=True, blank=True)
+# Required for signed webhook processing.
+STRIPE_WEBHOOK_SECRET=
 
-# User - konto Stripe Connect
-stripe_connect_id = models.CharField(max_length=100, null=True, blank=True)
-```---
+# Optional B2C subscription price.
+STRIPE_B2C_PRICE_ID=
+
+# B2B is disabled unless this explicit launch fence is enabled.
+STRIPE_B2B_BILLING_ENABLED=0
+STRIPE_B2B_PRICE_ID=
+
+# Server-owned checkout/portal redirects. Clients do not choose billing redirects.
+FRONTEND_URL=https://admin.example.com
+```
+
+### Authority
+
+| Surface | Authority |
+|----------|-----------|
+| `/api/rewards/stripe/b2b/` | Canonical B2B checkout. Requires TENANT_ADMIN/GLOBAL_OWNER and authoritative tenant scope. |
+| `/api/rewards/stripe/b2c/` | Rewards B2C checkout; fail-closed when Stripe/B2C price is missing. |
+| `/api/rewards/stripe/portal/` | Authenticated user's own Stripe customer portal. |
+| `/api/rewards/stripe/webhook/` | Signed rewards webhook; unavailable without webhook secret. |
+| `/api/activities/payments/*` | Legacy B2C compatibility surface; not B2B authority. |
+
+Never put Stripe secrets in client-side or `EXPO_PUBLIC_*` variables.
+
+---
 
 ## 📧 Email (SendGrid) Setup
 
