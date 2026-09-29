@@ -93,6 +93,7 @@ Every external command is bounded by `-TimeoutSeconds` (default 15 s). Successfu
 Before any runtime acceptance or Maestro session, run the strict preflight again if SDK/JDK/ADB/device/ports changed since the last proof.
 
 ---
+
 ## Environment variables (names only)
 
 | Variable | Purpose |
