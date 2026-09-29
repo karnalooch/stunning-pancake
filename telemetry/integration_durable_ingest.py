@@ -117,7 +117,7 @@ async def _cleanup() -> None:
         )
 
 
-@pytest_asyncio.fixture(scope="module", autouse=True)
+@pytest_asyncio.fixture(autouse=True)
 async def real_dependencies():
     assert os.environ.get("TELEMETRY_INGEST_JWT_REQUIRED") == "1"
     assert os.environ.get("TELEMETRY_INGEST_AUDIENCE_REQUIRED") == "1"
