@@ -5,24 +5,17 @@
  * routine result data and actions use modern product chrome.
  */
 
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Image, View, Text, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import * as Haptics from 'expo-haptics';
 
-import { ShareResultCard } from '../components/game/ShareResultCard';
 import {
   Metric,
   PrimaryButton,
   ProductCard,
 } from '../components/product';
-import {
-  computeRideRank,
-  formatElapsed,
-  rankDisplayName,
-  estimateXpGain,
-} from '../game/ranks';
 import { useI18n } from '../i18n/useI18n';
 import { APPROVED_ASSETS } from '../assets/approvedAssets';
 import { getSemanticColors } from '../theme/semantic';
@@ -31,6 +24,16 @@ import {
   isDurableRideSuccess,
   type RideFinishState,
 } from '../features/ride/model/RideFinishState';
+
+function formatElapsed(seconds: number): string {
+  const totalSeconds = Math.max(0, Math.round(seconds));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const secs = totalSeconds % 60;
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+    : `${minutes}:${String(secs).padStart(2, '0')}`;
+}
 
 const stylesheet = StyleSheet.create((theme) => {
   const semantic = getSemanticColors(theme.colors);
@@ -87,40 +90,6 @@ const stylesheet = StyleSheet.create((theme) => {
       ...PRODUCT_TYPOGRAPHY.displayEditorial,
       color: semantic.text.primary,
     },
-    rankRow: {
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      justifyContent: 'space-between' as const,
-      gap: 16,
-    },
-    rankCopy: {
-      flex: 1,
-      gap: 4,
-    },
-    rankLabel: {
-      ...PRODUCT_TYPOGRAPHY.metricLabel,
-      color: semantic.text.secondary,
-      textTransform: 'uppercase' as const,
-      letterSpacing: 0.5,
-    },
-    rankName: {
-      ...PRODUCT_TYPOGRAPHY.title,
-      color: semantic.text.primary,
-    },
-    rankBadge: {
-      minWidth: 64,
-      minHeight: 64,
-      borderRadius: 18,
-      borderWidth: 1,
-      borderColor: semantic.selection.border,
-      backgroundColor: semantic.selection.background,
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
-    },
-    rankLetter: {
-      ...PRODUCT_TYPOGRAPHY.displayEditorial,
-      color: semantic.selection.content,
-    },
     metricsRow: {
       flexDirection: 'row' as const,
       justifyContent: 'space-between' as const,
@@ -163,7 +132,6 @@ interface RideSummaryScreenProps {
 
 export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
   finishState,
-  username = 'RIDER',
   onShare,
   onBackToHub,
 }) => {
@@ -174,9 +142,7 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
   const elapsedSeconds = summary?.elapsedS ?? 0;
   const elevation = summary?.elevationGainM ?? 0;
   const durableSuccess = isDurableRideSuccess(finishState);
-  const rank = useMemo(() => computeRideRank(distance, elevation), [distance, elevation]);
   const timeLabel = formatElapsed(elapsedSeconds);
-  const xpGained = estimateXpGain(distance, elapsedSeconds / 60);
 
   useEffect(() => {
     if (!durableSuccess) return;
@@ -215,18 +181,6 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
               <Text style={s.successTitle}>{distance.toFixed(1)} km</Text>
             </View>
 
-            <ProductCard variant="raised" testID="ride-summary-rank-card">
-              <View style={s.rankRow}>
-                <View style={s.rankCopy}>
-                  <Text style={s.rankLabel}>{t.share.rank}</Text>
-                  <Text style={s.rankName}>{rankDisplayName(rank)}</Text>
-                </View>
-                <View style={s.rankBadge}>
-                  <Text style={s.rankLetter}>{rank}</Text>
-                </View>
-              </View>
-            </ProductCard>
-
             <ProductCard testID="ride-summary-metrics">
               <View style={s.metricsRow}>
                 <View style={s.metricCell}>
@@ -252,15 +206,6 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
                 </View>
               </View>
             </ProductCard>
-
-            <ShareResultCard
-              distanceKm={distance}
-              timeLabel={timeLabel}
-              elevationM={elevation}
-              rank={rank}
-              xpGained={xpGained}
-              username={username}
-            />
 
             <View style={s.actions}>
               <PrimaryButton
