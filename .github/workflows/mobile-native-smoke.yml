@@ -3,8 +3,8 @@ run-name: Mobile Native Smoke ${{ inputs.gumball_request_id || github.event.pull
 
 on:
   pull_request:
-    # Keep the workflow visible for mobile/workspace PRs, but let the cheap
-    # native-scope job decide whether a full Android rebuild is warranted.
+    # Keep the workflow visible for mobile/workspace PRs; the cheap
+    # native-scope job records whether an explicit Android proof may be warranted.
     paths:
       - "mobile/**"
       - "packages/**"
@@ -19,31 +19,6 @@ on:
       - "scripts/mobile-runtime-acceptance.ps1"
       - "scripts/test_mobile_harness_contract.py"
       - "scripts/test_mobile_native_smoke_workflow.py"
-      - ".github/workflows/mobile-native-smoke.yml"
-  push:
-    branches: [main]
-    # On main, run the expensive smoke only when native inputs changed.
-    paths:
-      - "mobile/app.config.js"
-      - "mobile/app.json"
-      - "mobile/eas.json"
-      - "mobile/package.json"
-      - "mobile/android/**"
-      - "mobile/ios/**"
-      - "mobile/plugins/**"
-      - "mobile/google-services.json"
-      - "mobile/GoogleService-Info.plist"
-      - "mobile/assets/icon.png"
-      - "mobile/assets/splash-icon.png"
-      - "mobile/assets/adaptive-icon.png"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - ".npmrc"
-      - ".github/actions/pnpm-setup/**"
-      - "version.json"
-      - "scripts/validate_mobile_native_provenance.py"
-      - "scripts/test_mobile_native_provenance.py"
       - ".github/workflows/mobile-native-smoke.yml"
   workflow_call:
     inputs:
