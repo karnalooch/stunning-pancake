@@ -82,7 +82,7 @@ These retain their original IDs. Only statuses/notes below are refreshed where l
 | T03 | Tenant destructive simulator authority | DONE | PR #65 |
 | T04 | Tenant moderator privilege review | DONE | PR #68 |
 | T05 | Telemetry auth (HTTP + WS / activity-scoped token) | DONE | PR #89 |
-| T06 | Telemetry read/privacy isolation | PLANNED | Still separate from ingest auth. |
+| T06 | Telemetry read/privacy isolation | ACTIVE | #366 / PR #367 makes authenticated Django SSE/HTTP/replay the production read authority, retires legacy direct FastAPI raw reads/browser WS and adds a route-surface regression contract. Required telemetry/admin/Aggregate CI evidence remains before DONE. |
 | T07 | MFA mandatory for administrators | DONE | PR #69 |
 | T08 | OAuth state enforcement + provider binding | DONE | PR #70 |
 | T09 | Tenant webhook admin / SSRF | DONE | PR #71 |
@@ -91,7 +91,7 @@ These retain their original IDs. Only statuses/notes below are refreshed where l
 | T12 | B2B billing isolate or disable | PLANNED | Outside core pilot unless endpoint is active; active endpoint must fail closed. |
 | T13 | Telemetry packet/batch contract validation | DONE | PR #95 |
 | T14 | Telemetry durable ACK lifecycle | DONE | PR #95; pilot mode qualification strengthened by T62. |
-| T15 | Telemetry multi-worker broadcast via Redis | PLANNED | Not required for pilot direct-DB ACK path. |
+| T15 | Telemetry multi-worker broadcast via Redis | NOT REQUIRED | T06 / #367 retires the only FastAPI live-read WebSocket consumer and keeps authenticated Django SSE/HTTP/replay as read authority. Cross-worker FastAPI fanout has no current consumer; reopen only if a FastAPI live subscriber surface is deliberately reintroduced. Remaining inert broadcaster code is cleanup debt, not a release requirement. |
 | T16 | Mobile telemetry bearer + WS auth | DONE | PR #89 |
 | T17 | Backend startup migrations out of replica | PLANNED | Needed for mature operations / P5 path. |
 | T18 | Telemetry schema out of worker startup | PLANNED | Depends on operational rollout design. |

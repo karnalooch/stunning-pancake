@@ -238,7 +238,7 @@ Aby uzyskać szczegółowe informacje na temat wydajnego paginacji, integracji �
 | `liveMapLayers.ts` | Klastry, ikony, etykiety, huby miast (symbol/kółko) |
 | `liveMapZoom.ts` | Stopień powiększenia + `szczegóły=podsumowanie\|standard\|pełny` |
 | `liveMapHealth.ts` / `liveMapPoll.ts` / `LiveMapStatusBar.tsx` | Synchronizacja stanu, odpytywanie SLO, zdegradowany UX |
-| `liveMapStream.ts` / `liveMapWs.ts` | SSE + opcjonalna telemetria WS |
+| `liveMapStream.ts` | Uwierzytelniony Django SSE; bezpośredni FastAPI WS wycofany w T06 |
 | `liveMapRing.ts` / `liveMapPolyline.ts` | Pierścień 3 pkt + interpolacja po polilinii |
 | `liveMapViewport.ts` | Klawisz rzutni, nieaktualne-puste po powiększaniu/przesuwaniu |
 | `liveMapMarkers.ts` | Typowe pozycje, `resolveActivityKind`, wyskakujące okienka pomocnicze |

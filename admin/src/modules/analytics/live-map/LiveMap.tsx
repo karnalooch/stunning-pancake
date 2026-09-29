@@ -51,7 +51,6 @@ import {
     resolveLiveMapPollDelayWithStream,
 } from './engine/liveMapPoll';
 import { connectLiveMapSse, parseStreamIntervalMs } from './engine/liveMapStream';
-import { connectLiveMapWs } from './engine/liveMapWs';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { apiClient, TelemetryApi } from '../../../api/client';
 import { isExpectedSimulatorConflict } from '../../../api/simulatorConflict';
@@ -196,7 +195,6 @@ export const LiveMap: React.FC = () => {
     const lastMesoReclusterZoomRef = useRef<number | null>(null);
     const scheduleStreamRestartRef = useRef<() => void>(() => { /* bound after scheduleStreamRestart */ });
     const streamAbortRef = useRef<AbortController | null>(null);
-    const wsDisconnectRef = useRef<(() => void) | null>(null);
     const streamIntervalMsRef = useRef(350);
     const lastStreamAtRef = useRef<number | null>(null);
     const [sseActive, setSseActive] = useState(false);
@@ -1265,8 +1263,6 @@ export const LiveMap: React.FC = () => {
     const stopTelemetryStream = useCallback(() => {
         streamAbortRef.current?.abort();
         streamAbortRef.current = null;
-        wsDisconnectRef.current?.();
-        wsDisconnectRef.current = null;
         lastStreamAtRef.current = null;
         setSseActive(false);
     }, []);
@@ -1298,10 +1294,6 @@ export const LiveMap: React.FC = () => {
             onError: () => setSseActive(false),
         });
 
-        wsDisconnectRef.current = connectLiveMapWs(
-            (pos) => interpolatorRef.current?.pushDelta(pos),
-            () => { /* WS optional — SSE is primary */ },
-        );
     }, [canFetch, mapReady, applyStreamSnapshot, stopTelemetryStream]);
 
     const scheduleStreamRestart = useCallback(() => {
