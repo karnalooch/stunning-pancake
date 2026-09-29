@@ -198,6 +198,39 @@ class FullReleaseLaneContractTests(unittest.TestCase):
         self.assertIn("pnpm --dir mobile test --ci", baseline)
         self.assertNotIn("pnpm --dir mobile test -- --ci", baseline)
 
+    def test_full_release_runs_real_postgis_rls_gate_fail_closed(self):
+        wf = load(FULL_RELEASE)
+        trigger_paths = self._trigger(FULL_RELEASE)["pull_request"]["paths"]
+        self.assertIn("backend/test_rls.py", trigger_paths)
+
+        job = wf["jobs"]["repo-regression"]
+        self.assertEqual(job["services"]["postgres"]["image"], "postgis/postgis:15-3.3")
+        self.assertTrue(job["env"]["DATABASE_URL"].startswith("postgres://"))
+        self.assertNotIn("sqlite", job["env"]["DATABASE_URL"].lower())
+
+        step = next(
+            step
+            for step in job["steps"]
+            if step.get("name") == "T19 PostgreSQL/PostGIS RLS integration gate"
+        )
+        self.assertEqual(step["working-directory"], "backend")
+        self.assertEqual(step["run"], "python -m pytest test_rls.py -v")
+        self.assertNotIn("continue-on-error", step)
+        self.assertNotIn("if", step)
+
+        steps = job["steps"]
+        rls_index = next(
+            index
+            for index, candidate in enumerate(steps)
+            if candidate.get("name") == "T19 PostgreSQL/PostGIS RLS integration gate"
+        )
+        baseline_index = next(
+            index
+            for index, candidate in enumerate(steps)
+            if candidate.get("name") == "Canonical full quality baseline"
+        )
+        self.assertLess(rls_index, baseline_index)
+
     def test_heavy_proofs_reuse_canonical_workflows(self):
         wf = load(FULL_RELEASE)
         jobs = wf["jobs"]
