@@ -158,6 +158,12 @@ class AffectedTestPlannerTests(unittest.TestCase):
         for component in ("mobile", "backend", "telemetry", "admin"):
             self.assertEqual(plan[component]["mode"], "full")
 
+    def test_gumball_policy_change_is_ci_core(self):
+        plan = plan_from_files([".gumball/proof-broker.json"])
+        self.assertTrue(plan["fullFallback"])
+        self.assertEqual(plan["risk"], "R5")
+        self.assertTrue(any("CI core: .gumball/proof-broker.json" == reason for reason in plan["reasons"]))
+
     def test_unknown_runtime_path_fails_safe_full(self):
         plan = plan_from_files(["new-runtime-system/config.magic"])
         self.assertTrue(plan["fullFallback"])
