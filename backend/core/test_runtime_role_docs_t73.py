@@ -23,9 +23,8 @@ class T73PilotWiringTests(unittest.TestCase):
         self.assertNotIn("MIGRATION_DATABASE_URL", content)
 
     def test_k8s_privileged_migration_secret_is_not_mounted_by_runtime_workloads(self):
-        job = (ROOT / "infrastructure" / "k8s" / "jobs" / "migrate-job.yaml").read_text(
-            encoding="utf-8"
-        )
+        migration_job_path = ROOT / "infrastructure" / "k8s" / "jobs" / "migrate-job.yaml"
+        job = migration_job_path.read_text(encoding="utf-8")
         self.assertIn("sport-migration-secrets", job)
         self.assertIn("MIGRATION_DATABASE_URL", job)
 
@@ -35,9 +34,8 @@ class T73PilotWiringTests(unittest.TestCase):
             "worker-simulation.yaml",
             "beat.yaml",
         ):
-            runtime = (
-                ROOT / "infrastructure" / "k8s" / "workloads" / filename
-            ).read_text(encoding="utf-8")
+            runtime_path = ROOT / "infrastructure" / "k8s" / "workloads" / filename
+            runtime = runtime_path.read_text(encoding="utf-8")
             with self.subTest(filename=filename):
                 self.assertNotIn("sport-migration-secrets", runtime)
                 self.assertNotIn("MIGRATION_DATABASE_URL", runtime)
