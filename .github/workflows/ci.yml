@@ -74,6 +74,7 @@ jobs:
               - 'pnpm-workspace.yaml'
             scripts:
               - 'scripts/**'
+              - '.gumball/**'
               - '**/*railway.json'
               - 'pyproject.toml'
               - 'docker-compose.prod.yml'
@@ -123,6 +124,8 @@ jobs:
             ci_core:
               - '.github/workflows/**'
               - '.github/actions/**'
+              - '.gumball/**'
+              - 'scripts/ops/**'
               - 'scripts/plan_affected_tests.py'
               - 'scripts/run_affected_mobile_tests.py'
               - 'scripts/run_affected_backend_tests.py'
