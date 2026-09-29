@@ -1,0 +1,102 @@
+name: Gumball Proof Broker
+
+on:
+  pull_request_target:
+    types:
+      - labeled
+  issue_comment:
+    types:
+      - created
+  repository_dispatch:
+    types:
+      - gumball-proof-request
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+    inputs:
+      proof:
+        description: Configured proof id
+        required: true
+        type: string
+      pr_number:
+        description: Pull request number
+        required: true
+        type: string
+      retry:
+        description: Rerun an existing failed proof
+        required: false
+        default: false
+        type: boolean
+
+permissions: {}
+
+concurrency:
+  group: gumball-proof-broker-${{ github.repository }}-${{ github.event.pull_request.number || github.event.issue.number || 'reconcile' }}
+  cancel-in-progress: false
+
+jobs:
+  broker-event:
+    name: Proof request broker
+    if: ${{ github.event_name != 'schedule' && (github.event_name != 'issue_comment' || startsWith(github.event.comment.body, '/gumball proof ')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      actions: write
+      contents: read
+      issues: write
+      pull-requests: read
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout trusted default branch
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+
+      - name: Validate Proof Broker policy
+        run: python scripts/ops/proof_broker.py validate
+
+      - name: Reconcile Proof Broker labels
+        run: python scripts/ops/proof_broker.py --apply labels-sync
+
+      - name: Process proof intent
+        run: python scripts/ops/proof_broker.py --apply event
+
+  reconcile:
+    name: Proof status reconciliation
+    if: ${{ github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+      pull-requests: read
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout trusted default branch
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+
+      - name: Validate Proof Broker policy
+        run: python scripts/ops/proof_broker.py validate
+
+      - name: Reconcile Proof Broker labels
+        run: python scripts/ops/proof_broker.py --apply labels-sync
+
+      - name: Reconcile requested proof status
+        run: python scripts/ops/proof_broker.py --apply reconcile

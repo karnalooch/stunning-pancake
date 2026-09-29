@@ -30,6 +30,8 @@ RISK_ORDER = {"R0": 0, "R1": 1, "R2": 2, "R3": 3, "R4": 4, "R5": 5}
 CI_CORE_PATTERNS = (
     ".github/workflows/**",
     ".github/actions/**",
+    ".gumball/**",
+    "scripts/ops/**",
     "scripts/plan_affected_tests.py",
     "scripts/run_affected_mobile_tests.py",
     "scripts/run_affected_backend_tests.py",

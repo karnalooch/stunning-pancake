@@ -74,6 +74,7 @@ jobs:
               - 'pnpm-workspace.yaml'
             scripts:
               - 'scripts/**'
+              - '.gumball/**'
               - '**/*railway.json'
               - 'pyproject.toml'
               - 'docker-compose.prod.yml'
@@ -123,6 +124,8 @@ jobs:
             ci_core:
               - '.github/workflows/**'
               - '.github/actions/**'
+              - '.gumball/**'
+              - 'scripts/ops/**'
               - 'scripts/plan_affected_tests.py'
               - 'scripts/run_affected_mobile_tests.py'
               - 'scripts/run_affected_backend_tests.py'
@@ -544,6 +547,9 @@ jobs:
 
       - name: Test cost-aware Mobile Native Smoke routing
         run: python -m unittest scripts/test_mobile_native_smoke_workflow.py -v
+
+      - name: Test Gumball Proof Broker consumer contract
+        run: python -m unittest scripts/test_gumball_proof_broker_contract.py -v
 
       - name: Test mobile runtime/appVersion boundary
         run: python -m unittest scripts/test_mobile_runtime_boundary.py -v

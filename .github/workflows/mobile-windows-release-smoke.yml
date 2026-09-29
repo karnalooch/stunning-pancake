@@ -62,12 +62,13 @@ jobs:
           if [ "$EVENT_NAME" != "pull_request" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
             echo "reason=$EVENT_NAME explicitly requests release validation" >> "$GITHUB_OUTPUT"
-          elif [ "$NATIVE_CHANGED" = "true" ]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            echo "reason=native-affecting PR paths changed" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "reason=JS/UI/assets/backend-only PR; Windows release compile is redundant" >> "$GITHUB_OUTPUT"
+            if [ "$NATIVE_CHANGED" = "true" ]; then
+              echo "reason=native-affecting PR detected; Gumball defers Windows APK compilation to manual/release validation" >> "$GITHUB_OUTPUT"
+            else
+              echo "reason=PR Windows release proof deferred by Gumball CI Cost Governor" >> "$GITHUB_OUTPUT"
+            fi
           fi
 
       - name: Report Windows release scope

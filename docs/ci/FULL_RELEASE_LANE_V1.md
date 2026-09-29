@@ -29,7 +29,9 @@ The lane is fail-closed and requires all four proofs:
 1. **Full monorepo regression** — canonical repository quality baseline on
    PostgreSQL/PostGIS + Redis with Python and pnpm dependencies installed.
 2. **Full Android native smoke** — reusable Mobile Native Smoke, including
-   clean Expo prebuild and `assembleDebug`.
+   clean Expo prebuild and APK packaging. On pull requests this heavyweight
+   proof is intentionally **deferred** by the Gumball CI Cost Governor; it is
+   required on manual/nightly/tag/reusable release execution.
 3. **Home Lab configuration proof** — reusable home-lab control/crypto tests and
    layered Compose validation.
 4. **Kubernetes + release proof** — reusable K8s manifest/build/release gate.
@@ -67,3 +69,30 @@ an excuse to weaken change-classified PR coverage.
 
 CI-core, unknown runtime, or ambiguous configuration changes still fail closed
 to broad/full PR coverage.
+
+
+## Gumball Proof Broker
+
+Routine pull requests never compile an Android APK automatically.
+
+When exact native/release evidence is actually needed for a PR, an authorized
+repository writer requests it from the PR conversation:
+
+```text
+/gumball proof android-native-release
+```
+
+The trusted broker runs from the default branch, resolves the current PR head
+SHA, validates the allow-listed workflow contract, derives a deterministic
+request id, rejects duplicate queued/running work and dispatches
+`mobile-native-smoke.yml` with that exact SHA and `release=true`.
+
+The same proof can be requested by applying the
+`proof:android-native-release` label. GitHub `workflow_dispatch` remains an
+operator fallback.
+
+For `pull_request` events the Full Release orchestrator expects the Android
+job to be `skipped`; that is a deliberate Gumball `DEFER`, not a missing
+proof. For manual, scheduled, tagged and reusable release execution the Android
+proof remains required and the final Full Release Gate still fails closed if it
+does not succeed.
