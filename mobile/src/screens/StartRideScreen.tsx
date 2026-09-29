@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
@@ -53,7 +53,7 @@ const stylesheet = StyleSheet.create((theme) => {
 
 type StartRideScreenProps = {
   isRecording: boolean;
-  onStartRide: (sport: ActivitySportType) => void;
+  onStartRide: (sport: ActivitySportType) => Promise<void> | void;
   onGoToRide: () => void;
   onOpenGpsWizard: () => void;
   gpsRecoveryVisible?: boolean;
@@ -81,6 +81,25 @@ export const StartRideScreen: React.FC<StartRideScreenProps> = ({
   const s = stylesheet;
   const { t, locale } = useI18n();
   const [selectedSport, setSelectedSport] = useState<ActivitySportType>('BIKE');
+  const [isStarting, setIsStarting] = useState(false);
+  const mountedRef = useRef(true);
+
+  useEffect(
+    () => () => {
+      mountedRef.current = false;
+    },
+    [],
+  );
+
+  const handleStartRide = async () => {
+    if (isStarting) return;
+    setIsStarting(true);
+    try {
+      await onStartRide(selectedSport);
+    } finally {
+      if (mountedRef.current) setIsStarting(false);
+    }
+  };
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
@@ -139,8 +158,9 @@ export const StartRideScreen: React.FC<StartRideScreenProps> = ({
                   ))}
                 </View>
                 <PrimaryButton
-                  label={t.dashboard.startRide}
-                  onPress={() => onStartRide(selectedSport)}
+                  label={isStarting ? t.dashboard.startingRide : t.dashboard.startRide}
+                  onPress={() => void handleStartRide()}
+                  disabled={isStarting}
                   testID="start-ride-primary"
                 />
               </>
