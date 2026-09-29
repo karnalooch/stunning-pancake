@@ -1,4 +1,5 @@
 name: Mobile Native Smoke
+run-name: Mobile Native Smoke ${{ inputs.gumball_request_id || github.event.pull_request.number || github.run_id }}
 
 on:
   pull_request:
@@ -56,7 +57,33 @@ on:
         required: false
         type: string
         default: ""
+      gumball_request_id:
+        description: "Optional deterministic Gumball proof request id"
+        required: false
+        type: string
+        default: ""
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Force release APK and publish exact-SHA runtime artifact"
+        required: false
+        type: boolean
+        default: false
+      source_sha:
+        description: "Exact source SHA to validate"
+        required: false
+        type: string
+        default: ""
+      pull_request:
+        description: "Optional source pull request number"
+        required: false
+        type: string
+        default: ""
+      gumball_request_id:
+        description: "Deterministic Gumball proof request id"
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -112,18 +139,10 @@ jobs:
               or path in release_orchestration
           ]
           required = bool(native_changed)
-          self_workflow_changed = (
-              ".github/workflows/mobile-native-smoke.yml" in changed
-          )
           with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as fh:
               fh.write(
                   "direct_native_changed="
                   + ("true" if required else "false")
-                  + "\n"
-              )
-              fh.write(
-                  "self_workflow_changed="
-                  + ("true" if self_workflow_changed else "false")
                   + "\n"
               )
           if native_changed:
@@ -137,9 +156,7 @@ jobs:
         id: decision
         env:
           EVENT_NAME: ${{ github.event_name }}
-          WORKFLOW_NAME: ${{ github.workflow }}
           NATIVE_CHANGED: ${{ steps.classifier.outputs.direct_native_changed }}
-          SELF_WORKFLOW_CHANGED: ${{ steps.classifier.outputs.self_workflow_changed }}
           FORCE_RELEASE: ${{ inputs.release || false }}
         run: |
           set -euo pipefail
@@ -151,18 +168,14 @@ jobs:
             echo "run=true" >> "$GITHUB_OUTPUT"
             echo "release=true" >> "$GITHUB_OUTPUT"
             echo "reason=$EVENT_NAME forces native + release validation" >> "$GITHUB_OUTPUT"
-          elif [ "$WORKFLOW_NAME" = "Mobile Native Smoke" ] && [ "$SELF_WORKFLOW_CHANGED" = "true" ]; then
-            echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "release=false" >> "$GITHUB_OUTPUT"
-            echo "reason=Full Release owns the heavyweight Android proof for mobile-native workflow changes" >> "$GITHUB_OUTPUT"
-          elif [ "$NATIVE_CHANGED" = "true" ]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            echo "release=true" >> "$GITHUB_OUTPUT"
-            echo "reason=direct native/release-affecting PR paths changed" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
             echo "release=false" >> "$GITHUB_OUTPUT"
-            echo "reason=no direct native/release inputs changed; heavyweight Android build not required" >> "$GITHUB_OUTPUT"
+            if [ "$NATIVE_CHANGED" = "true" ]; then
+              echo "reason=native-affecting PR detected; Gumball defers APK compilation to explicit /gumball proof android-native-release" >> "$GITHUB_OUTPUT"
+            else
+              echo "reason=PR Android proof deferred by Gumball CI Cost Governor; no native build required automatically" >> "$GITHUB_OUTPUT"
+            fi
           fi
 
       - name: Report native scope
@@ -291,8 +304,8 @@ jobs:
           sha256sum "$DEBUG_APK"
           ls -lh "$DEBUG_APK"
 
-      # Native/release-affecting PRs prove both debug and release packaging.
-      # JS/UI/assets-only and unrelated infra PRs never reach this job.
+      # Gumball-dispatched/manual/nightly/tag proof can build release packaging.
+      # Pull requests never reach this heavyweight job automatically.
       - name: Harden Gradle release memory
         if: needs.native-scope.outputs.release == 'true'
         working-directory: mobile/android
