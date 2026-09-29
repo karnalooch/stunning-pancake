@@ -80,6 +80,24 @@ services:
       - redis
       - brouter
 
+  # One-shot schema migration owner. The explicit profile keeps this
+  # service out of normal web/worker startup; canonical tooling invokes it
+  # before starting runtime services.
+  backend_migrate:
+    profiles: ["bootstrap"]
+    build: ./backend
+    restart: "no"
+    command: python manage.py migrate --no-input
+    environment:
+      DEBUG: ${DEBUG:-0}
+      SECRET_KEY: ${SECRET_KEY:?err_SECRET_KEY_not_set}
+      DATABASE_URL: postgres://${POSTGRES_USER}:${DB_PASSWORD}@db:5432/${POSTGRES_DB}
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+
   # Backend API (Django)
   backend:
     build: ./backend

@@ -24,6 +24,7 @@ EVIDENCE_DIR = BACKUP_DIR / "evidence"
 PROJECT = "4velo-home"
 BASE_COMPOSE_FILE = ROOT / "docker-compose.yml"
 HOME_COMPOSE_FILE = ROOT / "docker-compose.home.yml"
+BOOTSTRAP_PROFILE = "bootstrap"
 RECOVERY_DATABASE = "4velo_restore_check"
 BACKUP_RETENTION_DAYS = 30
 BACKUP_SUFFIX = ".dump.enc"
@@ -401,10 +402,27 @@ def profiles(args: argparse.Namespace) -> tuple[str, ...]:
     return tuple(selected)
 
 
+def apply_migrations() -> None:
+    """Apply schema changes once through the privileged bootstrap service."""
+    require_environment()
+    run(
+        compose_command(
+            "run",
+            "--rm",
+            "--build",
+            "backend_migrate",
+            profiles=(BOOTSTRAP_PROFILE,),
+        )
+    )
+    print("Django migrations applied by one-shot backend_migrate")
+
+
 def up(args: argparse.Namespace) -> None:
     require_environment()
-    run(compose_command("config", "--quiet", profiles=profiles(args)))
-    run(compose_command("up", "-d", "--build", "--wait", profiles=profiles(args)))
+    selected_profiles = profiles(args)
+    run(compose_command("config", "--quiet", profiles=selected_profiles))
+    apply_migrations()
+    run(compose_command("up", "-d", "--build", "--wait", profiles=selected_profiles))
     check_health()
 
 
@@ -525,6 +543,7 @@ def cold_start_smoke() -> Path:
     # retry proves the same canonical startup path from a known process state.
     run(compose_command("down", "--remove-orphans"))
     run(compose_command("config", "--quiet"))
+    apply_migrations()
     try:
         run(compose_command("up", "-d", "--build", "--wait"))
     except subprocess.CalledProcessError:
@@ -981,6 +1000,7 @@ def parse_args() -> argparse.Namespace:
         item.add_argument("--simulation", action="store_true")
         item.add_argument("--tracking", action="store_true")
         item.add_argument("--all-admin", action="store_true")
+    sub.add_parser("migrate")
     sub.add_parser("check")
     sub.add_parser("status")
     sub.add_parser("down")
@@ -1004,6 +1024,8 @@ def main() -> None:
     elif args.action == "config":
         require_environment()
         run(compose_command("config", "--quiet", profiles=profiles(args)))
+    elif args.action == "migrate":
+        apply_migrations()
     elif args.action == "check":
         check_health()
     elif args.action == "status":

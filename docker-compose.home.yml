@@ -90,6 +90,15 @@ services:
     ports: !override
       - "127.0.0.1:6379:6379"
 
+  backend_migrate:
+    # The one-shot bootstrap is the only Home Lab consumer of the privileged
+    # database owner. Runtime services never receive this credential.
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:?err_POSTGRES_USER_not_set}:${DB_PASSWORD:?err_DB_PASSWORD_not_set}@db:5432/${POSTGRES_DB:?err_POSTGRES_DB_not_set}
+    depends_on:
+      db_runtime_role_init:
+        condition: service_completed_successfully
+
   backend:
     # The backend issues the activity-scoped telemetry JWT, so it MUST use
     # the same signing key as the telemetry verifier in this isolated pilot.
@@ -97,7 +106,6 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?err_ADMIN_PASSWORD_not_set}
       TELEMETRY_INGEST_JWT_SECRET: ${TELEMETRY_INGEST_JWT_SECRET:?err_TELEMETRY_INGEST_JWT_SECRET_not_set}
       DATABASE_URL: postgres://${APP_DB_USER:-4velo_runtime}:${DB_PASSWORD:?err_DB_PASSWORD_not_set}@db:5432/${POSTGRES_DB:?err_POSTGRES_DB_not_set}
-      MIGRATION_DATABASE_URL: postgres://${POSTGRES_USER:?err_POSTGRES_USER_not_set}:${DB_PASSWORD:?err_DB_PASSWORD_not_set}@db:5432/${POSTGRES_DB:?err_POSTGRES_DB_not_set}
       RLS_RUNTIME_ROLE_GUARD: "1"
     depends_on:
       db_runtime_role_init:

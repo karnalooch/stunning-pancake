@@ -6,6 +6,7 @@ resources:
   - namespace.yaml
   - config/app-configmap.yaml
   - config/app-secrets.template.yaml
+  - config/migration-secrets.template.yaml
   - workloads/redis.yaml
   - workloads/brouter.yaml
   - workloads/api.yaml

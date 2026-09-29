@@ -8,7 +8,7 @@ Web, telemetry and Celery runtimes must use a PostgreSQL login with `NOSUPERUSER
 
 `core.db_role_guard` reads the effective `current_user` flags from `pg_roles` and fails closed when the guarded runtime is a superuser, has `BYPASSRLS`, or is not PostgreSQL. Production is always guarded. The pilot/home lab opts in explicitly with `RLS_RUNTIME_ROLE_GUARD=1` even though it runs with `DEBUG=1`.
 
-The backend entrypoint may temporarily use `MIGRATION_DATABASE_URL` for migrations and restores `DATABASE_URL` before deploy checks, account bootstrap and Gunicorn startup. The home-lab overlay creates/repairs a dedicated `4velo_runtime` role, grants runtime schema/data privileges, and keeps the migration owner separate.
+T17 removes schema mutation and privileged migration credentials from normal web startup. The backend entrypoint uses only the serving `DATABASE_URL` and runs `python manage.py migrate --check --no-input`; pending migrations therefore fail startup without changing schema. Home Lab invokes the profiled one-shot `backend_migrate` service before runtime startup, while Kubernetes uses the separate `sport-backend-migrate` Job. Privileged migration credentials are scoped to those one-shot paths and are not mounted into the API runtime.
 
 ## Celery scope boundary
 
