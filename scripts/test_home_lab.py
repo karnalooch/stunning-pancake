@@ -167,16 +167,19 @@ class HomeLabTests(unittest.TestCase):
         ), self.assertRaises(SystemExit):
             home_lab.checked_out_commit()
 
-    def test_apply_migrations_uses_dedicated_bootstrap_service(self):
+    def test_apply_migrations_uses_dedicated_bootstrap_services(self):
         with patch.object(home_lab, "require_environment"), patch.object(
             home_lab, "run"
         ) as run_mock:
             home_lab.apply_migrations()
 
-        command = run_mock.call_args.args[0]
-        self.assertIn("--profile", command)
-        self.assertIn("bootstrap", command)
-        self.assertEqual(command[-4:], ["run", "--rm", "--build", "backend_migrate"])
+        commands = [call.args[0] for call in run_mock.call_args_list]
+        self.assertEqual(len(commands), 2)
+        for command in commands:
+            self.assertIn("--profile", command)
+            self.assertIn("bootstrap", command)
+        self.assertEqual(commands[0][-4:], ["run", "--rm", "--build", "backend_migrate"])
+        self.assertEqual(commands[1][-4:], ["run", "--rm", "--build", "telemetry_migrate"])
 
     def test_check_migrations_uses_django_non_mutating_check(self):
         with patch.object(home_lab, "require_environment"), patch.object(
@@ -311,7 +314,9 @@ class HomeLabTests(unittest.TestCase):
             self.assertEqual(commands[1][-2:], ["config", "--quiet"])
             self.assertEqual(commands[2][-4:], ["run", "--rm", "--build", "backend_migrate"])
             self.assertIn("bootstrap", commands[2])
-            self.assertEqual(commands[3][-4:], ["up", "-d", "--build", "--wait"])
+            self.assertEqual(commands[3][-4:], ["run", "--rm", "--build", "telemetry_migrate"])
+            self.assertIn("bootstrap", commands[3])
+            self.assertEqual(commands[4][-4:], ["up", "-d", "--build", "--wait"])
             printed = [call.args[0] for call in print_mock.call_args_list]
             self.assertEqual(printed[-1], "DEV ENV READY")
 
