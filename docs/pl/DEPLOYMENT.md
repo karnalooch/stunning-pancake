@@ -83,15 +83,17 @@ SENTRY_DSN=https://...
 
 Repliki webowe Django **nie** wykonują już zmian schematu podczas startu. Migracje uruchamiaj jeden raz jako jawny krok deployment/bootstrap **przed** rolloutem lub skalowaniem nowej rewizji backendu. Gdy migracje są oczekujące, start weba kończy się fail-closed na `python manage.py migrate --check --no-input`, zamiast modyfikować schemat.
 
-```bash
-# Uruchom raz z credentialami właściciela schematu przed rolloutem backendu.
-railway run python manage.py migrate
+Na Railway właściciel migracji musi być dostępny w **osobno izolowanym, jednorazowym kontekście wykonawczym** (np. dedykowanym migration service/job skonfigurowanym w projekcie Railway). Nie dodawaj `MIGRATION_DATABASE_URL` do długo działającego serwisu backendu i nie traktuj `railway run` uruchamianego przeciwko backendowi jako uprzywilejowanej ścieżki migracji: `railway run` wstrzykuje zmienne wybranego serwisu, więc użyłby nieuprzywilejowanego runtime `DATABASE_URL` albo wymagałby wystawienia credentiala właściciela do serwisu webowego.
 
-# Pozostałe kroki bootstrap/data nadal są jawnymi akcjami operatora.
-railway run python manage.py create_admin
-railway run python manage.py seed_rbac
-railway run python manage.py seed_data
+Jednorazowy proces migracyjny wykonuje:
+
+```bash
+python manage.py migrate --no-input
 ```
+
+Dopiero po jego poprawnym zakończeniu wolno rolloutować/skalować nową rewizję backendu. Pozostałe kroki bootstrap/data, takie jak `create_admin`, `seed_rbac` i `seed_data`, pozostają jawnymi akcjami operatora i muszą używać credentiali odpowiednich do swojego zakresu.
+
+> CI repozytorium dowodzi fail-closed startupu oraz modelu one-shot dla Home Lab/Kubernetes. Utworzenie i zweryfikowanie osobno izolowanego kontekstu migracji Railway jest wymaganiem środowiskowym przed rolloutem Railway zawierającym nowe migracje.
 
 ### Krok 7: Wdrożenie admin panelu
 
