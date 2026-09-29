@@ -6,16 +6,10 @@ if [ "$#" -gt 0 ]; then
     exec "$@"
 fi
 
-# T73: migrations may use a privileged owner connection, while the serving
-# process must use DATABASE_URL backed by a NOSUPERUSER/NOBYPASSRLS role.
-_runtime_database_url="${DATABASE_URL:-}"
-if [ -n "${MIGRATION_DATABASE_URL:-}" ]; then
-    export DATABASE_URL="$MIGRATION_DATABASE_URL"
-    python manage.py migrate --no-input
-    export DATABASE_URL="$_runtime_database_url"
-else
-    python manage.py migrate --no-input
-fi
+# T17: schema mutation belongs to an explicit migration/bootstrap job.
+# A normal web replica only receives the runtime DATABASE_URL and fails
+# closed when the deployment forgot to apply required migrations first.
+python manage.py migrate --check --no-input
 
 # In production and the opted-in pilot home lab this includes core.E002,
 # which fails closed if DATABASE_URL can bypass PostgreSQL RLS.
