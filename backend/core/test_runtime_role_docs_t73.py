@@ -29,7 +29,12 @@ class T73PilotWiringTests(unittest.TestCase):
         self.assertIn("sport-migration-secrets", job)
         self.assertIn("MIGRATION_DATABASE_URL", job)
 
-        for filename in ("api.yaml", "worker.yaml", "worker-simulation.yaml", "beat.yaml"):
+        for filename in (
+            "api.yaml",
+            "worker.yaml",
+            "worker-simulation.yaml",
+            "beat.yaml",
+        ):
             runtime = (
                 ROOT / "infrastructure" / "k8s" / "workloads" / filename
             ).read_text(encoding="utf-8")
