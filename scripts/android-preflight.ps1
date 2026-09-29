@@ -71,9 +71,15 @@ function Invoke-BoundedProcess {
   $psi.RedirectStandardOutput = $true
   $psi.RedirectStandardError = $true
   $psi.CreateNoWindow = $true
+  $quotedArguments = @()
   foreach ($arg in $Arguments) {
-    [void]$psi.ArgumentList.Add($arg)
+    if ($arg -match '[\s"]') {
+      $quotedArguments += ('"' + ($arg -replace '"', '\"') + '"')
+    } else {
+      $quotedArguments += $arg
+    }
   }
+  $psi.Arguments = ($quotedArguments -join ' ')
 
   $process = New-Object System.Diagnostics.Process
   $process.StartInfo = $psi
@@ -84,7 +90,7 @@ function Invoke-BoundedProcess {
   $stdoutTask = $process.StandardOutput.ReadToEndAsync()
   $stderrTask = $process.StandardError.ReadToEndAsync()
   if (-not $process.WaitForExit($Timeout * 1000)) {
-    try { $process.Kill($true) } catch {}
+    try { $process.Kill() } catch {}
     throw "Timed out after $($Timeout)s: $FilePath $($Arguments -join ' ')"
   }
 
@@ -162,7 +168,7 @@ function Get-ProcessEvidence {
   param([int]$Pid)
   if ($Pid -le 0) { return $null }
   try {
-    $process = Get-CimInstance Win32_Process -Filter "ProcessId = $Pid" -ErrorAction Stop
+    $process = Get-CimInstance Win32_Process -Filter "ProcessId = $ProcessId" -ErrorAction Stop
     if (-not $process) { return $null }
     return [ordered]@{
       pid = $Pid
@@ -177,7 +183,19 @@ function Get-ProcessEvidence {
       } else { $null }
     }
   } catch {
-    return [ordered]@{ pid = $Pid; name = $null; executable = $null; command = $null }
+    return [ordered]@{ pid = $ProcessId; name = $null; executable = $null }
+  }
+}
+
+function Get-ProcessCommandLine {
+  param([int]$ProcessId)
+  if ($ProcessId -le 0) { return $null }
+  try {
+    $process = Get-CimInstance Win32_Process -Filter "ProcessId = $ProcessId" -ErrorAction Stop
+    if (-not $process -or -not $process.CommandLine) { return $null }
+    return $process.CommandLine
+  } catch {
+    return $null
   }
 }
 
@@ -268,7 +286,7 @@ foreach ($port in @(5037, 8081, 8000, 8001)) {
   $matches = @($listeners | Where-Object { $_.Port -eq $port })
   $owners = @()
   foreach ($match in $matches) {
-    $owners += Get-ProcessEvidence -Pid $match.Pid
+    $owners += Get-ProcessEvidence -ProcessId $match.Pid
   }
   $portEvidence["$port"] = $owners
 }
@@ -279,7 +297,8 @@ if ($metroOwners.Count -gt 0) {
     if ($owner.name -and $owner.name -notmatch "^node(?:\.exe)?$") {
       throw "Port 8081 is occupied by non-Node process PID $($owner.pid) ($($owner.name))."
     }
-    if ($owner.command -and $owner.command -notmatch [Regex]::Escape((Normalize-PathText $repoRoot))) {
+    $metroCommand = Get-ProcessCommandLine -ProcessId $owner.pid
+    if ($metroCommand -and $metroCommand -notmatch [Regex]::Escape($repoRoot)) {
       throw "Port 8081 is owned by a Node/Metro process outside this 4VELO checkout (PID $($owner.pid))."
     }
   }
