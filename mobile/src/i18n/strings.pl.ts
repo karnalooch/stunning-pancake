@@ -107,6 +107,7 @@ export const stringsPl = {
     currentRide: 'Trwa jazda',
     inProgress: 'W toku',
     startRide: 'START JAZDY',
+    startingRide: 'URUCHAMIANIE…',
     goToRide: 'DO JAZDY',
     lastRide: 'Ostatni przejazd',
     noRides: 'Brak zapisanych przejazdów.',
