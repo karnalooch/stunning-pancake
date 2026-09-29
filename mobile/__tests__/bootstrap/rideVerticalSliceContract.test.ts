@@ -24,8 +24,8 @@ describe('T80-D deterministic Ride vertical slice contract', () => {
 
     const paused = source('screens/RidePausedScreen.tsx');
     expect(paused).toContain('testID="ride-paused-screen"');
-    expect(paused).toContain('testID="ride-paused-resume"');
-    expect(paused).toContain('testID="ride-paused-stop"');
+    expect(paused).toContain('resumeTestID="ride-paused-resume"');
+    expect(paused).toContain('stopTestID="ride-paused-stop"');
 
     const summary = source('screens/RideSummaryScreen.tsx');
     expect(summary).toContain('testID="ride-summary-screen"');
