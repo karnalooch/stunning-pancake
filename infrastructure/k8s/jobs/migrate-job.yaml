@@ -20,3 +20,11 @@ spec:
                 name: sport-app-config
             - secretRef:
                 name: sport-app-secrets
+          env:
+            # Override the runtime DATABASE_URL only inside this one-shot Job.
+            # The privileged Secret is never mounted by API/worker Deployments.
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: sport-migration-secrets
+                  key: MIGRATION_DATABASE_URL
