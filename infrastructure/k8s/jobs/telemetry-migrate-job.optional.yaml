@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sport-telemetry-migrate
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: telemetry-migrate
+          image: ghcr.io/your-org/sport-telemetry:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - python
+            - schema_bootstrap.py
+          envFrom:
+            - configMapRef:
+                name: sport-app-config
+            - secretRef:
+                name: sport-app-secrets
+          env:
+            # Override the runtime DATABASE_URL only inside this one-shot Job.
+            # The privileged Secret is never mounted by telemetry Deployment.
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: sport-migration-secrets
+                  key: MIGRATION_DATABASE_URL
