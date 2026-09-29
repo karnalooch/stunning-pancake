@@ -1,6 +1,6 @@
 {
   "name": "@4velo/mobile",
-  "version": "0.3.7-dev",
+  "version": "0.3.8-dev",
   "main": "index",
   "scripts": {
     "start": "expo start --dev-client",
@@ -46,9 +46,11 @@
     "@shopify/react-native-skia": "2.4.18",
     "axios": "^1.20.0",
     "expo": "~55.0.31",
+    "expo-asset": "~55.0.20",
     "expo-audio": "~55.0.18",
     "expo-battery": "~55.0.17",
     "expo-build-properties": "~55.0.18",
+    "expo-constants": "~55.0.17",
     "expo-crypto": "~55.0.19",
     "expo-dev-client": "~55.0.40",
     "expo-file-system": "~55.0.26",
@@ -62,12 +64,13 @@
     "expo-speech": "~55.0.18",
     "expo-status-bar": "~55.0.6",
     "expo-task-manager": "~55.0.20",
-    "expo-updates": "~55.0.32",
+    "expo-updates": "~55.0.33",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-native": "0.83.10",
     "react-native-gesture-handler": "~2.30.0",
     "react-native-mmkv": "4.3.2",
+    "react-native-nitro-modules": "0.35.9",
     "react-native-reanimated": "4.2.1",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.23.0",
@@ -76,10 +79,7 @@
     "react-native-view-shot": "^4.0.3",
     "react-native-web": "^0.21.0",
     "react-native-worklets": "0.7.4",
-    "zustand": "^5.0.15",
-    "expo-asset": "~55.0.20",
-    "expo-constants": "~55.0.17",
-    "react-native-nitro-modules": "0.35.9"
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@4velo/tsconfig": "workspace:*",
@@ -89,6 +89,7 @@
     "@types/react": "~19.2.10",
     "@types/react-test-renderer": "^19.1.0",
     "babel-plugin-transform-inline-environment-variables": "^0.4.4",
+    "babel-preset-expo": "55.0.25",
     "esbuild": "0.28.1",
     "eslint": "^8.57.1",
     "eslint-config-expo": "~55.0.1",
@@ -97,8 +98,7 @@
     "react-native-svg-transformer": "^1.5.3",
     "ts-jest": "^29.2.5",
     "tsx": "^4.21.0",
-    "typescript": "~5.9.3",
-    "babel-preset-expo": "55.0.25"
+    "typescript": "~5.9.3"
   },
   "private": true
 }
