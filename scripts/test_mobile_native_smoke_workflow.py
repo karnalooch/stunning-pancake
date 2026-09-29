@@ -32,7 +32,7 @@ class MobileNativeSmokeWorkflowTests(unittest.TestCase):
 
     def test_pull_requests_never_compile_apk_automatically(self):
         text = workflow_text()
-        self.assertIn('elif [ "$EVENT_NAME" != "pull_request" ]; then', text)
+        self.assertIn('elif [ "$EVENT_NAME" = "pull_request" ]; then', text)
         self.assertIn(
             "Gumball defers APK compilation to explicit /gumball proof android-native-release",
             text,
@@ -41,7 +41,17 @@ class MobileNativeSmokeWorkflowTests(unittest.TestCase):
             "PR Android proof deferred by Gumball CI Cost Governor",
             text,
         )
+        self.assertNotIn('elif [ "$EVENT_NAME" != "pull_request" ]; then', text)
         self.assertNotIn("direct native/release-affecting PR paths changed", text)
+
+    def test_main_push_never_compiles_apk_automatically(self):
+        text = workflow_text()
+        self.assertIn('elif [ "$EVENT_NAME" = "push" ]; then', text)
+        self.assertIn(
+            "ordinary main push defers APK compilation to explicit exact-SHA "
+            "Gumball/release proof",
+            text,
+        )
 
     def test_broker_dispatch_has_exact_sha_and_request_id_inputs(self):
         text = workflow_text()
@@ -55,11 +65,16 @@ class MobileNativeSmokeWorkflowTests(unittest.TestCase):
         )
         self.assertIn("FORCE_RELEASE: ${{ inputs.release || false }}", text)
 
-    def test_non_pr_runs_can_force_native_release_proof(self):
+    def test_explicit_runs_can_request_native_proof(self):
         text = workflow_text()
         self.assertIn('if [ "$FORCE_RELEASE" = "true" ]; then', text)
+        self.assertIn('elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then', text)
         self.assertIn('echo "run=true" >> "$GITHUB_OUTPUT"', text)
         self.assertIn('echo "release=true" >> "$GITHUB_OUTPUT"', text)
+        self.assertIn(
+            "manual workflow_dispatch requests explicit native debug validation",
+            text,
+        )
         self.assertIn("  workflow_call:", text)
         self.assertIn("    branches: [main]", text)
 

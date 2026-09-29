@@ -20,7 +20,8 @@ The lane runs:
 - for release tags matching `v*.*.*`.
 
 The ordinary `4VELO CI/CD Pipeline` no longer owns a nightly schedule. Pushes
-to `main` still retain broad/full regression during staged rollout.
+to `main` may still retain broad/full non-native regression during staged
+rollout, but an ordinary merge/push must not rebuild an Android APK.
 
 ## Heavyweight evidence
 
@@ -65,10 +66,12 @@ succeeds.
 Periodic Android drift validation is owned by this nightly Full / Release lane.
 The standalone Mobile Native Smoke remains:
 
-- path-aware on pull requests;
-- native-affecting on pushes to `main`;
-- manually runnable;
-- reusable by Full / Release Validation.
+- path-aware on pull requests, with the heavy Android job deferred;
+- path-filtered on relevant pushes to `main`, but limited to cheap routing and
+  reporting — the APK build is deferred there too;
+- manually runnable as an explicit native proof;
+- reusable by Full / Release Validation, whose release caller explicitly forces
+  the exact-SHA APK proof.
 
 This prevents duplicate scheduled Gradle builds.
 
@@ -84,7 +87,8 @@ to broad/full PR coverage.
 
 ## Gumball Proof Broker
 
-Routine pull requests never compile an Android APK automatically.
+Routine pull requests and ordinary pushes/merges to `main` never compile an
+Android APK automatically.
 
 When exact native/release evidence is actually needed for a PR, an authorized
 repository writer requests it from the PR conversation:

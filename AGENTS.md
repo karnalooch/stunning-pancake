@@ -26,6 +26,15 @@
 - Po dwóch kolejnych nieskutecznych poprawkach tego samego problemu przerwij zgadywanie. Przedstaw przyczynę lub brakujące dane, zmienione pliki i proponowany następny krok.
 - Po spełnieniu kryteriów i wymaganych kontroli zakończ. Nie uruchamiaj kolejnego audytu dla samego potwierdzenia.
 
+## Gumball CI Cost Governor
+- CI ma dostarczać wymagany dowód przy najmniejszym rozsądnym koszcie. Nie utożsamiaj „więcej buildów” z większym bezpieczeństwem; respektuj changed-path classifier, kanoniczny required proof set i jawne kontrakty workflow.
+- `skipped` lub `deferred` jest poprawnym wynikiem, gdy polityka mówi, że dany ciężki proof nie jest wymagany dla bieżącego SHA. Nie uruchamiaj go ponownie tylko po to, żeby wszystkie joby wyglądały na wykonane.
+- Rutynowy pull request ani zwykły push/merge do `main` nie może automatycznie kompilować Android APK. `expo prebuild --clean` / Gradle uruchamiaj tylko jako jawny exact-SHA proof: przez Gumball Proof Broker, bezpośredni `workflow_dispatch`, reusable release/full-release caller albo inne wskazane kryterium wydania.
+- Gdy ciężki proof jest wymagany, zwiąż go z dokładnym source SHA i preferuj ponowne użycie już zweryfikowanego artefaktu/evidence zamiast przebudowy tego samego SHA. Nie uruchamiaj proofa dla starego/superseded SHA.
+- Preferuj repozytoryjny broker/automatyzację nad ręcznym klikaniem UI, jeśli istnieje zatwierdzona ścieżka. Nie wykonuj pustych commitów, nie rozszerzaj triggerów i nie osłabiaj guardów tylko po to, żeby wymusić ciężki job.
+- Zmiany routingu CI muszą mieć test kontraktowy obejmujący zarówno przypadek `RUN`, jak i zamierzone `DEFER/SKIP`. Brak wymaganego proofa ma pozostać fail-closed; brak niewymaganego proofa nie jest błędem.
+- Jeśli workflow ma `cancel-in-progress` lub równoważną ochronę, nie wskrzeszaj ręcznie superseded runów bez konkretnej potrzeby dowodowej.
+
 ## Issue → Project → dostarczenie
 - Każde nowe zadanie, które ma zmienić repozytorium, zaczynaj od jednego głównego GitHub Issue, chyba że użytkownik wskazał już właściwe Issue lub istniejący PR. Nie twórz Issue dla samej analizy, planowania, odczytu lub odpowiedzi bez zmian w repo.
 - Issue jest kanonicznym elementem planowania. Zapisz w nim co najmniej: cel, zakres i non-scope, kryteria ukończenia, wymagane kontrole oraz odniesienie do właściwej transzy/takeover planu, jeśli zadanie do niej należy.
