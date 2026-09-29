@@ -1,4 +1,4 @@
-"""App startup / shutdown (schema, privacy zones, background tasks)."""
+"""App startup / shutdown (schema readiness, privacy zones, background tasks)."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from db import close_pool, flush_insert_buffer, get_pool
 from ingest_queue import queue_enabled, start_drain_worker, stop_drain_worker
 from ingest_service import get_ingest_redis
 from privacy import load_zones_from_rows, privacy_zones_sync, zones
+from schema import assert_schema_ready
 
 logger = logging.getLogger("telemetry")
 
@@ -23,58 +24,7 @@ logger = logging.getLogger("telemetry")
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     pool = await get_pool()
     async with pool.acquire() as conn:
-        # Database extensions are owned by the privileged migration/bootstrap
-        # path. Telemetry intentionally runs with a NOSUPERUSER runtime role.
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS gps_points (
-                time        TIMESTAMPTZ     NOT NULL,
-                device_id   TEXT            NOT NULL,
-                user_id     INTEGER,
-                lat         DOUBLE PRECISION NOT NULL,
-                lon         DOUBLE PRECISION NOT NULL,
-                speed_ms    DOUBLE PRECISION DEFAULT 0,
-                accuracy_m  DOUBLE PRECISION DEFAULT 5,
-                activity_id INTEGER,
-                seq         BIGINT
-            );
-        """)
-        await conn.execute("ALTER TABLE gps_points ADD COLUMN IF NOT EXISTS seq BIGINT;")
-        await conn.execute("""
-            CREATE UNIQUE INDEX IF NOT EXISTS gps_points_activity_time_seq_uidx
-            ON gps_points (activity_id, time, seq)
-            WHERE activity_id IS NOT NULL AND seq IS NOT NULL;
-        """)
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS telemetry_ingest_receipts (
-                client_batch_id TEXT PRIMARY KEY,
-                activity_id INTEGER NOT NULL,
-                user_id INTEGER NOT NULL,
-                point_count INTEGER NOT NULL CHECK (point_count > 0),
-                persisted_count INTEGER NOT NULL CHECK (persisted_count >= 0),
-                dropped_privacy INTEGER NOT NULL CHECK (dropped_privacy >= 0),
-                max_seq BIGINT NOT NULL CHECK (max_seq > 0),
-                payload_fingerprint TEXT NOT NULL,
-                acked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                CHECK (persisted_count + dropped_privacy = point_count)
-            );
-        """)
-        # Existing P3-D databases already have the receipt table. CREATE TABLE
-        # IF NOT EXISTS does not add new columns, so evolve it explicitly and
-        # leave historical rows NULL; ingest treats those rows as unverifiable.
-        await conn.execute("""
-            ALTER TABLE telemetry_ingest_receipts
-            ADD COLUMN IF NOT EXISTS payload_fingerprint TEXT;
-        """)
-        await conn.execute("""
-            CREATE INDEX IF NOT EXISTS telemetry_ingest_receipts_activity_user_idx
-            ON telemetry_ingest_receipts (activity_id, user_id, max_seq);
-        """)
-        try:
-            await conn.execute(
-                "SELECT create_hypertable('gps_points', 'time', if_not_exists => TRUE);"
-            )
-        except Exception:
-            pass
+        await assert_schema_ready(conn)
 
     try:
         async with pool.acquire() as conn:

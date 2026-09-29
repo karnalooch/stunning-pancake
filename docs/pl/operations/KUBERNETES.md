@@ -58,7 +58,7 @@ Before first deployment, copy and edit:
 2. Uzupełnij co najmniej:
    - `SECRET_KEY`
    - `DATABASE_URL` rolą runtime PostgreSQL bez uprawnień uprzywilejowanych (`NOSUPERUSER`, `NOBYPASSRLS`)
-3. Skopiuj `infrastructure/k8s/config/migration-secrets.template.yaml` i ustaw `MIGRATION_DATABASE_URL` na uprzywilejowanego właściciela schematu/migracji. Ten Secret jest używany wyłącznie przez jednorazowy migration Job i nie może być montowany w Deploymentach API/workera.
+3. Skopiuj `infrastructure/k8s/config/migration-secrets.template.yaml` i ustaw `MIGRATION_DATABASE_URL` na uprzywilejowanego właściciela schematu/migracji. Ten Secret jest używany wyłącznie przez jednorazowe Joby właściciela schematu (`sport-backend-migrate` oraz, gdy telemetria jest włączona, `sport-telemetry-migrate`) i nie może być montowany w Deploymentach API/workera/telemetrii.
 4. Opcjonalnie ustaw integracje (`SENTRY_DSN`, Stripe, email, Matrix).
 
 Also update `infrastructure/k8s/config/app-configmap.yaml`:
@@ -82,7 +82,10 @@ kubectl apply -f infrastructure/k8s/workloads/redis.yaml
 kubectl apply -f infrastructure/k8s/workloads/brouter.yaml
 kubectl apply -f infrastructure/k8s/jobs/migrate-job.yaml
 kubectl wait --for=condition=complete job/sport-backend-migrate -n sport --timeout=300s
-# Dopiero po sukcesie migration Joba uruchom/rolluj workloady runtime.
+# Jeżeli workload telemetrii jest włączony, zbootstrapuj również jego schemat:
+kubectl apply -f infrastructure/k8s/jobs/telemetry-migrate-job.optional.yaml
+kubectl wait --for=condition=complete job/sport-telemetry-migrate -n sport --timeout=300s
+# Dopiero po sukcesie właściwych Jobów właściciela schematu uruchom/rolluj workloady runtime.
 kubectl apply -f infrastructure/k8s/workloads/api.yaml
 kubectl apply -f infrastructure/k8s/workloads/worker.yaml
 kubectl apply -f infrastructure/k8s/workloads/worker-simulation.yaml
@@ -188,7 +191,7 @@ kubectl rollout restart deployment/sport-celery-beat -n sport
   - `kubectl delete job sport-backend-migrate -n sport`
   - `kubectl apply -f infrastructure/k8s/jobs/migrate-job.yaml`
   - `kubectl wait --for=condition=complete job/sport-backend-migrate -n sport --timeout=300s`
-- Nie dodawaj `sport-migration-secrets` ani `MIGRATION_DATABASE_URL` do Deploymentów API/workera.
+- Nie dodawaj `sport-migration-secrets` ani `MIGRATION_DATABASE_URL` do Deploymentów API/workera/telemetrii. Jeżeli telemetry zgłasza przy starcie niegotowy schemat, uruchom ponownie `telemetry-migrate-job.optional.yaml`; nie dawaj Deploymentowi telemetrii uprawnień właściciela DDL.
 
 ### B) Worker backlog growing
 - Scale workers quickly:

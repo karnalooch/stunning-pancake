@@ -58,7 +58,7 @@ Before first deployment, copy and edit:
 2. Replace at least:
    - `SECRET_KEY`
    - `DATABASE_URL` with the non-privileged runtime PostgreSQL role (`NOSUPERUSER`, `NOBYPASSRLS`)
-3. Copy `infrastructure/k8s/config/migration-secrets.template.yaml` and set `MIGRATION_DATABASE_URL` to the privileged schema/migration owner. This Secret is consumed only by the one-shot migration Job and must not be mounted by API/worker Deployments.
+3. Copy `infrastructure/k8s/config/migration-secrets.template.yaml` and set `MIGRATION_DATABASE_URL` to the privileged schema/migration owner. This Secret is consumed only by one-shot schema-owner Jobs (`sport-backend-migrate` and, when telemetry is enabled, `sport-telemetry-migrate`) and must not be mounted by API/worker/telemetry Deployments.
 4. Optionally set integrations (`SENTRY_DSN`, Stripe, email, Matrix).
 
 Also update `infrastructure/k8s/config/app-configmap.yaml`:
@@ -83,7 +83,10 @@ kubectl apply -f infrastructure/k8s/workloads/redis.yaml
 kubectl apply -f infrastructure/k8s/workloads/brouter.yaml
 kubectl apply -f infrastructure/k8s/jobs/migrate-job.yaml
 kubectl wait --for=condition=complete job/sport-backend-migrate -n sport --timeout=300s
-# Only after the migration Job succeeds, start/roll out runtime workloads.
+# If the telemetry workload is enabled, bootstrap its owned schema too:
+kubectl apply -f infrastructure/k8s/jobs/telemetry-migrate-job.optional.yaml
+kubectl wait --for=condition=complete job/sport-telemetry-migrate -n sport --timeout=300s
+# Only after the relevant schema-owner Jobs succeed, start/roll out runtime workloads.
 kubectl apply -f infrastructure/k8s/workloads/api.yaml
 kubectl apply -f infrastructure/k8s/workloads/worker.yaml
 kubectl apply -f infrastructure/k8s/workloads/worker-simulation.yaml
@@ -190,7 +193,7 @@ kubectl rollout restart deployment/sport-celery-beat -n sport
   - `kubectl delete job sport-backend-migrate -n sport`
   - `kubectl apply -f infrastructure/k8s/jobs/migrate-job.yaml`
   - `kubectl wait --for=condition=complete job/sport-backend-migrate -n sport --timeout=300s`
-- Do not add `sport-migration-secrets` or `MIGRATION_DATABASE_URL` to API/worker Deployments.
+- Do not add `sport-migration-secrets` or `MIGRATION_DATABASE_URL` to API/worker/telemetry Deployments. If telemetry startup reports that its schema is not ready, re-run `telemetry-migrate-job.optional.yaml`; do not grant DDL ownership to the telemetry Deployment.
 
 ### B) Worker backlog growing
 

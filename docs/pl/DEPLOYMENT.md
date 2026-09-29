@@ -81,17 +81,21 @@ SENTRY_DSN=https://...
 
 ### Krok 6: Migracje i seed data
 
-Repliki webowe Django **nie** wykonują już zmian schematu podczas startu. Migracje uruchamiaj jeden raz jako jawny krok deployment/bootstrap **przed** rolloutem lub skalowaniem nowej rewizji backendu. Gdy migracje są oczekujące, start weba kończy się fail-closed na `python manage.py migrate --check --no-input`, zamiast modyfikować schemat.
+Repliki webowe Django **nie** wykonują zmian schematu podczas startu. Workery telemetrii również nie wykonują DDL schematu w lifespan FastAPI. Oba kroki właściciela schematu uruchamiaj jawnie **przed** rolloutem lub skalowaniem odpowiedniej rewizji runtime. Gdy migracje Django są oczekujące, start weba kończy się fail-closed na `python manage.py migrate --check --no-input`; gdy brakuje tabel, kolumn lub indeksów telemetrii, telemetry kończy start fail-closed na read-only schema readiness check.
 
 Na Railway właściciel migracji musi być dostępny w **osobno izolowanym, jednorazowym kontekście wykonawczym** (np. dedykowanym migration service/job skonfigurowanym w projekcie Railway). Nie dodawaj `MIGRATION_DATABASE_URL` do długo działającego serwisu backendu i nie traktuj `railway run` uruchamianego przeciwko backendowi jako uprzywilejowanej ścieżki migracji: `railway run` wstrzykuje zmienne wybranego serwisu, więc użyłby nieuprzywilejowanego runtime `DATABASE_URL` albo wymagałby wystawienia credentiala właściciela do serwisu webowego.
 
-Jednorazowy proces migracyjny wykonuje:
+Jednorazowe ścieżki właściciela schematu wykonują:
 
 ```bash
+# obraz/root backendu
 python manage.py migrate --no-input
+
+# obraz/root telemetrii
+python schema_bootstrap.py
 ```
 
-Dopiero po jego poprawnym zakończeniu wolno rolloutować/skalować nową rewizję backendu. Pozostałe kroki bootstrap/data, takie jak `create_admin`, `seed_rbac` i `seed_data`, pozostają jawnymi akcjami operatora i muszą używać credentiali odpowiednich do swojego zakresu.
+Dopiero po poprawnym zakończeniu właściwego procesu jednorazowego wolno rolloutować/skalować rewizję backendu lub telemetrii. Pozostałe kroki bootstrap/data, takie jak `create_admin`, `seed_rbac` i `seed_data`, pozostają jawnymi akcjami operatora i muszą używać credentiali odpowiednich do swojego zakresu.
 
 > CI repozytorium dowodzi fail-closed startupu oraz modelu one-shot dla Home Lab/Kubernetes. Utworzenie i zweryfikowanie osobno izolowanego kontekstu migracji Railway jest wymaganiem środowiskowym przed rolloutem Railway zawierającym nowe migracje.
 

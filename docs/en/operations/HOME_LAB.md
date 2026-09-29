@@ -35,7 +35,7 @@ python scripts/home_lab.py cold-start-smoke
 
 `init` creates ignored `.env.home` and refuses to overwrite an existing file. It generates independent local values for the database password, dedicated GLOBAL_OWNER `ADMIN_PASSWORD`, Django `SECRET_KEY`, telemetry JWT signing secret, and AES-256 backup key. Secret values are never written to T87 evidence.
 
-`up` validates the layered Compose model, executes the profiled one-shot `backend_migrate` bootstrap with the privileged database owner, then starts runtime services with `up -d --build --wait` and probes the backend, telemetry, and GLOBAL_OWNER admin HTTP surfaces. The backend/worker runtime containers never receive the migration-owner credential.
+`up` validates the layered Compose model, executes the profiled one-shot `backend_migrate` and `telemetry_migrate` bootstraps with the privileged database owner, then starts runtime services with `up -d --build --wait` and probes the backend, telemetry, and GLOBAL_OWNER admin HTTP surfaces. Backend, worker, and telemetry runtime containers never receive the migration-owner credential.
 
 For a home lab created before T87, do **not** delete/regenerate `.env.home` just to add this field because that would also rotate database/signing keys. Add a strong local `ADMIN_PASSWORD` entry to the existing private file before the next `up`. If the GLOBAL_OWNER account already exists, this does not rotate that account's existing password; role-login acceptance remains the separate T86 runtime smoke.
 
@@ -64,7 +64,7 @@ The same migration primitive is also available explicitly for operator/debug use
 python scripts/home_lab.py migrate
 ```
 
-The command is fail-closed. From a known process state it runs `down --remove-orphans` **without `-v`**, preserving named volumes and local data. It then validates exactly `docker-compose.yml` + `docker-compose.home.yml`, runs the one-shot `backend_migrate` bootstrap first, and only after that succeeds runs `up -d --build --wait`. It verifies the core services and backend/telemetry/GLOBAL_OWNER HTTP surfaces, proves that Django has no pending migrations, and actively probes PostgreSQL, Redis, and the main Celery worker path.
+The command is fail-closed. From a known process state it runs `down --remove-orphans` **without `-v`**, preserving named volumes and local data. It then validates exactly `docker-compose.yml` + `docker-compose.home.yml`, runs the one-shot `backend_migrate` and `telemetry_migrate` bootstraps first, and only after both succeed runs `up -d --build --wait`. It verifies the core services and backend/telemetry/GLOBAL_OWNER HTTP surfaces, proves that Django has no pending migrations, and actively probes PostgreSQL, Redis, and the main Celery worker path.
 
 Only after the complete contract passes does it write secret-free exact-SHA evidence to `backups/home-lab/evidence/t90-dev-env-ready-*.json` and print `DEV ENV READY`. A bare `docker compose up`, container status, or a single health endpoint is not equivalent evidence.
 

@@ -35,7 +35,7 @@ python scripts/home_lab.py cold-start-smoke
 
 `init` tworzy ignorowany plik `.env.home` i odmawia nadpisania istniejącego pliku. Generuje niezależne lokalne wartości dla hasła bazy, dedykowanego `ADMIN_PASSWORD` GLOBAL_OWNER-a, Django `SECRET_KEY`, sekretu podpisującego JWT telemetrii oraz klucza AES-256 do backupów. Wartości sekretów nigdy nie trafiają do evidence T87.
 
-`up` waliduje warstwowy model Compose, uruchamia profilowany jednorazowy bootstrap `backend_migrate` z uprzywilejowanym właścicielem bazy, a dopiero potem startuje usługi runtime przez `up -d --build --wait` i sprawdza HTTP backendu, telemetrii i panelu GLOBAL_OWNER. Kontenery runtime backendu/workera nigdy nie dostają credentiala właściciela migracji.
+`up` waliduje warstwowy model Compose, uruchamia profilowane jednorazowe bootstrapy `backend_migrate` i `telemetry_migrate` z uprzywilejowanym właścicielem bazy, a dopiero potem startuje usługi runtime przez `up -d --build --wait` i sprawdza HTTP backendu, telemetrii i panelu GLOBAL_OWNER. Kontenery runtime backendu, workerów i telemetrii nigdy nie dostają credentiala właściciela migracji.
 
 Dla home-labu utworzonego przed T87 **nie** usuwaj i nie generuj ponownie `.env.home` tylko po to, aby dodać to pole — obróciłoby to również hasło bazy i klucze podpisujące. Przed kolejnym `up` dopisz silny lokalny `ADMIN_PASSWORD` do istniejącego prywatnego pliku. Jeżeli konto GLOBAL_OWNER już istnieje, nie zmienia to jego dotychczasowego hasła; akceptacja logowania roli nadal należy do osobnego runtime smoke T86.
 
@@ -64,7 +64,7 @@ Ten sam prymityw migracyjny można też uruchomić jawnie do obsługi operatorsk
 python scripts/home_lab.py migrate
 ```
 
-Komenda działa fail-closed i z czystego stanu procesów wykonuje `down --remove-orphans` **bez `-v`**, więc zachowuje wolumeny i lokalne dane. Następnie waliduje dokładnie `docker-compose.yml` + `docker-compose.home.yml`, najpierw wykonuje jednorazowy bootstrap `backend_migrate`, a dopiero po jego sukcesie uruchamia `up -d --build --wait`. Sprawdza usługi rdzenia i HTTP backendu/telemetrii/GLOBAL_OWNER, brak oczekujących migracji Django oraz aktywne ścieżki PostgreSQL, Redis i głównego workera Celery.
+Komenda działa fail-closed i z czystego stanu procesów wykonuje `down --remove-orphans` **bez `-v`**, więc zachowuje wolumeny i lokalne dane. Następnie waliduje dokładnie `docker-compose.yml` + `docker-compose.home.yml`, najpierw wykonuje jednorazowe bootstrapy `backend_migrate` i `telemetry_migrate`, a dopiero po sukcesie obu uruchamia `up -d --build --wait`. Sprawdza usługi rdzenia i HTTP backendu/telemetrii/GLOBAL_OWNER, brak oczekujących migracji Django oraz aktywne ścieżki PostgreSQL, Redis i głównego workera Celery.
 
 Po pełnym PASS zapisuje pozbawione sekretów evidence powiązane z dokładnym SHA do `backups/home-lab/evidence/t90-dev-env-ready-*.json`. Tylko ten pełny kontrakt wypisuje `DEV ENV READY`. Nie używaj samego `docker compose up`, statusu kontenera ani pojedynczego health endpointu jako równoważnego dowodu.
 

@@ -8,7 +8,9 @@ Web, telemetry and Celery runtimes must use a PostgreSQL login with `NOSUPERUSER
 
 `core.db_role_guard` reads the effective `current_user` flags from `pg_roles` and fails closed when the guarded runtime is a superuser, has `BYPASSRLS`, or is not PostgreSQL. Production is always guarded. The pilot/home lab opts in explicitly with `RLS_RUNTIME_ROLE_GUARD=1` even though it runs with `DEBUG=1`.
 
-T17 removes schema mutation and privileged migration credentials from normal web startup. The backend entrypoint uses only the serving `DATABASE_URL` and runs `python manage.py migrate --check --no-input`; pending migrations therefore fail startup without changing schema. Home Lab invokes the profiled one-shot `backend_migrate` service before runtime startup, while Kubernetes uses the separate `sport-backend-migrate` Job. Privileged migration credentials are scoped to those one-shot paths and are not mounted into the API runtime.
+T17 removes schema mutation and privileged migration credentials from normal web startup. The backend entrypoint uses only the serving `DATABASE_URL` and runs `python manage.py migrate --check --no-input`; pending migrations therefore fail startup without changing schema. Home Lab invokes the profiled one-shot `backend_migrate` service before runtime startup, while Kubernetes uses the separate `sport-backend-migrate` Job.
+
+T18 applies the same ownership boundary to telemetry. FastAPI lifespan performs only read-only schema readiness checks; all telemetry `CREATE`/`ALTER`/index/hypertable work lives in `telemetry/schema_bootstrap.py`. Home Lab runs the profiled one-shot `telemetry_migrate` service, and Kubernetes uses `sport-telemetry-migrate` when the optional telemetry workload is deployed. Privileged migration credentials are scoped to these one-shot paths and are not mounted into API, worker, or telemetry runtimes.
 
 ## Celery scope boundary
 

@@ -98,6 +98,19 @@ services:
       db:
         condition: service_healthy
 
+  # One-shot telemetry schema owner. Runtime telemetry workers only verify
+  # schema readiness; DDL belongs to this explicit bootstrap path.
+  telemetry_migrate:
+    profiles: ["bootstrap"]
+    build: ./telemetry
+    restart: "no"
+    command: python schema_bootstrap.py
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${DB_PASSWORD}@db:5432/${POSTGRES_DB}
+    depends_on:
+      db:
+        condition: service_healthy
+
   # Backend API (Django)
   backend:
     build: ./backend

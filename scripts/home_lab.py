@@ -403,18 +403,22 @@ def profiles(args: argparse.Namespace) -> tuple[str, ...]:
 
 
 def apply_migrations() -> None:
-    """Apply schema changes once through the privileged bootstrap service."""
+    """Apply Django and telemetry schema changes through one-shot owners."""
     require_environment()
-    run(
-        compose_command(
-            "run",
-            "--rm",
-            "--build",
-            "backend_migrate",
-            profiles=(BOOTSTRAP_PROFILE,),
+    for service, label in (
+        ("backend_migrate", "Django migrations"),
+        ("telemetry_migrate", "Telemetry schema bootstrap"),
+    ):
+        run(
+            compose_command(
+                "run",
+                "--rm",
+                "--build",
+                service,
+                profiles=(BOOTSTRAP_PROFILE,),
+            )
         )
-    )
-    print("Django migrations applied by one-shot backend_migrate")
+        print(f"{label} applied by one-shot {service}")
 
 
 def up(args: argparse.Namespace) -> None:
