@@ -15,6 +15,7 @@ on:
       - "scripts/test_plan_affected_tests.py"
       - "scripts/test_mobile_windows_release_smoke_workflow.py"
       - "scripts/android-env.ps1"
+      - "scripts/android-preflight.ps1"
       - "scripts/mobile-runtime-acceptance.ps1"
       - "scripts/validate_mobile_native_provenance.py"
       - "scripts/test_mobile_native_provenance.py"
@@ -36,10 +37,25 @@ jobs:
     outputs:
       run: ${{ steps.decision.outputs.run }}
       reason: ${{ steps.decision.outputs.reason }}
+      preflight_changed: ${{ steps.preflight-scope.outputs.changed }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
+
+      - name: Detect Android preflight contract changes
+        id: preflight-scope
+        if: github.event_name == 'pull_request'
+        env:
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CI_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet "$CI_BASE_SHA" "$CI_HEAD_SHA" --             scripts/android-env.ps1             scripts/android-preflight.ps1; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Classify native-affecting changes
         id: classifier
@@ -77,6 +93,32 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**Run Windows release compile:** `${{ steps.decision.outputs.run }}`" >> "$GITHUB_STEP_SUMMARY"
           echo "**Reason:** ${{ steps.decision.outputs.reason }}" >> "$GITHUB_STEP_SUMMARY"
+
+  android-preflight-syntax-windows:
+    name: Android preflight syntax (Windows PowerShell 5.1)
+    needs: [native-scope]
+    if: github.event_name == 'pull_request' && needs.native-scope.outputs.preflight_changed == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Parse Android preflight with Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $path = Join-Path $env:GITHUB_WORKSPACE "scripts\android-preflight.ps1"
+          $tokens = $null
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile(
+            $path,
+            [ref]$tokens,
+            [ref]$errors
+          )
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
+          Write-Host "Windows PowerShell 5.1 parse PASS: $path"
 
   android-release-windows:
     name: Android release compile (Windows)

@@ -39,6 +39,27 @@ class MobileWindowsReleaseSmokeWorkflowTests(unittest.TestCase):
         )
         self.assertNotIn("native-affecting PR paths changed", text)
 
+    def test_preflight_changes_get_cheap_windows_powershell_parse(self):
+        text = workflow_text()
+        self.assertIn('      - "scripts/android-preflight.ps1"', text)
+        self.assertIn("Detect Android preflight contract changes", text)
+        self.assertIn("scripts/android-env.ps1", text)
+        self.assertIn("scripts/android-preflight.ps1", text)
+        self.assertIn(
+            "Android preflight syntax (Windows PowerShell 5.1)",
+            text,
+        )
+        self.assertIn(
+            "needs.native-scope.outputs.preflight_changed == 'true'",
+            text,
+        )
+        self.assertIn("shell: powershell", text)
+        self.assertIn(
+            "[System.Management.Automation.Language.Parser]::ParseFile",
+            text,
+        )
+        self.assertIn("timeout-minutes: 5", text)
+
     def test_windows_release_compile_remains_scope_gated(self):
         text = workflow_text()
         self.assertIn("    needs: [native-scope]", text)
