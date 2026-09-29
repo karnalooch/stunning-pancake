@@ -55,4 +55,4 @@ packages:
   - "packages/*"
 
 minimumReleaseAgeExclude:
-  - expo-updates@55.0.32
+  - expo-updates@55.0.32 || 55.0.33
