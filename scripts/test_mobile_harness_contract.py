@@ -39,6 +39,7 @@ class MobileHarnessContractTests(unittest.TestCase):
             "Conflicting Android SDK roots detected before resolution",
             "PATH exposes adb outside the canonical SDK",
             "A stale/foreign adb server is running from",
+            "ADB server port 5037 is occupied by non-adb process",
             '$expectedNode = "24.21.0"',
             '$expectedPnpm = "12.4.2"',
             "JDK 17 is required",
