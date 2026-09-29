@@ -1,4 +1,4 @@
-"""Contract for cost-aware Mobile Windows Release Smoke routing."""
+"""Contract for Gumball-routed Mobile Windows Release Smoke."""
 
 from __future__ import annotations
 
@@ -25,19 +25,31 @@ class MobileWindowsReleaseSmokeWorkflowTests(unittest.TestCase):
         self.assertIn("Classify native-affecting changes", text)
         self.assertIn("python scripts/plan_affected_tests.py", text)
         self.assertIn("steps.classifier.outputs.lane_mobile_native", text)
-        self.assertIn("github.event.pull_request.base.sha", text)
-        self.assertIn("github.event.pull_request.head.sha", text)
 
-    def test_windows_release_compile_is_conditioned_on_native_scope(self):
+    def test_pull_requests_never_compile_windows_apk_automatically(self):
+        text = workflow_text()
+        self.assertIn('if [ "$EVENT_NAME" != "pull_request" ]; then', text)
+        self.assertIn(
+            "Gumball defers Windows APK compilation to manual/release validation",
+            text,
+        )
+        self.assertIn(
+            "PR Windows release proof deferred by Gumball CI Cost Governor",
+            text,
+        )
+        self.assertNotIn("native-affecting PR paths changed", text)
+
+    def test_windows_release_compile_remains_scope_gated(self):
         text = workflow_text()
         self.assertIn("    needs: [native-scope]", text)
         self.assertIn("    if: needs.native-scope.outputs.run == 'true'", text)
-        self.assertIn("JS/UI/assets/backend-only PR; Windows release compile is redundant", text)
-        self.assertIn("gradlew.bat assembleRelease --no-daemon --stacktrace --max-workers=2", text)
+        self.assertIn(
+            "gradlew.bat assembleRelease --no-daemon --stacktrace --max-workers=2",
+            text,
+        )
 
     def test_manual_run_still_forces_release_validation(self):
         text = workflow_text()
-        self.assertIn('if [ "$EVENT_NAME" != "pull_request" ]; then', text)
         self.assertIn('echo "run=true" >> "$GITHUB_OUTPUT"', text)
         self.assertIn("workflow_dispatch:", text)
 
