@@ -2,7 +2,7 @@
 
 **Status:** canonical execution index  
 **Decision date:** 2026-09-17  
-**Last reconciled with `main`:** 2026-09-28 (`cf8067d0`)  
+**Last reconciled with `main`:** 2026-09-29 (`384c74ed`)  
 **Rule:** one tranche = one small, reviewable responsibility/PR unless a historical tranche already landed in several small PRs. Tranche IDs are stable identifiers; the explicit execution-order section below is authoritative when a later-added tranche is intentionally pulled forward.
 
 ## One plan, not two
@@ -82,18 +82,18 @@ These retain their original IDs. Only statuses/notes below are refreshed where l
 | T03 | Tenant destructive simulator authority | DONE | PR #65 |
 | T04 | Tenant moderator privilege review | DONE | PR #68 |
 | T05 | Telemetry auth (HTTP + WS / activity-scoped token) | DONE | PR #89 |
-| T06 | Telemetry read/privacy isolation | ACTIVE | #366 / PR #367 makes authenticated Django SSE/HTTP/replay the production read authority, retires legacy direct FastAPI raw reads/browser WS and adds a route-surface regression contract. Required telemetry/admin/Aggregate CI evidence remains before DONE. |
+| T06 | Telemetry read/privacy isolation | DONE | #366 closed / PR #367 merged (`fca1617a`). Authenticated Django SSE/HTTP/replay is the production read authority; legacy direct FastAPI raw reads/browser WS are retired and the route-surface regression contract is gated by CI. |
 | T07 | MFA mandatory for administrators | DONE | PR #69 |
 | T08 | OAuth state enforcement + provider binding | DONE | PR #70 |
 | T09 | Tenant webhook admin / SSRF | DONE | PR #71 |
 | T10 | Department / moderation / heatmap tenant scope | DONE | PR #72 |
 | T11 | Real PostgreSQL RLS enforcement | DONE | PR #83 |
-| T12 | B2B billing isolate or disable | ACTIVE | #368 / PR #369 makes rewards B2B billing default-OFF, fail-closed without Stripe config, binds checkout to TENANT_ADMIN/GLOBAL_OWNER + authoritative tenant scope, removes mock-success billing paths and consolidates Stripe configuration authority. Final replay + CI after #365/#367 remain before DONE. |
+| T12 | B2B billing isolate or disable | DONE | #368 closed / PR #369 merged (`384c74ed`). Rewards B2B billing is default-OFF, fails closed without Stripe config, binds checkout to TENANT_ADMIN/GLOBAL_OWNER + authoritative tenant scope, removes mock-success billing paths and consolidates Stripe configuration authority. |
 | T13 | Telemetry packet/batch contract validation | DONE | PR #95 |
 | T14 | Telemetry durable ACK lifecycle | DONE | PR #95; pilot mode qualification strengthened by T62. |
 | T15 | Telemetry multi-worker broadcast via Redis | NOT REQUIRED | T06 / #367 retires the only FastAPI live-read WebSocket consumer and keeps authenticated Django SSE/HTTP/replay as read authority. Cross-worker FastAPI fanout has no current consumer; reopen only if a FastAPI live subscriber surface is deliberately reintroduced. Remaining inert broadcaster code is cleanup debt, not a release requirement. |
 | T16 | Mobile telemetry bearer + WS auth | DONE | PR #89 |
-| T17 | Backend startup migrations out of replica | PLANNED | Needed for mature operations / P5 path. |
+| T17 | Backend startup migrations out of replica | ACTIVE | #370 / PR #374 detaches Django schema mutation from normal web startup, adds explicit Home Lab/Kubernetes migration ownership, preserves T73 runtime-role separation and requires fresh Home Lab/release/CI evidence before DONE. |
 | T18 | Telemetry schema out of worker startup | PLANNED | Depends on operational rollout design. |
 | T19 | True PostGIS pytest backend gate | PLANNED | Pilot-critical when release gate relies on it. |
 | T20 | Telemetry integration gate | PLANNED | Pilot-critical integration evidence. |
@@ -108,7 +108,7 @@ These retain their original IDs. Only statuses/notes below are refreshed where l
 | T29 | Backend Python runtime remediation | NOT REQUIRED | T28 found no backend runtime vulnerability requiring pre-pilot remediation. Reopen only for a new confirmed runtime HIGH/CRITICAL or another concrete blocker. |
 | T30 | Node dependency remediation | NOT REQUIRED | T28 found no Node workspace HIGH/CRITICAL vulnerability requiring pre-pilot remediation. Reopen only for a new confirmed runtime blocker. |
 | T31 | DRF/GIS direction decision + prototype | PLANNED | Post-pilot unless concrete blocker. |
-| T32 | Mobile overrides → pnpm workspace authority | ACTIVE | #263 / PR #365 disambiguates root/mobile package names, makes `pnpm-workspace.yaml` the single override authority and adds selector/identity guards. Full frozen-install + mobile/Expo + Aggregate CI evidence is required before DONE. |
+| T32 | Mobile overrides → pnpm workspace authority | DONE | #263 closed / PR #365 merged (`d7c2c0b0`). Root/mobile package names are disambiguated, `pnpm-workspace.yaml` is the single override authority and selector/identity guards are enforced by CI. |
 | T33 | Expo/EAS canonical configuration + E2E secrets | PARTIAL | Pilot-local/profile prerequisites landed across #85/#86/#88; #257 adds generated-native provenance validation; #264 makes Windows raw native builds diagnostic-only and keeps EAS as artifact authority. Remaining canonical runtime/appVersion closure is tracked by #156/#157. |
 | T34 | Firebase gate + platform config safety | PARTIAL | Pilot Firebase-off/platform gating landed across #88/#90; broader release contract remains. |
 | T35 | Conservative admin dead-code/export cleanup | PLANNED | Post-pilot cleanup. |
