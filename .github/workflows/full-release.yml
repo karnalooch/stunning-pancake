@@ -114,11 +114,12 @@ jobs:
 
   android-native:
     name: Full Android native smoke
+    # Gumball CI Cost Governor: PRs never burn an APK build automatically.
+    # Exact-SHA PR proof is requested explicitly through the Proof Broker.
+    if: github.event_name != 'pull_request'
     uses: ./.github/workflows/mobile-native-smoke.yml
     with:
-      # PRs delegate the expensive APK decision to direct native/release path
-      # classification. Nightly/manual/tag runs always force a release APK.
-      release: ${{ github.event_name != 'pull_request' }}
+      release: true
       source_sha: ${{ inputs.source_sha || github.event.pull_request.head.sha || github.sha }}
 
   home-lab:
@@ -147,6 +148,7 @@ jobs:
     steps:
       - name: Enforce heavyweight validation matrix
         env:
+          EVENT_NAME: ${{ github.event_name }}
           REPO_REGRESSION: ${{ needs.repo-regression.result }}
           ANDROID_NATIVE: ${{ needs.android-native.result }}
           HOME_LAB: ${{ needs.home-lab.result }}
@@ -165,7 +167,16 @@ jobs:
             fi
           }
           check "Full monorepo regression" "$REPO_REGRESSION"
-          check "Full Android native smoke" "$ANDROID_NATIVE"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            if [ "$ANDROID_NATIVE" != "skipped" ]; then
+              echo "::error::Full Android native smoke expected skipped on pull_request, got $ANDROID_NATIVE"
+              failed=1
+            else
+              echo "Full Android native smoke: skipped on pull_request by Gumball cost policy"
+            fi
+          else
+            check "Full Android native smoke" "$ANDROID_NATIVE"
+          fi
           check "Home Lab configuration proof" "$HOME_LAB"
           check "Kubernetes + release proof" "$K8S_RELEASE"
           exit "$failed"
