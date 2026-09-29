@@ -1,5 +1,5 @@
 {
-  "name": "4velo",
+  "name": "@4velo/mobile",
   "version": "0.3.7-dev",
   "main": "index",
   "scripts": {
@@ -99,32 +99,6 @@
     "tsx": "^4.21.0",
     "typescript": "~5.9.3",
     "babel-preset-expo": "55.0.25"
-  },
-  "overrides": {
-    "node-forge": "1.4.0",
-    "tar": "7.5.13",
-    "yaml": "2.8.3",
-    "uuid": "14.0.0",
-    "ajv": "8.20.0",
-    "eslint": {
-      "ajv": "6.15.0"
-    },
-    "@eslint/eslintrc": {
-      "ajv": "6.15.0"
-    },
-    "eslint-plugin-expo": {
-      "ajv": "6.15.0",
-      "eslint": {
-        "ajv": "6.15.0"
-      },
-      "@eslint/eslintrc": {
-        "ajv": "6.15.0"
-      }
-    },
-    "postcss": "8.5.12",
-    "@xmldom/xmldom": ">=0.8.14",
-    "minimatch": ">=10.0.1",
-    "diff": ">=7.0.0"
   },
   "private": true
 }
