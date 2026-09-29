@@ -50,10 +50,19 @@ class TelemetrySchemaTests(unittest.IsolatedAsyncioTestCase):
 
         joined = "\n".join(conn.executed)
         self.assertIn("CREATE TABLE IF NOT EXISTS gps_points", joined)
-        self.assertIn("ALTER TABLE gps_points ADD COLUMN IF NOT EXISTS seq BIGINT", joined)
-        self.assertIn("CREATE UNIQUE INDEX IF NOT EXISTS gps_points_activity_time_seq_uidx", joined)
+        self.assertIn(
+            "ALTER TABLE gps_points ADD COLUMN IF NOT EXISTS seq BIGINT",
+            joined,
+        )
+        self.assertIn(
+            "CREATE UNIQUE INDEX IF NOT EXISTS gps_points_activity_time_seq_uidx",
+            joined,
+        )
         self.assertIn("CREATE TABLE IF NOT EXISTS telemetry_ingest_receipts", joined)
-        self.assertIn("CREATE INDEX IF NOT EXISTS telemetry_ingest_receipts_activity_user_idx", joined)
+        self.assertIn(
+            "CREATE INDEX IF NOT EXISTS telemetry_ingest_receipts_activity_user_idx",
+            joined,
+        )
         self.assertIn("create_hypertable", joined)
 
     async def test_runtime_readiness_is_read_only(self):
