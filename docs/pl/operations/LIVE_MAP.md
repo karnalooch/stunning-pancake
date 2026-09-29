@@ -4,7 +4,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Platform Operator / Admin Owner |
-| **Last reviewed** | 2026-06-05 |
+| **Last reviewed** | 2026-09-29 |
 | **Audience** | Operatorzy, on-call, maintainerzy frontendu |
 | **lang** | pl |
 | **translation** | [English](../../en/operations/LIVE_MAP.md) |
@@ -68,7 +68,8 @@ Nagłówek: **active** (global FSM) + **in view** (`positions_returned` w bbox).
 | **Widok kraj (z ≥ 5)** | Huby miast z liczbą + klastry (`detail=standard`, limit ~800) | — |
 | **SSE (domyślny, z ≥ 5)** | `GET /api/activities/telemetry/live/stream/` | 200–500 ms (`stream_interval_ms` w meta) |
 | **HTTP poll (fallback)** | `GET /api/activities/telemetry/live/` | ≥ 950 ms przy zoom ≥ 12; wolniejszy gdy SSE aktywny (~15 s) |
-| **WS (opcjonalny)** | FastAPI `/ws/telemetry/live` | `position_update` z ingest — `VITE_LIVE_MAP_WS=1` |
+
+Odczyty produkcyjne są obsługiwane wyłącznie przez uwierzytelnione Django SSE/HTTP/replay, gdzie dostępny jest kontekst user/rola/tenant i RBAC. Legacy bezpośrednie odczyty live/history z FastAPI oraz browserowy direct-WS zostały wycofane w T06.
 
 Ruch na mapie: **ring buffer 3 punkty / device** + interpolacja po **polilinii** (`liveMapRing.ts`, `liveMapPolyline.ts`).
 

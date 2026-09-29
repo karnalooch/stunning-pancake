@@ -4,7 +4,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Platform Operator / Admin Owner |
-| **Last reviewed** | 2026-06-05 |
+| **Last reviewed** | 2026-09-29 |
 | **Audience** | Operators, on-call, frontend maintainers |
 | **lang** | en |
 | **translation** | [Polski](../../pl/operations/LIVE_MAP.md) |
@@ -32,7 +32,8 @@
 | **Country view (z ≥ 5)** | City hubs + counts + clusters (`detail=standard`, limit ~800) | — |
 | **SSE (default, z ≥ 5)** | `GET /api/activities/telemetry/live/stream/` | 200–500 ms (`stream_interval_ms` in meta) |
 | **HTTP poll (fallback)** | `GET /api/activities/telemetry/live/` | ≥ 950 ms at zoom ≥ 12; slower when SSE active (~15 s) |
-| **WS (optional)** | FastAPI `/ws/telemetry/live` | `position_update` from ingest — `VITE_LIVE_MAP_WS=1` |
+
+Production reads are served only through the authenticated Django SSE/HTTP/replay surface so user/role/tenant RBAC is available. Legacy direct FastAPI live/history reads and the browser direct-WS lane are retired under T06.
 
 On-map motion: **3-point ring buffer / device** + polyline interpolation (`liveMapRing.ts`, `liveMapPolyline.ts`).
 

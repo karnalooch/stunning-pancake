@@ -248,7 +248,7 @@ For deep-dive details on high-performance pagination, MapLibre GL GPS tracking i
 | `liveMapLayers.ts` | Klastry, ikony, etykiety, huby miast (symbol/circle) |
 | `liveMapZoom.ts` | Tiery zoom + `detail=summary\|standard\|full` |
 | `liveMapHealth.ts` / `liveMapPoll.ts` / `LiveMapStatusBar.tsx` | Stan sync, polling SLO, degraded UX |
-| `liveMapStream.ts` / `liveMapWs.ts` | SSE + opcjonalny WS telemetry |
+| `liveMapStream.ts` | Uwierzytelniony Django SSE; direct FastAPI WS wycofany w T06 |
 | `liveMapRing.ts` / `liveMapPolyline.ts` | Ring 3 pkt + interpolacja po polilinii |
 | `liveMapViewport.ts` | Viewport key, stale-empty po zoom/pan |
 | `liveMapMarkers.ts` | Typy pozycji, `resolveActivityKind`, popup helpers |

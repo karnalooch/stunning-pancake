@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
 
@@ -40,7 +39,6 @@ from ingest_service import (
 )
 from privacy import is_in_privacy_zone, zones
 from schemas import BatchPacket, GpsPacket
-from ws_manager import manager
 
 logger = logging.getLogger("telemetry")
 
@@ -255,17 +253,6 @@ async def ingest_queue_reclaim(
     return {"enabled": True, "reclaim": stats}
 
 
-@router.websocket("/ws/telemetry/live")
-async def websocket_live(ws: WebSocket) -> None:
-    await manager.connect(ws)
-    try:
-        while True:
-            await asyncio.sleep(30)
-            await ws.send_json({"type": "ping"})
-    except WebSocketDisconnect:
-        manager.disconnect(ws)
-
-
 @router.websocket("/ws/telemetry/ingest")
 async def websocket_ingest(
     ws: WebSocket,
@@ -403,46 +390,3 @@ async def websocket_ingest(
         logger.info("ws.ingest: mobile client disconnected")
     except Exception as exc:
         logger.error("ws.ingest: unexpected error: %s", exc)
-
-
-@router.get("/api/telemetry/live")
-async def get_live_positions(device_id: str | None = None, limit: int = 50) -> list[dict]:
-    pool = await get_pool()
-    async with pool.acquire() as conn:
-        if device_id:
-            rows = await conn.fetch(
-                "SELECT * FROM gps_points WHERE device_id = $1 ORDER BY time DESC LIMIT $2",
-                device_id,
-                limit,
-            )
-        else:
-            rows = await conn.fetch(
-                "SELECT DISTINCT ON (device_id) * FROM gps_points "
-                "ORDER BY device_id, time DESC LIMIT $1",
-                limit,
-            )
-    return [dict(r) for r in rows]
-
-
-@router.get("/api/telemetry/history/{device_id}")
-async def get_device_history(
-    device_id: str, since_unix: float, until_unix: float | None = None
-) -> list[dict]:
-    pool = await get_pool()
-    async with pool.acquire() as conn:
-        if until_unix:
-            rows = await conn.fetch(
-                "SELECT * FROM gps_points WHERE device_id = $1 "
-                "AND time BETWEEN to_timestamp($2) AND to_timestamp($3) ORDER BY time ASC",
-                device_id,
-                since_unix,
-                until_unix,
-            )
-        else:
-            rows = await conn.fetch(
-                "SELECT * FROM gps_points WHERE device_id = $1 "
-                "AND time >= to_timestamp($2) ORDER BY time ASC",
-                device_id,
-                since_unix,
-            )
-    return [dict(r) for r in rows]
