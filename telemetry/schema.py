@@ -55,7 +55,7 @@ REQUIRED_INDEXES = frozenset(
     {
         "gps_points_activity_time_seq_uidx",
         "telemetry_ingest_receipts_activity_user_idx",
-    }
+    },
 )
 
 _READINESS_QUERIES = (
