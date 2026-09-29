@@ -21,3 +21,15 @@ class T73PilotWiringTests(unittest.TestCase):
         self.assertIn("RLS_RUNTIME_ROLE_GUARD", content)
         self.assertIn("backend_migrate:", content)
         self.assertNotIn("MIGRATION_DATABASE_URL", content)
+
+    def test_k8s_privileged_migration_secret_is_not_mounted_by_api_runtime(self):
+        job = (ROOT / "infrastructure" / "k8s" / "jobs" / "migrate-job.yaml").read_text(
+            encoding="utf-8"
+        )
+        api = (ROOT / "infrastructure" / "k8s" / "workloads" / "api.yaml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("sport-migration-secrets", job)
+        self.assertIn("MIGRATION_DATABASE_URL", job)
+        self.assertNotIn("sport-migration-secrets", api)
+        self.assertNotIn("MIGRATION_DATABASE_URL", api)
