@@ -22,7 +22,8 @@ on:
       - ".github/workflows/mobile-native-smoke.yml"
   push:
     branches: [main]
-    # On main, run the expensive smoke only when native inputs changed.
+    # Keep a cheap native-scope signal on relevant main changes, but never
+    # rebuild an APK automatically just because a PR was merged.
     paths:
       - "mobile/app.config.js"
       - "mobile/app.json"
@@ -163,12 +164,16 @@ jobs:
           if [ "$FORCE_RELEASE" = "true" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
             echo "release=true" >> "$GITHUB_OUTPUT"
-            echo "reason=caller forces native + release validation" >> "$GITHUB_OUTPUT"
-          elif [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "reason=caller forces exact-SHA native + release validation" >> "$GITHUB_OUTPUT"
+          elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
-            echo "release=true" >> "$GITHUB_OUTPUT"
-            echo "reason=$EVENT_NAME forces native + release validation" >> "$GITHUB_OUTPUT"
-          else
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "reason=manual workflow_dispatch requests explicit native debug validation" >> "$GITHUB_OUTPUT"
+          elif [ "$EVENT_NAME" = "push" ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "reason=ordinary main push defers APK compilation to explicit exact-SHA Gumball/release proof" >> "$GITHUB_OUTPUT"
+          elif [ "$EVENT_NAME" = "pull_request" ]; then
             echo "run=false" >> "$GITHUB_OUTPUT"
             echo "release=false" >> "$GITHUB_OUTPUT"
             if [ "$NATIVE_CHANGED" = "true" ]; then
@@ -176,6 +181,9 @@ jobs:
             else
               echo "reason=PR Android proof deferred by Gumball CI Cost Governor; no native build required automatically" >> "$GITHUB_OUTPUT"
             fi
+          else
+            echo "::error::Unhandled Mobile Native Smoke event: $EVENT_NAME" >&2
+            exit 1
           fi
 
       - name: Report native scope

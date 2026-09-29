@@ -4,12 +4,12 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-09-25 |
+| **Last reviewed** | 2026-09-29 |
 | **Audience** | See canonical document |
 | **lang** | en |
 | **translation** | [Polski](../../pl/operations/MOBILE.md) |
 | **translation_status** | reviewed |
-| **translation_reviewed** | 2026-09-25 |
+| **translation_reviewed** | 2026-09-29 |
 | **canonical_path** | docs/en/operations/MOBILE.md |
 
 ---
@@ -18,7 +18,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Mobile Lead |
-| **Last reviewed** | 2026-09-25 |
+| **Last reviewed** | 2026-09-29 |
 | **Target** | Build and release the React Native/Expo app; handle GPS/telemetry failures in the field. |
 | **Audience** | Mobile Lead, Platform Operator (env), QA |
 | **GPS architecture** | [DATA_RESILIENCE.md](../../DATA_RESILIENCE.md) |
@@ -116,11 +116,19 @@ The blocking implementation is `scripts/validate_mobile_runtime_boundary.py` in 
 
 ### Cost-aware Android native smoke
 
-`.github/workflows/mobile-native-smoke.yml` keeps a cheap PR-level scope check for mobile/workspace changes, but runs the expensive `expo prebuild --clean` + `gradlew assembleDebug` only when the diff can affect the native artifact. Native-affecting inputs include Expo/EAS config, `mobile/package.json`, committed native/config-plugin paths, Google Services files, build-time app icons/splash assets, product versioning, workspace/toolchain manifests, the native provenance scripts, and the Native Smoke workflow itself.
+`.github/workflows/mobile-native-smoke.yml` keeps cheap routing for mobile/workspace changes, but **neither a routine PR nor an ordinary push/merge to `main` compiles an APK automatically**. A native-affecting diff may show that proof is needed, while the expensive `expo prebuild --clean` + Gradle work is deferred to an explicit exact-SHA proof.
 
-Pure JS/UI changes under `mobile/src/**`, mobile tests, ordinary approved production JPG/PNG assets, design/docs, and shared non-native packages do not require a full Gradle rebuild. They remain covered by the normal Mobile lane, Metro bundle smoke, unit tests, Mobile Visual Contract and asset-governance checks.
+When a PR really needs a native artifact, the preferred path is the Gumball Proof Broker:
 
-The policy is fail-closed for ambiguous dependency/toolchain changes: root `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml` and `.npmrc` still force the full native smoke. A weekly scheduled build catches runner/toolchain drift even when no native PR lands.
+```text
+/gumball proof android-native-release
+```
+
+The `proof:android-native-release` label is equivalent. The broker resolves the current PR head, rejects duplicate queued/running work, and dispatches `mobile-native-smoke.yml` for that exact SHA with `release=true`. Direct `workflow_dispatch` remains an operator fallback. Full / Release Validation explicitly requests the same heavyweight proof for nightly/release/tag/reusable runs.
+
+Pure JS/UI changes under `mobile/src/**`, mobile tests, docs/design, and other non-native changes remain covered by the normal quality lanes without Gradle. Ambiguous dependency/toolchain changes remain fail-closed in classification and may require an explicit proof; **they do not justify an automatic APK build on a PR or `main`**.
+
+Do not force proof with an empty commit or by broadening a trigger. If an exact-SHA artifact has already been built and verified, reuse it instead of rebuilding the same SHA.
 
 ### Verification after build
 
