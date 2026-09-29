@@ -20,7 +20,7 @@ from ingest_service import get_ingest_redis
 from privacy import zones
 from schema import assert_schema_ready, bootstrap_schema
 
-JWT_SECRET = os.environ["TELEMETRY_INGEST_JWT_SECRET"]
+JWT_SECRET = os.environ.get("TELEMETRY_INGEST_JWT_SECRET") or os.environ["SECRET_KEY"]
 USER_ID = 930_001
 ACTIVITY_IDS = (920_001, 920_002, 920_003, 920_004)
 _CREATED_BATCH_IDS: set[str] = set()
