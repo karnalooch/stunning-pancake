@@ -107,9 +107,9 @@ class TelemetrySchemaTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("python schema_bootstrap.py", migrate_block)
         self.assertNotIn("schema_bootstrap.py", runtime_block)
 
-        deployment = (
-            REPO_ROOT / "infrastructure/k8s/optional/telemetry.optional.yaml"
-        ).read_text(encoding="utf-8")
+        deployment = (REPO_ROOT / "infrastructure/k8s/optional/telemetry.optional.yaml").read_text(
+            encoding="utf-8"
+        )
         migration_job = (
             REPO_ROOT / "infrastructure/k8s/jobs/telemetry-migrate-job.optional.yaml"
         ).read_text(encoding="utf-8")
