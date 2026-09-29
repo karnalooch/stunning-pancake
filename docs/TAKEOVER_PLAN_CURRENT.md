@@ -93,9 +93,9 @@ These retain their original IDs. Only statuses/notes below are refreshed where l
 | T14 | Telemetry durable ACK lifecycle | DONE | PR #95; pilot mode qualification strengthened by T62. |
 | T15 | Telemetry multi-worker broadcast via Redis | NOT REQUIRED | T06 / #367 retires the only FastAPI live-read WebSocket consumer and keeps authenticated Django SSE/HTTP/replay as read authority. Cross-worker FastAPI fanout has no current consumer; reopen only if a FastAPI live subscriber surface is deliberately reintroduced. Remaining inert broadcaster code is cleanup debt, not a release requirement. |
 | T16 | Mobile telemetry bearer + WS auth | DONE | PR #89 |
-| T17 | Backend startup migrations out of replica | ACTIVE | #370 / PR #374 detaches Django schema mutation from normal web startup, adds explicit Home Lab/Kubernetes migration ownership, preserves T73 runtime-role separation and requires fresh Home Lab/release/CI evidence before DONE. |
-| T18 | Telemetry schema out of worker startup | PLANNED | Depends on operational rollout design. |
-| T19 | True PostGIS pytest backend gate | PLANNED | Pilot-critical when release gate relies on it. |
+| T17 | Backend startup migrations out of replica | DONE | #370 / PR #374 merged. Django schema mutation is detached from normal web startup, with explicit Home Lab/Kubernetes migration ownership and T73 runtime-role separation preserved. |
+| T18 | Telemetry schema out of worker startup | DONE | #371 / PR #379 merged (`79ed8dce`). FastAPI lifespan is read-only for schema readiness; explicit one-shot telemetry schema owners exist for Home Lab and Kubernetes, and runtime telemetry does not receive migration-owner credentials. |
+| T19 | True PostGIS pytest backend gate | ACTIVE | #372 / PR #380 adds blocking `backend/test_rls.py` execution to Full / Release Validation against the real PostGIS service, with fail-closed workflow contract coverage. |
 | T20 | Telemetry integration gate | PLANNED | Pilot-critical integration evidence. |
 | T21 | Mobile CI filter + test integrity | DONE | PR #59 |
 | T22 | CI path routing + aggregate check | DONE | PR #61 |

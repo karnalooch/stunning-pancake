@@ -27,7 +27,12 @@ to `main` still retain broad/full regression during staged rollout.
 The lane is fail-closed and requires all four proofs:
 
 1. **Full monorepo regression** — canonical repository quality baseline on
-   PostgreSQL/PostGIS + Redis with Python and pnpm dependencies installed.
+   PostgreSQL/PostGIS + Redis with Python and pnpm dependencies installed, plus
+   the real `backend/test_rls.py` tenant-isolation integration gate. The RLS
+   proof is blocking and fail-closed: it has no SQLite fallback, conditional
+   skip, or `continue-on-error`. The existing limited `fourvelo_rls_test`
+   role remains the behavioral proof boundary so the Postgres service's
+   superuser does not bypass RLS during the isolation assertions.
 2. **Full Android native smoke** — reusable Mobile Native Smoke, including
    clean Expo prebuild and APK packaging. On pull requests this heavyweight
    proof is intentionally **deferred** by the Gumball CI Cost Governor; it is
