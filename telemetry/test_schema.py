@@ -7,8 +7,9 @@ from pathlib import Path
 
 from schema import REQUIRED_INDEXES, assert_schema_ready, bootstrap_schema
 
-ROOT = Path(__file__).resolve().parent
-LIFECYCLE = ROOT / "lifecycle.py"
+TELEMETRY_ROOT = Path(__file__).resolve().parent
+REPO_ROOT = TELEMETRY_ROOT.parent
+LIFECYCLE = TELEMETRY_ROOT / "lifecycle.py"
 
 
 class FakeConnection:
@@ -84,6 +85,32 @@ class TelemetrySchemaTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(token=token):
                 self.assertNotIn(token, upper)
         self.assertIn("assert_schema_ready", text)
+
+    def test_runtime_manifests_do_not_receive_migration_owner(self):
+        compose = (REPO_ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+        migrate_start = compose.index("  telemetry_migrate:")
+        runtime_start = compose.index("  telemetry:", migrate_start)
+        next_service = compose.index("  # 1. Global Admin", runtime_start)
+        migrate_block = compose[migrate_start:runtime_start]
+        runtime_block = compose[runtime_start:next_service]
+
+        self.assertIn('profiles: ["bootstrap"]', migrate_block)
+        self.assertIn("python schema_bootstrap.py", migrate_block)
+        self.assertNotIn("schema_bootstrap.py", runtime_block)
+
+        deployment = (
+            REPO_ROOT / "infrastructure/k8s/optional/telemetry.optional.yaml"
+        ).read_text(encoding="utf-8")
+        migration_job = (
+            REPO_ROOT / "infrastructure/k8s/jobs/telemetry-migrate-job.optional.yaml"
+        ).read_text(encoding="utf-8")
+
+        self.assertNotIn("sport-migration-secrets", deployment)
+        self.assertNotIn("MIGRATION_DATABASE_URL", deployment)
+        self.assertIn("sport-migration-secrets", migration_job)
+        self.assertIn("MIGRATION_DATABASE_URL", migration_job)
+        self.assertIn("python", migration_job)
+        self.assertIn("schema_bootstrap.py", migration_job)
 
 
 if __name__ == "__main__":
