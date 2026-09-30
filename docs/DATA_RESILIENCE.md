@@ -174,11 +174,19 @@ These are deliberately separate product properties.
 | eventual upload after connectivity returns | Durable outbox design |
 | remote live position freshness while screen-off | **Not implied by recording durability**; requires its own SLO/runtime proof |
 | offline Ride start | Product/lifecycle decision; do not infer from outbox durability alone |
-| PAUSE semantics | Separate Ride lifecycle contract; must not be inferred from UI state alone |
+| PAUSE semantics | Persisted Ride lifecycle state: producer stopped, same Activity identity, paused time/movement excluded; see Mobile Ride Flow |
 
 A JS upload timer running while the app is active is not evidence of a background live-delivery guarantee.
 
-## 9. Privacy and completeness
+## 9. Pause durability
+
+PAUSED remains the same open Activity/session.
+
+Mobile persists `ridePhase=paused` in encrypted tracking state before quiescing the native location task. Relaunch restores PAUSED without restarting GPS production. Resume reuses the same Activity identity and excludes the pause interval from elapsed/GPS-active time and movement metrics.
+
+Background upload/reconciliation may continue for points already produced before PAUSE; PAUSE does not delete or weaken the durable buffer/outbox.
+
+## 10. Privacy and completeness
 
 Privacy filtering and data completeness are different dimensions.
 
@@ -186,13 +194,13 @@ Receipt metadata records the original batch coverage (including intentionally pr
 
 Do not reconstruct missing telemetry with straight-line assumptions merely to make a route look complete.
 
-## 10. Operational configuration
+## 11. Operational configuration
 
 Home Lab and release proofs currently use the strict critical-data path (including scoped auth/audience and direct durable ACK). Generic environment defaults or old runbooks must not be interpreted as stronger authority than ADR 015.
 
 Deployment instructions live in operations docs. This document defines invariants, not environment-variable copy/paste.
 
-## 11. Verification
+## 12. Verification
 
 Relevant proof families include:
 
@@ -212,13 +220,12 @@ python manage.py test activities
 
 Exact CI/runtime acceptance is determined by the repository's affected-test planner and release gates; these examples are not a substitute for the required CI matrix.
 
-## 12. Open architecture decisions
+## 13. Open architecture decisions
 
 Tracked separately, not papered over here:
 
-1. semantic Ride PAUSE/RESUME and persisted paused-state recovery;
-2. product SLO for background live-delivery freshness;
-3. fail-closed production authority for telemetry auth/signing configuration;
-4. whether Redis is ever promoted to a qualified durable journal for critical Activity telemetry.
+1. product SLO for background live-delivery freshness;
+2. fail-closed production authority for telemetry auth/signing configuration;
+3. whether Redis is ever promoted to a qualified durable journal for critical Activity telemetry.
 
 Until those decisions land, the conservative durability rule wins: **preserve the last retryable copy rather than acknowledge data whose durable authority is unproven.**
