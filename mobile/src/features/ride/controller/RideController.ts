@@ -24,7 +24,8 @@ export type RideControllerOptions = {
 export interface RideController {
   isRecording: boolean;
   ridePaused: boolean;
-  setRidePaused: (value: boolean) => void;
+  pause: () => Promise<void>;
+  resume: () => Promise<void>;
   liveSpeed: number;
   liveDistanceKm: number;
   liveElevationGainM: number;
