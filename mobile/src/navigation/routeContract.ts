@@ -22,7 +22,6 @@ export const ROUTE_PATHS = {
   activityDetail: 'profile/activity/:activityId',
   performanceTrends: 'profile/trends',
   globalLeaderboard: 'compete/global-leaderboard',
-  ridePaused: 'ride/paused',
   visionGallery: 'vision-gallery',
 } as const;
 
