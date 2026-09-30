@@ -9,6 +9,7 @@ import { DataFieldGrid } from '../components/ride/DataFieldGrid';
 import { RideStatusBar } from '../components/ride/RideStatusBar';
 import { RideActionBar } from '../components/ride/RideActionBar';
 import { RideNavigationHint } from '../components/ride/RideNavigationHint';
+import { RidePausedOverlay } from '../components/ride/RidePausedOverlay';
 import type { RideMetricsSnapshot } from '../ride/types';
 import { useBatteryPct } from '../hooks/useBatteryPct';
 import { useI18n } from '../i18n/useI18n';
@@ -120,7 +121,7 @@ export const ActiveRideHUDScreen: React.FC<Props> = ({
 
   return (
     <View testID="active-ride-screen" style={s.container}>
-      <View style={s.mapLayer}>
+      <View testID="active-ride-map" style={s.mapLayer}>
         <RideMapView
           userCoordinate={liveCoord}
           cyclistState={cyclistState}
@@ -139,17 +140,26 @@ export const ActiveRideHUDScreen: React.FC<Props> = ({
             busy={gpsRecoveryBusy}
             onPress={() => onGpsRecoveryPress?.()}
           />
-          <DataFieldGrid metrics={metrics} hudMode />
+          <View testID="active-ride-metrics">
+            <DataFieldGrid metrics={metrics} hudMode />
+          </View>
         </View>
-        <View style={s.bottom}>
-          <RideActionBar
-            isPaused={isPaused}
-            onPause={() => onPause?.()}
-            onResume={() => onResume?.()}
-            onStop={() => onStop?.()}
-          />
-        </View>
+        {!isPaused ? (
+          <View style={s.bottom}>
+            <RideActionBar
+              isPaused={false}
+              onPause={() => onPause?.()}
+              onStop={() => onStop?.()}
+            />
+          </View>
+        ) : null}
       </SafeAreaView>
+      {isPaused ? (
+        <RidePausedOverlay
+          onResume={() => onResume?.()}
+          onStop={() => onStop?.()}
+        />
+      ) : null}
     </View>
   );
 };
