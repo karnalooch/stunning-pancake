@@ -10,6 +10,7 @@ import {
   clearPendingFinalization,
   createClientBatchId,
   GPS_STORAGE_KEYS,
+  getPersistedRidePhaseFromState,
   GpsStorageAdapter,
   loadBuffer,
   loadPendingFinalization,
@@ -52,6 +53,43 @@ const samplePoint = (ts: number) => ({
   speed_ms: 3,
   accuracy_m: 5,
   timestamp: ts,
+});
+
+describe('persisted Ride phase', () => {
+  const baseState = {
+    isTracking: true,
+    activityId: 42,
+    deviceId: 'dev-1',
+    userId: 1,
+    lastCoord: null,
+    lastAltitude: null,
+  };
+
+  test('legacy active state migrates semantically to active', () => {
+    expect(getPersistedRidePhaseFromState(baseState)).toBe('active');
+  });
+
+  test('paused state preserves the same activity identity', () => {
+    expect(
+      getPersistedRidePhaseFromState({
+        ...baseState,
+        ridePhase: 'paused',
+        pauseStartedAtMs: 123456,
+        pausedDurationMs: 5000,
+      }),
+    ).toBe('paused');
+  });
+
+  test('closed or missing session is idle even if stale phase survives', () => {
+    expect(
+      getPersistedRidePhaseFromState({
+        ...baseState,
+        isTracking: false,
+        ridePhase: 'paused',
+      }),
+    ).toBe('idle');
+    expect(getPersistedRidePhaseFromState(null)).toBe('idle');
+  });
 });
 
 describe('gpsSyncStorage', () => {
