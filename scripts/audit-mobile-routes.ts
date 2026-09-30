@@ -1,6 +1,6 @@
 /**
- * Mobile Screen Parity — compares screens in mobile/src/screens/ with the plan
- * defined in plans/screen-architecture-plan.md.
+ * Mobile Screen Parity — checks current production screen inventory.
+ * Ride PAUSED is intentionally an in-place component state, not a screen.
  *
  * Detects: plan screens not yet implemented, implemented screens not in plan.
  */
@@ -16,7 +16,6 @@ const PLANNED_SCREENS: string[] = [
   'OnboardingScreen',       // SetupScreen in auth group
   'RideDashboardScreen',
   'ActiveRideHUDScreen',
-  'RidePausedScreen',
   'RideSummaryScreen',
   'GlobalLeaderboardScreen',
   'CityHubScreen',
@@ -81,7 +80,7 @@ function main(): never {
   // Also check the plan roadmap phases against actuals
   console.log('\n─── Phase completion check ───');
   const phase1screens = ['RideDashboardScreen', 'ActiveRideHUDScreen', 'RideSummaryScreen', 'CityHubScreen', 'ActivityDetailScreen'];
-  const phase2screens = ['RidePausedScreen', 'GlobalLeaderboardScreen', 'MarketplaceScreen', 'AthleteProfileScreen', 'TrainingLogScreen'];
+  const phase2screens = ['GlobalLeaderboardScreen', 'MarketplaceScreen', 'AthleteProfileScreen', 'TrainingLogScreen'];
   const phase3screens = ['SegmentsScreen', 'ExploreMapScreen', 'ClubsDirectoryScreen', 'PerformanceTrendsScreen', 'SettingsScreen'];
 
   for (const [phase, screens] of [['Phase 1 (P0)', phase1screens], ['Phase 2 (P1)', phase2screens], ['Phase 3 (P2)', phase3screens]] as const) {
