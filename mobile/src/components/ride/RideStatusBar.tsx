@@ -37,10 +37,9 @@ export const RideStatusBar: React.FC<RideStatusBarProps> = ({
   const [clock, setClock] = useState(() => formatClock(new Date()));
 
   useEffect(() => {
-    if (clockText !== undefined) return undefined;
     const id = setInterval(() => setClock(formatClock(new Date())), 30_000);
     return () => clearInterval(id);
-  }, [clockText]);
+  }, []);
 
   const gpsLabel = gpsLocked ? t.ride.status.gpsLocked : t.ride.status.gpsSearching;
   const gpsColor = gpsLocked ? semantic.ride.gpsLocked : semantic.status.warning;
