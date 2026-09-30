@@ -7,6 +7,7 @@
 | **Owner role** | Product / Mobile / Admin Frontend |
 | **Tracks** | GitHub Issue #346 (authority) · #348 / PR #349 (mobile UI-1) |
 | **Machine mobile authority** | `MOBILE_UI_VISUAL_AUTHORITY_V1.json` (legacy path retained for validator compatibility; `currentAuthority` points here first) |
+| **Mobile composition authority** | [Mobile Visual Composition Architecture v1](./MOBILE_VISUAL_COMPOSITION_ARCHITECTURE_V1.md) |
 | **Applies to** | 4VELO mobile UI and 4VELO CONTROL (admin/web) information architecture, shell, visual language and legacy retirement |
 | **Supersedes for UI direction** | `MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md` hard-freeze direction, Frozen UI v1.2 intent, dated mobile UI audits and the current admin shell/IA descriptions where they conflict |
 
