@@ -1,44 +1,56 @@
-// STITCH Phase 2 — RidePausedScreen (stack modal)
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
+
+import { ProductCard } from '../components/product';
+import { RideActionBar } from '../components/ride/RideActionBar';
 import { useI18n } from '../i18n/useI18n';
 import { getSemanticColors } from '../theme/semantic';
 import { PRODUCT_TYPOGRAPHY } from '../theme/typography';
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  modal: {
-    borderWidth: 1,
-    borderRadius: 20,
-    padding: 24,
-    width: '100%',
-    maxWidth: 320,
-    alignItems: 'center',
-  },
-  title: {
-    ...PRODUCT_TYPOGRAPHY.title,
-    marginBottom: 24,
-  },
-  btn: {
-    width: '100%',
-    minHeight: 48,
-    paddingVertical: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-  },
-  btnText: {
-    ...PRODUCT_TYPOGRAPHY.bodyMedium,
-  },
+const stylesheet = StyleSheet.create((theme) => {
+  const c = theme.colors as Record<string, string>;
+  const semantic = getSemanticColors(theme.colors);
+
+  return {
+    overlay: {
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      zIndex: 30,
+      justifyContent: 'flex-end',
+      padding: 16,
+      backgroundColor: c.ridePausedScrim,
+    },
+    cardWrap: {
+      width: '100%',
+      maxWidth: 440,
+      alignSelf: 'center',
+    },
+    content: {
+      gap: 20,
+    },
+    copy: {
+      gap: 8,
+    },
+    eyebrow: {
+      ...PRODUCT_TYPOGRAPHY.metricLabel,
+      color: semantic.status.warning,
+      textTransform: 'uppercase',
+      letterSpacing: 0.6,
+    },
+    title: {
+      ...PRODUCT_TYPOGRAPHY.title,
+      color: semantic.text.primary,
+    },
+    body: {
+      ...PRODUCT_TYPOGRAPHY.body,
+      color: semantic.text.secondary,
+    },
+  };
 });
 
 interface Props {
@@ -47,54 +59,37 @@ interface Props {
 }
 
 export const RidePausedScreen: React.FC<Props> = ({ onResume, onStop }) => {
-  const { theme } = useUnistyles();
+  const s = stylesheet;
   const { t } = useI18n();
-  const c = theme.colors as Record<string, string>;
-  const semantic = getSemanticColors(theme.colors);
+
   return (
-    <SafeAreaView testID="ride-paused-screen" style={[styles.overlay, { backgroundColor: c.ridePausedScrim }]} edges={['top', 'bottom']}>
-      <View
-        style={[
-          styles.modal,
-          {
-            backgroundColor: semantic.surface.raised,
-            borderColor: semantic.border.subtle,
-          },
-        ]}
-      >
-        <Text style={[styles.title, { color: semantic.text.primary }]} allowFontScaling>
-          {t.ride.paused.title}
-        </Text>
-        <Pressable
-          style={({ pressed }) => [
-            styles.btn,
-            { borderColor: semantic.action.primary, backgroundColor: semantic.action.primary },
-            pressed && { opacity: 0.85 },
-          ]}
-          onPress={onResume}
-          testID="ride-paused-resume"
-          accessibilityRole="button"
-          accessibilityLabel={t.ride.paused.resume}
-        >
-          <Text style={[styles.btnText, { color: semantic.text.onAction }]} allowFontScaling>
-            {t.ride.paused.resume}
-          </Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [
-            styles.btn,
-            { borderColor: semantic.action.destructive, backgroundColor: semantic.action.destructive },
-            pressed && { opacity: 0.85 },
-          ]}
-          onPress={onStop}
-          testID="ride-paused-stop"
-          accessibilityRole="button"
-          accessibilityLabel={t.ride.paused.stop}
-        >
-          <Text style={[styles.btnText, { color: semantic.text.onDestructive }]} allowFontScaling>
-            {t.ride.paused.stop}
-          </Text>
-        </Pressable>
+    <SafeAreaView
+      testID="ride-paused-screen"
+      style={s.overlay}
+      edges={['bottom']}
+    >
+      <View style={s.cardWrap}>
+        <ProductCard variant="raised" testID="ride-paused-card">
+          <View style={s.content}>
+            <View style={s.copy}>
+              <Text style={s.eyebrow}>{t.ride.actions.pause}</Text>
+              <Text style={s.title} allowFontScaling>
+                {t.ride.paused.title}
+              </Text>
+              <Text style={s.body} allowFontScaling>
+                {t.ride.actions.stopConfirm}
+              </Text>
+            </View>
+
+            <RideActionBar
+              isPaused
+              onResume={onResume}
+              onStop={onStop}
+              resumeTestID="ride-paused-resume"
+              stopTestID="ride-paused-stop"
+            />
+          </View>
+        </ProductCard>
       </View>
     </SafeAreaView>
   );
