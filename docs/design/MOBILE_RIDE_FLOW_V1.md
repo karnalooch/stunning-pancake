@@ -2,7 +2,7 @@
 
 > **Status:** NORMATIVE for #152/#153/#154  
 > **Decision date:** 2026-09-24  
-> **Related:** #149, #152, #153, #154, #157
+> **Related:** #149, #152, #153, #154, #157, #392
 
 ## 1. Canonical first vertical slice
 
@@ -103,17 +103,41 @@ Requirements:
 
 ## 6. Pause/resume contract
 
-Pause must not finalize the ride.
+Pause must not finalize the ride and must not be implemented as presentation-only state.
 
-Paused state must preserve:
+The controller exposes semantic `pause()` / `resume()` commands. Presentation cannot set PAUSED directly.
 
-- ride identity;
-- elapsed/metric truth;
-- durable tracking state required by current services;
-- a clear Resume action;
-- a protected Finish path.
+### PAUSED producer semantics
 
-Resume returns to the same ride identity.
+On `ACTIVE -> PAUSED`:
+
+- the same Activity identity is retained;
+- the persisted encrypted tracking state becomes `isPaused=true`;
+- the GPS producer is fenced before native location shutdown, so late callbacks cannot append points;
+- already-buffered/outbox telemetry may continue uploading;
+- live speed becomes zero;
+- distance and elevation stop changing because no new ride points are accepted;
+- ride elapsed time freezes and excludes the paused interval;
+- Finish remains available and finalizes the points already recorded.
+
+PAUSED survives process death. Relaunch restores the same Activity in PAUSED state and **does not** automatically restart the GPS producer.
+
+### Resume semantics
+
+On `PAUSED -> ACTIVE`:
+
+- the same Activity identity is reused;
+- accumulated paused wall time remains excluded from ride elapsed time;
+- GPS point comparison state is reset;
+- persisted last coordinate/altitude are cleared for distance accumulation;
+- the first accepted point is marked as a new segment boundary;
+- the native GPS producer is restarted only after the persisted state is ready.
+
+The segment boundary prevents a rider who moved while paused from creating a synthetic route/distance jump across the pause.
+
+### Presentation
+
+PAUSED is rendered as a bounded overlay/sheet inside the same Active Ride composition. The underlying Ride context remains visible/recognisable. There is no normal product navigation to a separate `RidePaused` destination.
 
 ## 7. Finish/finalization contract
 
