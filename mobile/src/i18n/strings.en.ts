@@ -213,6 +213,10 @@ export const stringsEn = {
     stopDoneBody: 'GPS recording ended.',
     stopError: 'Could not finish ride',
     stopErrorBody: 'Check the GPS recovery banner and try again.',
+    pauseError: 'Could not pause ride',
+    pauseErrorBody: 'GPS recording could not enter a safe paused state.',
+    resumeError: 'Could not resume ride',
+    resumeErrorBody: 'GPS recording is still paused. Try again.',
   },
   authErrors: {
     missingFields: 'Fill in all required fields',
