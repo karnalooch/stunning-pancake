@@ -186,6 +186,20 @@ Czyste zmiany JS/UI w `mobile/src/**`, testy mobile, dokumentacja/design i inne 
 
 Nie wymuszaj proofa pustym commitem ani zmianą triggera. Jeśli exact-SHA artefakt został już poprawnie zbudowany i zweryfikowany, użyj go ponownie zamiast przebudowywać ten sam SHA.
 
+### Exact-SHA visual proof w Maestro
+
+Po uzyskaniu release APK z jawnego proofa `Mobile Native Smoke` nie buduj go ponownie tylko po to, żeby zrobić screenshoty. Kanoniczny proof wizualny konsumuje istniejący artefakt:
+
+```powershell
+pnpm mobile:visual:proof
+# albo jawnie:
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-mobile-maestro-visual-proof.ps1 -CiRunId <run-id> -DeviceId <adb-serial>
+```
+
+Runner wymaga czystego worktree i sprawdza, że manifest artefaktu oraz hash APK należą dokładnie do bieżącego `HEAD`. Następnie instaluje ten APK i odpala repo-owned flow `Today -> Start Ride -> Active Ride -> Paused -> Summary -> Today`. Wynik trafia do ignorowanego `artifacts/mobile-maestro-visual-proof/` jako screenshoty + manifest provenance + checklistę ręcznego sign-offu.
+
+Ten proof jest jawny i exact-SHA. Rutynowy PR/main nie uruchamia go automatycznie i nie kompiluje dla niego APK.
+
 ### Weryfikacja po buildzie
 
 | Check | Oczekiwane |
