@@ -6,7 +6,12 @@ import json
 import unittest
 from pathlib import Path
 
-from scripts.ops.proof_broker import validate_policy, validate_workflow_contract
+from scripts.ops.proof_broker import (
+    BrokerError,
+    resolve_proof_revision,
+    validate_policy,
+    validate_workflow_contract,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 POLICY = ROOT / ".gumball" / "proof-broker.json"
@@ -26,6 +31,81 @@ class GumballProofBrokerContractTests(unittest.TestCase):
         self.assertEqual("$sha", proof["inputs"]["source_sha"])
         self.assertEqual("$request_id", proof["inputs"]["gumball_request_id"])
         self.assertEqual(["karnalooch"], policy["defaults"]["trusted_actor_logins"])
+
+    def test_open_pr_proof_uses_exact_head_revision(self):
+        sha = "a" * 40
+        pr = {
+            "state": "open",
+            "head": {
+                "ref": "feat/example",
+                "sha": sha,
+                "repo": {"full_name": "karnalooch/stunning-pancake"},
+            },
+            "base": {"ref": "main"},
+            "merge_commit_sha": "b" * 40,
+        }
+
+        branch, resolved_sha = resolve_proof_revision(
+            "karnalooch/stunning-pancake",
+            pr,
+            allow_merged=False,
+        )
+
+        self.assertEqual("feat/example", branch)
+        self.assertEqual(sha, resolved_sha)
+
+    def test_explicit_merged_pr_proof_uses_merge_commit_sha(self):
+        sha = "c" * 40
+        pr = {
+            "state": "closed",
+            "merged_at": "2026-09-30T17:30:00Z",
+            "head": {
+                "ref": "feat/example",
+                "sha": "a" * 40,
+                "repo": {"full_name": "karnalooch/stunning-pancake"},
+            },
+            "base": {"ref": "main"},
+            "merge_commit_sha": sha,
+        }
+
+        branch, resolved_sha = resolve_proof_revision(
+            "karnalooch/stunning-pancake",
+            pr,
+            allow_merged=True,
+        )
+
+        self.assertEqual("main", branch)
+        self.assertEqual(sha, resolved_sha)
+
+    def test_automatic_merged_pr_proof_remains_blocked(self):
+        pr = {
+            "state": "closed",
+            "merged_at": "2026-09-30T17:30:00Z",
+            "base": {"ref": "main"},
+            "merge_commit_sha": "c" * 40,
+        }
+
+        with self.assertRaisesRegex(BrokerError, "explicit trusted request"):
+            resolve_proof_revision(
+                "karnalooch/stunning-pancake",
+                pr,
+                allow_merged=False,
+            )
+
+    def test_closed_unmerged_pr_proof_remains_blocked(self):
+        pr = {
+            "state": "closed",
+            "merged_at": None,
+            "base": {"ref": "main"},
+            "merge_commit_sha": None,
+        }
+
+        with self.assertRaisesRegex(BrokerError, "closed-unmerged"):
+            resolve_proof_revision(
+                "karnalooch/stunning-pancake",
+                pr,
+                allow_merged=True,
+            )
 
     def test_native_workflow_satisfies_trusted_dispatch_contract(self):
         policy = json.loads(POLICY.read_text(encoding="utf-8"))
