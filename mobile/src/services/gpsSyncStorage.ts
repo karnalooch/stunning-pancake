@@ -66,7 +66,16 @@ export interface PendingFinalizationPayload {
 }
 
 export interface TrackingState {
+  /** True only while the GPS producer is allowed to append new ride points. */
   isTracking: boolean;
+  /** Persisted Ride lifecycle state. PAUSED survives process death. */
+  isPaused?: boolean;
+  /** Wall-clock instant when the current pause started. */
+  pausedAtMs?: number | null;
+  /** Sum of completed pause intervals, excluded from ride elapsed time. */
+  accumulatedPausedMs?: number;
+  /** Forces the first accepted point after resume to start a new route segment. */
+  resumeSegmentBreakPending?: boolean;
   activityId: number | null;
   deviceId: string;
   userId: number | null;
