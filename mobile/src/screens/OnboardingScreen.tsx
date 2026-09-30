@@ -94,11 +94,21 @@ interface ChoiceCardProps {
   C: ThemeColorMap;
   leading?: React.ReactNode;
   compact?: boolean;
+  testID?: string;
 }
 
-function ChoiceCard({ label, selected, onPress, C, leading, compact = false }: ChoiceCardProps) {
+function ChoiceCard({
+  label,
+  selected,
+  onPress,
+  C,
+  leading,
+  compact = false,
+  testID,
+}: ChoiceCardProps) {
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected }}
@@ -363,6 +373,7 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
                   {visibleTenants.map((tenant) => (
                     <ChoiceCard
                       key={tenant.id}
+                      testID="onboarding-city-option"
                       label={tenant.name}
                       selected={selectedTenantId === tenant.id}
                       onPress={() => setSelectedTenantId(tenant.id)}
@@ -420,6 +431,7 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
                   {flatDepartments.map((department) => (
                     <ChoiceCard
                       key={department.id}
+                      testID="onboarding-department-option"
                       label={department.name}
                       selected={selectedDepartmentId === department.id}
                       onPress={() => setSelectedDepartmentId(department.id)}
