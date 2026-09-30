@@ -37,13 +37,14 @@ This snapshot records the actual repository/runtime state after the September cl
 
 ### Mobile visual authority
 
-For mobile visual implementation, the takeover-era authority is:
+For current mobile visual implementation, authority is:
 
-1. `docs/design/MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md`;
-2. `docs/design/MOBILE_UI_DESIGN_CONTRACT_V1.md` (Frozen UI v1.2);
-3. current asset-governance documents.
+1. `docs/design/PRODUCT_UX_V2.md` — product direction, IA and user journeys;
+2. `docs/design/MOBILE_VISUAL_COMPOSITION_ARCHITECTURE_V1.md` — screen hierarchy, map/data/control/brand planes and asset-off rule;
+3. `docs/design/MOBILE_UI_DESIGN_CONTRACT_V1.md` — subordinate Frozen UI v1.2 palette/typography/readability baseline;
+4. current asset-governance documents.
 
-**All mobile visual/design/art-direction/mockup decisions predating T00 / PR #60 are historical only and cannot override the current freeze.** Old documents may still contain useful functional/safety history, but they are not visual SSOT. T79–T84 must use the current visual authority and protection gates.
+`MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md` and pre-T00 visual decisions are historical evidence only. They cannot override Product UX v2 or the current composition contract. New decorative asset work is composition-gated rather than treated as an automatic queue.
 
 ## Status vocabulary
 

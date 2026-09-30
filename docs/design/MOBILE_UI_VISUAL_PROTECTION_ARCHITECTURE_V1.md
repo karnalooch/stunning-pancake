@@ -37,11 +37,12 @@ Those sources may still explain history or preserve independently valid function
 When sources conflict, use this order:
 
 1. **[Product UX v2](./PRODUCT_UX_V2.md)** for product direction, shell, IA, migration and legacy retirement.
-2. **`MOBILE_UI_DESIGN_CONTRACT_V1.md`** only as the subordinate Frozen UI v1.2 visual/reference baseline where it does not conflict with UX v2.
-3. **Asset governance:** `MOBILE_ASSET_BIBLE_V1.md`, `PLACE_IDENTITY_POLICY_V1.md`, `MOBILE_ASSET_PRODUCTION_LIST_V1.md`, `assets/ASSET_GOVERNANCE_V1.json`.
-4. **`TAKEOVER_PLAN_CURRENT.md`** for non-UI implementation/release scope where still applicable.
-5. **This document** as historical Frozen UI v1.2 evidence and retained safety/legibility rationale.
-6. Dated audits and pre-takeover design documents as historical evidence only.
+2. **[Mobile Visual Composition Architecture v1](./MOBILE_VISUAL_COMPOSITION_ARCHITECTURE_V1.md)** for screen hierarchy and map/data/control/brand composition.
+3. **`MOBILE_UI_DESIGN_CONTRACT_V1.md`** only as the subordinate Frozen UI v1.2 palette/typography/readability baseline.
+4. **Asset governance:** `MOBILE_ASSET_BIBLE_V1.md`, `PLACE_IDENTITY_POLICY_V1.md`, `MOBILE_ASSET_PRODUCTION_LIST_V1.md`, `assets/ASSET_GOVERNANCE_V1.json`.
+5. **`TAKEOVER_PLAN_CURRENT.md`** for non-UI implementation/release scope where still applicable.
+6. **This document** as historical Frozen UI v1.2 evidence and retained safety/legibility rationale.
+7. Dated audits and pre-takeover design documents as historical evidence only.
 
 A pre-takeover document can become normative again only through an explicit post-takeover decision that copies or re-adopts the rule into a current source.
 

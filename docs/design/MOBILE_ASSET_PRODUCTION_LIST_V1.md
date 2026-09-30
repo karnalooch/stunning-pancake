@@ -1,7 +1,26 @@
 # 4VELO Mobile Asset Production List v1
 
-**Status:** fresh v1 pilot family active; legacy generated pack purged  
-**Visual freeze:** 1.2.0
+**Status:** approved v1 core active; planned decorative work is composition-gated  
+**Visual freeze:** 1.2.0  
+**Composition authority:** [Mobile Visual Composition Architecture v1](./MOBILE_VISUAL_COMPOSITION_ARCHITECTURE_V1.md)
+
+## Composition-first production gate — 2026-09-30
+
+Approved files remain approved, but **planned decorative assets are not an automatic implementation queue**.
+
+Before a planned decorative target moves to candidate, its issue must document:
+
+1. the composition gap it solves;
+2. why layout, typography, iconography, map/data rendering or an existing component cannot solve the gap;
+3. which presentation plane owns the asset;
+4. the functional fallback when the asset is absent;
+5. the real runtime slot/dimensions;
+6. accessibility/reduced-motion implications;
+7. whether an approved family can be reused.
+
+Every target must pass the [asset-off test](./MOBILE_VISUAL_COMPOSITION_ARCHITECTURE_V1.md#4-asset-off-test): removing optional brand artwork must not destroy task clarity, hierarchy or operability.
+
+Until a gap is proven, optional hero variants, profile scenes, Explore hero art, city scenes, Summary particles and achievement families stay `planned`.
 
 ## Phase 0 — Auth / onboarding
 
