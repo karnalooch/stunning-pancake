@@ -5,6 +5,7 @@
 import { createAppMmkv, type AppMmkvStorage } from './mmkvStorage';
 import { ActivityService, type ActivitySportType } from './api';
 import {
+  getPersistedRidePhase,
   GpsSyncManager,
   PollingResolution,
   resumeTrackingAfterRelaunch,
@@ -60,6 +61,20 @@ export async function stopRideSession(
 ): Promise<{ finalized: boolean; pendingUpload: number }> {
   const manager = getRideGpsManager(userId);
   return manager.stopTracking();
+}
+
+export async function pauseRideSession(userId: number | null): Promise<void> {
+  const manager = getRideGpsManager(userId);
+  await manager.pauseTracking();
+}
+
+export async function resumeRideSession(userId: number | null): Promise<void> {
+  const manager = getRideGpsManager(userId);
+  await manager.resumeTracking();
+}
+
+export function getRideSessionPhase(): 'idle' | 'active' | 'paused' {
+  return getPersistedRidePhase();
 }
 
 /** After app relaunch — restore UI + background GPS if a ride was in progress. */
