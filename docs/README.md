@@ -4,7 +4,7 @@
 |--|--|
 | **Status** | ✅ Active — główny indeks dokumentacji |
 | **Owner role** | Documentation maintainer / Tech Lead |
-| **Last reviewed** | 2026-09-28 |
+| **Last reviewed** | 2026-09-30 |
 | **Audience** | Developer, operator, release manager, reviewer |
 
 Ten plik jest **głównym punktem wejścia i mapą SSOT** dla 4VELO. Dokumentacja ma dziś setki plików, więc zasada jest prosta: **najpierw wybierz zadanie z tabeli poniżej; nie zaczynaj od roadmapy, starego planu takeover ani datowanego audytu.**
@@ -14,7 +14,7 @@ Ten plik jest **głównym punktem wejścia i mapą SSOT** dla 4VELO. Dokumentacj
 | Chcę… | Kanoniczny punkt startowy |
 |---|---|
 | Uruchomić projekt lokalnie | [Getting started PL](pl/GETTING_STARTED.md) / [EN](en/GETTING_STARTED.md) |
-| Zrozumieć komponenty i granice systemu | [ARCHITECTURE.md](ARCHITECTURE.md) · [mapa repo](reports/REPOSITORY_MAP.md) |
+| Zrozumieć komponenty i granice systemu | [ARCHITECTURE.md](ARCHITECTURE.md) · [C4](diagrams/architecture_c4.md) · [mapa repo](reports/REPOSITORY_MAP.md) |
 | Zmieniać kod | [CONTRIBUTING.md](../CONTRIBUTING.md) · [Development PL](pl/DEVELOPMENT.md) |
 | Uruchomić / naprawić Home Lab | [HOME_LAB PL](pl/operations/HOME_LAB.md) / [EN](en/operations/HOME_LAB.md) |
 | Zrobić release / pre-release | [PRE_RELEASE_VERIFICATION PL](pl/operations/PRE_RELEASE_VERIFICATION.md) · [Full Release lane](ci/FULL_RELEASE_LANE_V1.md) |
@@ -31,10 +31,10 @@ Ten plik jest **głównym punktem wejścia i mapą SSOT** dla 4VELO. Dokumentacj
 
 | Obszar | SSOT / indeks | Czego **nie** traktować jako SSOT |
 |---|---|---|
-| Architektura | [ARCHITECTURE.md](ARCHITECTURE.md), [ADR](adr/README.md) | roadmapy i audyty UI |
+| Architektura | [ARCHITECTURE.md](ARCHITECTURE.md), [C4](diagrams/architecture_c4.md), [ADR](adr/README.md) | roadmapy, datowane audyty i superseded implementation proposals |
 | Dev setup | [pl/GETTING_STARTED.md](pl/GETTING_STARTED.md), [pl/DEVELOPMENT.md](pl/DEVELOPMENT.md) | stare instrukcje takeover |
 | Operacje | [pl/operations/README.md](pl/operations/README.md) | datowane proofy / incident notes |
-| Mobile | [pl/operations/MOBILE.md](pl/operations/MOBILE.md), [quality/MOBILE_RUNTIME_ACCEPTANCE_V1.md](quality/MOBILE_RUNTIME_ACCEPTANCE_V1.md) | sprint seedy i stare audyty |
+| Mobile | [pl/operations/MOBILE.md](pl/operations/MOBILE.md), [DATA_RESILIENCE.md](DATA_RESILIENCE.md), [quality/MOBILE_RUNTIME_ACCEPTANCE_V1.md](quality/MOBILE_RUNTIME_ACCEPTANCE_V1.md) | sprint seedy i stare audyty |
 | Release | [pl/operations/PRE_RELEASE_VERIFICATION.md](pl/operations/PRE_RELEASE_VERIFICATION.md), [ci/FULL_RELEASE_LANE_V1.md](ci/FULL_RELEASE_LANE_V1.md) | pojedynczy stary run CI |
 | Security | [SECURITY.md](../SECURITY.md), [security/](security/) | historyczne audyty bezpieczeństwa |
 | Compliance | [compliance/README.md](compliance/README.md) | template kampanii / snapshoty |

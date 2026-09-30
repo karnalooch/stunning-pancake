@@ -1,143 +1,224 @@
-# Odporność na utratę danych — 4VELO
-
+# 4VELO data resilience
 
 | | |
 |--|--|
 | **Status** | ✅ Active |
-| **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
-| **Audience** | See canonical document |
+| **Document class** | REFERENCE |
+| **Owner role** | Mobile Lead / Platform Lead |
+| **Last reviewed** | 2026-09-30 |
+| **Audience** | Mobile, backend, telemetry, reviewers |
 | **lang** | en |
 | **translation** | [Polski](pl/DATA_RESILIENCE.md) |
 | **canonical_path** | docs/DATA_RESILIENCE.md |
 
----
+This document defines the end-to-end durability contract for Ride GPS data. It is intentionally narrower than deployment/runbooks: it answers **which copy is authoritative at each stage, when a producer may delete data, and how a stopped recording becomes a durably completed Activity**.
 
-| | |
-|--|--|
-| **Status** | ✅ Active |
-| **Owner role** | Mobile Lead |
-| **Last reviewed** | 2026-06-03 |
-| **Audience** | Mobile, backend |
+Related authorities:
 
-Dokument opisuje warstwy trwałości danych GPS i sesji treningowych oraz pozostałe ryzyka.
+- [ADR 004 — MMKV persistence](adr/004-persistent-storage-mmkv.md)
+- [ADR 011 — telemetry under burst load](adr/011-telemetry-ingest-durability-under-load.md)
+- [ADR 015 — critical-data acknowledgement](adr/015-critical-data-acknowledgement.md)
+- [Architecture](ARCHITECTURE.md)
+- [Mobile operations](pl/operations/MOBILE.md)
 
-**Runbook:** [operations/MOBILE.md](./pl/operations/MOBILE.md) · **ADR:** [adr/004-persistent-storage-mmkv.md](./adr/004-persistent-storage-mmkv.md)
-
-## Warstwy (od klienta do serwera)
+## 1. Durability model
 
 ```mermaid
 flowchart LR
-  GPS[GPS / Expo Location] --> BUF[MMKV gps_buffer]
-  BUF -->|overflow| OF[gps_buffer_overflow]
-  BUF -->|upload fail| OB[MMKV gps_outbox]
-  OB --> TEL[Telemetry FastAPI]
-  BUF --> TEL
-  TEL -->|Redis dedupe| TS[(TimescaleDB gps_points)]
-  SESS[pending_session] --> API[Django POST sessions]
-  API --> ACT[(Postgres Activity)]
-  STOP[stopTracking] --> PATH[PATCH sync_path]
-  STOP --> FIN[POST finalize]
-  PATH --> ACT
-  FIN --> ACT
-  ACT --> VERIFY[Celery anti-cheat]
+  GPS[Expo Location / TaskManager]
+  Local[(Encrypted MMKV\nGPS buffer + outbox)]
+  Django[Django\nActivity command plane]
+  Tel[FastAPI\ntelemetry ingest]
+  Points[(gps_points)]
+  Receipts[(telemetry_ingest_receipts)]
+  Finalize[Durable finalization]
+  Activity[(Activity)]
+  Route[(route_path\nderived)]
+
+  GPS --> Local
+  Local -->|receipt-backed batch| Tel
+  Tel -->|same transaction| Points
+  Tel -->|same transaction| Receipts
+  Django --> Activity
+  Receipts --> Finalize
+  Points --> Finalize
+  Activity --> Finalize
+  Finalize --> Route
+  Finalize --> Activity
 ```
 
-### 1. MMKV na urządzeniu (`mobile/src/services/gpsSyncStorage.ts`, `GpsSyncManager.ts`)
+The mobile outbox is the producer's retryable copy. It remains authoritative for retry until the server crosses the delete-safe ACK boundary.
 
-| Klucz | Rola |
-|-------|------|
-| `gps_buffer` | Aktywny bufor punktów (do 2000; starsze trafiają do `gps_buffer_overflow`) |
-| `gps_outbox` | Partie, które nie wyszły po 5 próbach — ponawiane przy starcie i co 30 s |
-| `tracking_state` / `current_stats` | Stan trasy i metryk na żywo |
-| `pending_session` | Payload POST `sessions/` gdy tworzenie sesji się nie uda |
-| `tracking_recovery_pending` | Flaga UI: możliwe wznowienie / dokończenie uploadu |
+## 2. Source-of-truth table
 
-**Recovery przy starcie:** `recoverGpsDataOnLaunch()` (wywołane z `App.tsx`) — retry `pending_session`, `processGpsOutbox()`, upload bufora.
+| State/data | Authority | Notes |
+|---|---|---|
+| GPS not yet durably accepted by server | encrypted mobile buffer/outbox | Must survive process death; do not delete on timeout/ambiguous response |
+| persisted public GPS coordinates | PostgreSQL `gps_points` | Server durable telemetry evidence |
+| batch acceptance/coverage | PostgreSQL `telemetry_ingest_receipts` | Immutable receipt identity/coverage used by finalization |
+| Activity lifecycle | Django `Activity` | Command/domain authority |
+| final canonical route | derived `Activity.route_path` | Rebuilt/reconciled from durable telemetry during finalization |
+| Redis dedupe/queue/cache | operational state | Helpful for performance/legacy traffic; not sufficient critical-data truth |
 
-**Ręczne wysłanie (UI):** baner na `RideDashboardScreen` / `ActiveRideHUDScreen` → `runManualGpsRecovery()` (outbox + bufor), flaga czyszczona po sukcesie.
+## 3. Mobile durable producer
 
-**Sieć:** `@react-native-community/netinfo` — po powrocie online `processGpsOutbox()` + upload bufora; subskrypcja zdejmowana w tle, wznawiana przy `active`.
+The current mobile durability chain uses encrypted local storage and a persistent outbox.
 
-**Koniec sesji:** flush outbox + bufor → `sync_path` (GeoJSON lista `[lon, lat]`, merge z istniejącą trasą) → `finalize` (idempotentny `end_time`, `distance`).
+Important invariants:
 
-**Start sesji:** `ActivityService.createSession` → `createSessionWithDurability` (`sessionDurability.ts`); start jazdy przez `rideSessionService.startRideSession` w `App.tsx`.
+- GPS/background production writes to persistent storage, not JS-memory-only state.
+- The same Activity identity is recovered after process death where recovery is possible.
+- A batch has stable identity and sequence metadata for idempotent retries.
+- Failed/ambiguous uploads remain in the outbox.
+- Upload workers are single-flight per Activity to avoid parallel retry storms.
+- Only a server response that satisfies the critical ACK contract allows local deletion.
 
-### 2. Telemetry (Railway / FastAPI)
+Accepted runtime evidence for encrypted storage, lost-key fail-closed behavior and locked/background producer continuity is tracked by the mobile recovery lane; see [MOBILE_RUNTIME_ACCEPTANCE_V1](quality/MOBILE_RUNTIME_ACCEPTANCE_V1.md).
 
-- `POST /api/telemetry/ingest/batch` przyjmuje opcjonalne `client_batch_id`.
-- Redis: `telemetry:dedupe:{client_batch_id}` TTL 7 dni (`TELEMETRY_DEDUPE_TTL_S`) — duplikat zwraca `deduped: true`, `inserted: 0` bez ponownego INSERT.
+## 4. Activity-scoped telemetry authentication
 
-### 3. Django Activity
+Mobile obtains a short-lived Activity-scoped telemetry JWT through the authenticated Django command plane, then uses that token against FastAPI ingest.
 
-- `PATCH .../sync_path/` — parsuje listę współrzędnych / GeoJSON LineString, **scala** z `route_path`, idempotentny `200` przy tym samym `path_hash` (Redis 7 dni).
-- `POST .../finalize/` — idempotentne zakończenie; ponowne wywołanie zwraca `200` z tym samym rekordem.
+This separates:
 
-### 4. Wearables / leaderboard
+- user/session authentication and Activity ownership — Django;
+- high-rate telemetry ingestion — FastAPI.
 
-Bez zmian w tym PR: dedupe `external_id`, idempotentny kredyt leaderboard — warstwa importu z zewnątrz.
+The scoped token does not make FastAPI a second Activity authority; it is an execution credential for one Activity.
 
-## Status implementacji
+## 5. Delete-safe ACK boundary
 
-| Element | Status |
-|---------|--------|
-| Recovery przy starcie + outbox | ✅ |
-| Overflow bufora zamiast cichego truncate | ✅ |
-| `client_batch_id` (mobile + telemetry Redis) | ✅ |
-| `pending_session` + `createSessionWithDurability` | ✅ (`ActivityService`, `rideSessionService`, `App.tsx`) |
-| `sync_path` merge + hash | ✅ |
-| `finalize` endpoint | ✅ |
-| NetInfo — upload po powrocie sieci | ✅ |
-| UI „Wyślij niewysłane punkty GPS” | ✅ |
-| Stop jazdy → `stopTracking` + finalize | ✅ |
-| Wznowienie GPS po kill app (`resumeTrackingAfterRelaunch`) | ✅ |
-| UNIQUE w DB na `(activity_id, client_batch_id)` | ✅ Redis wystarcza bez migracji Timescale |
-| PowerSync / offline-first DB | 📋 Osobna inicjatywa (zależność usunięta; MMKV outbox pozostaje SSOT offline GPS) |
+[ADR 015](adr/015-critical-data-acknowledgement.md) is authoritative.
 
-## Pozostałe ryzyka (uczciwie)
+For a receipt-backed critical Activity batch, delete-safe ACK occurs only after PostgreSQL commits the durable evidence required by finalization.
 
-- **Zniszczenie telefonu** przed jakimkolwiek uploadem — dane tylko lokalnie, bez odzysku.
-- **MMKV mock** w tle przy awarii JSI — punkty mogą nie zostać zapisane (log + Crashlytics).
-- **Rozbieżność tras:** telemetry `gps_points` vs `Activity.route_path` — pełna rekonsyliacja wymaga joba serwerowego (nie zaimplementowany).
+```mermaid
+sequenceDiagram
+  participant M as Mobile durable outbox
+  participant T as FastAPI
+  participant P as PostgreSQL
 
-## Deploy telemetry (Railway)
+  M->>T: batch + client_batch_id + point_count/max_seq/fingerprint
+  T->>P: BEGIN
+  T->>P: persist public gps_points
+  T->>P: persist telemetry_ingest_receipt
+  T->>P: COMMIT
+  P-->>T: durable success
+  T-->>M: ACK
+  M->>M: delete local batch
+```
 
-1. Wdróż serwis `telemetry` z aktualnym `main.py` (dedupe Redis).
-2. Upewnij się, że `REDIS_URL` jest ustawione (ten sam Redis co Django zalecany).
-3. Opcjonalnie: `TELEMETRY_DEDUPE_TTL_S` (domyślnie 604800 = 7 dni).
-4. **Brak migracji DB** — tabela `gps_points` bez nowych kolumn.
-5. Zweryfikuj: dwa razy ten sam `client_batch_id` → drugi response `deduped: true`.
+Rules:
 
-## Deploy backend (Django)
+- timeout before confirmed ACK → retain and retry;
+- `429/503 + Retry-After` → retain and retry later;
+- Redis `XADD` alone → **not** delete-safe ACK for this path;
+- duplicate/retry → validate against durable receipt identity; do not create duplicate route evidence;
+- a fully privacy-dropped batch still needs receipt coverage so finalization can distinguish intentional dropping from missing telemetry.
 
-- Akcje `sync_path` i `finalize` na routerze `sessions` — bez zmiany URL-i poza `finalize/` i rozszerzone `sync_path/`.
-- Redis wymagany dla idempotentnego `path_hash` (graceful degrade: brak Redis = brak dedupe po hash).
+Legacy/non-receipt queue traffic may still use Redis according to its own contract; it must not weaken the receipt-backed Activity path.
 
-## Deploy mobile
+## 6. Durable finalization
 
-1. `npm install` (nowe: `@react-native-community/netinfo`).
-2. EAS build / OTA update z `App.tsx`, `GpsSyncManager`, ekranami Ride/HUD.
-3. Po wdrożeniu: test offline → kill app → online → baner recovery lub auto-sync.
+Stopping GPS production is not equivalent to completing an Activity.
 
-## Testy
+The finalization barrier uses durable server evidence to decide whether completion is truthful.
+
+Conceptually:
+
+```text
+stop local recording
+    |
+flush/retry outstanding durable outbox
+    |
+request finalize
+    |
+Django verifies durable receipt coverage / telemetry truth
+    |
+rebuild/reconcile canonical route from durable gps_points
+    |
+commit final Activity truth
+    |
+durable-success
+```
+
+If required telemetry is not yet durable, the client/domain must represent a pending/recovery state rather than impersonating success.
+
+The Ride UI contract therefore distinguishes:
+
+- `durable-success`;
+- `pending-finalization`;
+- `recovery-required`.
+
+## 7. Failure behavior
+
+| Failure | Required behavior |
+|---|---|
+| network disappears during Ride | keep recording locally; outbox remains retryable |
+| request times out after server may have committed | retry same batch identity; server resolves idempotently |
+| telemetry service overloaded | respect `Retry-After`; do not clear local outbox |
+| Redis unavailable | critical receipt-backed path must not invent durable ACK from missing cache/broker state |
+| app process killed | recover durable local state and Activity identity where accepted runtime path supports it |
+| encryption key unavailable | fail closed rather than silently treating encrypted GPS as empty |
+| finalization sees incomplete receipt coverage | remain pending/recovery; no success business effects |
+| device destroyed before any server ACK | data may be unrecoverable; no server-side system can recover a copy never uploaded |
+
+## 8. Recording durability vs live tracking
+
+These are deliberately separate product properties.
+
+| Capability | Current architecture statement |
+|---|---|
+| background/locked GPS recording durability | Proven by the mobile physical recovery chain |
+| local recovery after process death | Proven for the accepted recovery path |
+| eventual upload after connectivity returns | Durable outbox design |
+| remote live position freshness while screen-off | **Not implied by recording durability**; requires its own SLO/runtime proof |
+| offline Ride start | Product/lifecycle decision; do not infer from outbox durability alone |
+| PAUSE semantics | Separate Ride lifecycle contract; must not be inferred from UI state alone |
+
+A JS upload timer running while the app is active is not evidence of a background live-delivery guarantee.
+
+## 9. Privacy and completeness
+
+Privacy filtering and data completeness are different dimensions.
+
+Receipt metadata records the original batch coverage (including intentionally privacy-dropped points) so finalization can reason about whether telemetry is complete without requiring private coordinates to be persisted as public `gps_points`.
+
+Do not reconstruct missing telemetry with straight-line assumptions merely to make a route look complete.
+
+## 10. Operational configuration
+
+Home Lab and release proofs currently use the strict critical-data path (including scoped auth/audience and direct durable ACK). Generic environment defaults or old runbooks must not be interpreted as stronger authority than ADR 015.
+
+Deployment instructions live in operations docs. This document defines invariants, not environment-variable copy/paste.
+
+## 11. Verification
+
+Relevant proof families include:
 
 ```bash
-cd mobile && npm test -- __tests__/services/gpsSyncStorage.test.ts
-cd backend && python manage.py test activities.test_route_sync
-cd telemetry && pip install pytest pytest-asyncio && pytest test_ingest_dedupe.py -q
+# Mobile durability / outbox
+pnpm --filter mobile test -- gpsSyncStorage
+pnpm --filter mobile test -- gpsFinalization
+
+# Telemetry durable receipt / ACK
+cd telemetry
+pytest test_durable_receipts.py test_durable_receipt_collisions.py test_ingest_dedupe.py -q
+
+# Backend durable finalization / reconciliation
+cd backend
+python manage.py test activities
 ```
 
-## Tier 1 production confirmation (offline/outbox)
+Exact CI/runtime acceptance is determined by the repository's affected-test planner and release gates; these examples are not a substitute for the required CI matrix.
 
-Confirmed on production build workflow (manual QA script + in-app recovery):
+## 12. Open architecture decisions
 
-1. Start ride online, switch device to airplane mode.
-2. Continue ride while offline, then force-kill app.
-3. Relaunch app offline, verify recovery banner and pending points.
-4. Disable airplane mode, wait for auto flush (`flushGpsUploadQueues`) or tap manual recovery.
-5. Verify finalized activity appears in backend history and leaderboard updates.
+Tracked separately, not papered over here:
 
-Acceptance evidence:
-- Recovery banner visible when outbox pending.
-- `pendingPoints` reaches 0 after reconnect.
-- Session remains idempotent (`finalize` returns stable result).
+1. semantic Ride PAUSE/RESUME and persisted paused-state recovery;
+2. product SLO for background live-delivery freshness;
+3. fail-closed production authority for telemetry auth/signing configuration;
+4. whether Redis is ever promoted to a qualified durable journal for critical Activity telemetry.
+
+Until those decisions land, the conservative durability rule wins: **preserve the last retryable copy rather than acknowledge data whose durable authority is unproven.**

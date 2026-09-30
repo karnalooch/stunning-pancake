@@ -158,5 +158,5 @@ AI Coach studio · Voucher 3D customizer · ESG portal — [ROADMAP_V3.md](./ROA
 | Simulator ops | [operations/SIMULATOR.md](../operations/SIMULATOR.md) |
 | Live Map | [operations/LIVE_MAP.md](../operations/LIVE_MAP.md) |
 | Reliability | [reports/RELIABILITY_AUDIT_PLAYBOOK.md](../reports/RELIABILITY_AUDIT_PLAYBOOK.md) |
-| Department sponsors | [DEPARTMENT_ARCHITECTURE.md](../DEPARTMENT_ARCHITECTURE.md) |
+| Department sponsors | [DEPARTMENT_ARCHITECTURE.md](../DEPARTMENT_ARCHITECTURE.md) — superseded proposal; revalidate before reuse |
 | Experience visions (per role) | [overhaul_plan/README.md](../overhaul_plan/README.md) |

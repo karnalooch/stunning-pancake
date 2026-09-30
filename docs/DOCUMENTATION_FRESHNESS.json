@@ -15,6 +15,18 @@
       "max_age_days": 180
     },
     {
+      "path": "docs/diagrams/architecture_c4.md",
+      "max_age_days": 90
+    },
+    {
+      "path": "docs/DATA_RESILIENCE.md",
+      "max_age_days": 90
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "max_age_days": 90
+    },
+    {
       "path": "docs/pl/GETTING_STARTED.md",
       "max_age_days": 90
     },
