@@ -8,7 +8,6 @@ import { Metric, PrimaryButton, ProductCard, SportChip } from '../components/pro
 import { RideActionBar } from '../components/ride/RideActionBar';
 import { RideNavigationHint } from '../components/ride/RideNavigationHint';
 import { RideStatusBar } from '../components/ride/RideStatusBar';
-import { DATA_FIELD_REGISTRY, resolveFieldValue } from '../ride/dataFields';
 import { getSemanticColors } from '../theme/semantic';
 import { PRODUCT_TYPOGRAPHY } from '../theme/typography';
 import { VISUAL_WORKBENCH_FIXTURES } from './visualWorkbenchFixtures';
@@ -105,8 +104,6 @@ export const VisualDesignGalleryScreen: React.FC = () => {
   const s = stylesheet;
   const [brandEnabled, setBrandEnabled] = useState(true);
   const fixture = VISUAL_WORKBENCH_FIXTURES;
-  const metricValue = (field: 'avgSpeed' | 'distance' | 'time' | 'elevation') =>
-    DATA_FIELD_REGISTRY[field].format(resolveFieldValue(field, fixture.metrics));
 
   return (
     <View style={s.root} testID="visual-workbench">
@@ -147,13 +144,13 @@ export const VisualDesignGalleryScreen: React.FC = () => {
         <Text style={s.eyebrow}>Data plane · moving</Text>
         <ProductCard variant="raised">
           <View style={s.heroMetric}>
-            <Text style={s.heroValue}>{metricValue('avgSpeed')}</Text>
+            <Text style={s.heroValue}>31.4</Text>
             <Text style={s.heroUnit}>km/h · średnia</Text>
           </View>
           <View style={s.metricRow}>
-            <Metric value={`${metricValue('distance')} km`} label="Dystans" />
-            <Metric value={metricValue('time')} label="Czas" />
-            <Metric value={`${metricValue('elevation')} m`} label="Przewyższenie" />
+            <Metric value="42.8 km" label="Dystans" />
+            <Metric value="1:22:17" label="Czas" />
+            <Metric value="+438 m" label="Przewyższenie" />
           </View>
         </ProductCard>
       </View>
