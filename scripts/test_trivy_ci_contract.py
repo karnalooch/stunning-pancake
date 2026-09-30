@@ -30,6 +30,11 @@ class TrivyCIContractTests(unittest.TestCase):
         end = block.index(f"      - name: {next_name}\n", start)
         return block[start:end]
 
+    def test_dependency_manifest_changes_require_trivy(self):
+        block = _trivy_block()
+        self.assertIn("needs.changes.outputs.dependency_security == 'true'", block)
+        self.assertIn("needs.changes.outputs.full == 'true'", block)
+
     def test_reporting_scans_are_vulnerability_only_and_high_critical_only(self):
         block = _trivy_block()
         boundaries = (
