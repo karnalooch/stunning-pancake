@@ -74,7 +74,7 @@ Nie zidentyfikowano potwierdzonego P0 w analizie statycznej.
 
 | ID | Poziom | Obszar | Status | Ścieżki dowodowe | Możliwy wpływ | Minimalne kryterium zamknięcia | Odpowiedzialna rola |
 |---|---|---|---|---|---|---|---|
-| RISK-001 | P1 | Sekrety i konfiguracja | CONFIRMED (committed); REQUIRES VERIFICATION (produkcyjne użycie) | `backend/railway.json` (pole `SECRET_KEY` z nieplaceholderową wartością) | Przejęcie sesji/JWT, fałszowanie podpisów, gdy klucz jest używany w prod | Rotacja klucza, przeniesienie do zmiennej środowiskowej, usunięcie z historii git; potwierdzenie, że prod używa innego klucza | Security |
+| RISK-001 | P1 | Sekrety i konfiguracja | CODE REMEDIATED; ENVIRONMENT VERIFICATION REQUIRED | Bieżący `backend/railway.json` nie zawiera `SECRET_KEY`; `backend/core/settings.py` failuje przy `DEBUG=0` bez jawnego stabilnego klucza. Historyczna ekspozycja nadal wymaga potwierdzenia rotacji środowiskowej. | Przejęcie sesji/JWT lub niestabilny signing authority przy użyciu starego/zmiennego klucza | Potwierdzić rotację i wspólny stabilny secret w środowisku; nie przywracać ujawnionego klucza | Security |
 | RISK-002 | P1 | Telemetry ingest | REQUIRES VERIFICATION | `telemetry/ingest_auth.py` (production/PaaS startup wymaga JWT + audience + signing authority), `telemetry/main.py` (CORS `*`), `telemetry/ingest_guard.py` (fail-open) | Nieautoryzowany zapis danych GPS, zanieczyszczenie danych live | Zweryfikować Railway secret provisioning i utrzymać fail-closed startup + end-to-end rejection without token | Backend Lead |
 | RISK-003 | P1 | Izolacja tenantów | REQUIRES VERIFICATION | `backend/core/rls.py` (RLS tylko dla 3 tabel), `backend/core/middleware.py` (TenantRLSMiddleware) | Dostęp między tenantami do danych nieobjętych RLS | Audyt wszystkich modeli tenantowych + rozszerzenie RLS lub dowód filtrowania w ORM + test cross-tenant | Backend Lead |
 | RISK-004 | P1 | Migracje | MITIGATED / ENVIRONMENT REQUIRED | T17 / PR #374: `backend/docker-entrypoint.sh` wykonuje tylko `migrate --check`; mutacje schematu należą do one-shot `backend_migrate` / `sport-backend-migrate` | Ryzyko wyścigu migracji przy skalowaniu weba usunięte po stronie repo; pozostałe ryzyko to błędna konfiguracja ścieżki migracji w środowisku | Zweryfikować osobno izolowany Railway migration context przed rolloutem z nową migracją i zebrać runtime evidence | Operations |
@@ -108,8 +108,8 @@ Kod nie rozstrzyga poniższych kwestii:
 
 ## 7. Rekomendowana kolejność dalszej weryfikacji
 
-1. P0 — brak potwierdzonego P0; zweryfikować RISK-001 (klucz) jako najpilniejszy.
-2. P1 — RISK-001..RISK-006 w kolejności: sekrety, izolacja tenantów, ingest auth, MFA, migracje, backup.
+1. P0 — brak potwierdzonego P0.
+2. P1 — RISK-001 pozostaje środowiskowym zadaniem rotacji/weryfikacji; pozostałe P1 prowadzić według aktualnego statusu i ownership map.
 3. Krytyczna ścieżka użytkownika (logowanie → aktywność → telemetria → moderacja admin).
 4. Backup i restore (zdefiniować RPO/RTO, przetestować odtworzenie).
 5. Izolacja tenantów (rozszerzenie RLS + testy cross-tenant).
