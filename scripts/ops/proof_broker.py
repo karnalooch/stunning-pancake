@@ -1,4 +1,4 @@
-# Synced from karnalooch/engineering-platform@8210f2d0c9a5bb925ae33bc681f6e690f5601a9a (Gumball v0.6 lineage).
+# Synced from karnalooch/engineering-platform@21df6e660ef895086f0462f9eb0b2db75629e58d (Gumball v0.6 lineage).
 #!/usr/bin/env python3
 """Trusted Gumball broker for heavyweight workflow_dispatch proofs."""
 
@@ -989,7 +989,6 @@ def reconcile(
             proof_id = proof_for_label(policy, label)
             if not proof_id:
                 continue
-            actor = label_actor(repo, token, number, label)
             try:
                 result = evaluate_proof(
                     repo=repo,
