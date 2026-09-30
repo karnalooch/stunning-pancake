@@ -1,0 +1,53 @@
+appId: com.sport.athlete
+---
+# #401 Tranche D — deterministic visual proof for the canonical Ride slice.
+# The exact-SHA wrapper installs and verifies the artifact before this flow runs.
+- launchApp:
+    clearState: true
+
+# Vision-fixture builds bypass auth but a clean app state may still show onboarding.
+- runFlow:
+    when:
+      visible: ".*(DALEJ|Wybierz miasto|Gotowy do startu).*"
+    file: complete-onboarding.yaml
+
+- extendedWaitUntil:
+    visible: ".*(START JAZDY|START RIDE).*"
+    timeout: 60000
+- takeScreenshot: 01_today
+
+- tapOn:
+    id: "home-open-start-ride"
+- extendedWaitUntil:
+    visible: ".*(START JAZDY|START RIDE).*"
+    timeout: 12000
+- takeScreenshot: 02_start_ride
+
+- tapOn:
+    id: "start-ride-primary"
+- extendedWaitUntil:
+    visible: ".*(PAUZA|PAUSE|SZUKAM GPS|SEARCHING GPS).*"
+    timeout: 20000
+- takeScreenshot: 03_active_ride
+
+- tapOn:
+    id: "ride-pause-button"
+- extendedWaitUntil:
+    visible: ".*(WZNÓW|RESUME|ZATRZYMAJ JAZDĘ|STOP RIDE).*"
+    timeout: 12000
+- takeScreenshot: 04_paused
+
+- tapOn:
+    id: "ride-paused-stop"
+- extendedWaitUntil:
+    visible: ".*(Jazda ukończona|Ride complete|UDOSTĘPNIJ|SHARE).*"
+    timeout: 25000
+- takeScreenshot: 05_summary
+
+# Close the canonical journey so the proof also detects a broken Summary -> Today return.
+- tapOn:
+    id: "ride-summary-back-home"
+- extendedWaitUntil:
+    visible: ".*(START JAZDY|START RIDE).*"
+    timeout: 15000
+- takeScreenshot: 06_today_after_summary
