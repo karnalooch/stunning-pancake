@@ -38,6 +38,7 @@ describe('repo-native visual workbench contract', () => {
     expect(fixtures).toContain('batteryPct: 78');
     expect(fixtures).not.toContain('Math.random');
     expect(status).toContain('clockText ?? clock');
+    expect(status).toContain('if (clockText !== undefined) return undefined');
   });
 
   test('screen fixture index stays dev/vision-only and uses product chrome', () => {
