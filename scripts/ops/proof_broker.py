@@ -1,4 +1,4 @@
-# Synced from Gumball v0.6.0 (karnalooch/engineering-platform).
+# Synced from karnalooch/engineering-platform@8210f2d0c9a5bb925ae33bc681f6e690f5601a9a (Gumball v0.6 lineage).
 #!/usr/bin/env python3
 """Trusted Gumball broker for heavyweight workflow_dispatch proofs."""
 
@@ -335,6 +335,38 @@ def resolve_pr_revision(
     if not isinstance(sha, str) or not SHA40.fullmatch(sha):
         raise BrokerError("PR head SHA is not an exact lowercase 40-character SHA")
     return branch, sha
+
+
+def resolve_proof_revision(
+    repo: str,
+    pr: dict[str, Any],
+    *,
+    allow_merged: bool,
+) -> tuple[str, str]:
+    state = str(pr.get("state") or "")
+    if state == "open":
+        return resolve_pr_revision(repo, pr)
+
+    if state == "closed" and pr.get("merged_at"):
+        if not allow_merged:
+            raise BrokerError(
+                "merged PR proof dispatch requires an explicit trusted request"
+            )
+        base = pr.get("base") or {}
+        branch = base.get("ref")
+        sha = pr.get("merge_commit_sha")
+        if not isinstance(branch, str) or not branch:
+            raise BrokerError("merged PR base branch missing")
+        if not isinstance(sha, str) or not SHA40.fullmatch(sha):
+            raise BrokerError(
+                "merged PR merge_commit_sha is not an exact lowercase 40-character SHA"
+            )
+        return branch, sha
+
+    if state == "closed":
+        raise BrokerError("closed-unmerged PR cannot request proof")
+
+    raise BrokerError(f"unsupported PR state for proof dispatch: {state!r}")
 
 
 def default_branch(repo: str, token: str) -> str:
@@ -732,12 +764,14 @@ def evaluate_proof(
         authorize_actor(repo, token, actor, policy)
 
     pr = get_pr(repo, token, pr_number)
-    if pr.get("state") != "open":
-        raise BrokerError(f"PR #{pr_number} is not open")
+    branch, sha = resolve_proof_revision(
+        repo,
+        pr,
+        allow_merged=explicit,
+    )
 
-    if explicit and not status_only:
+    if explicit and not status_only and pr.get("state") == "open":
         ensure_request_label(repo, token, pr_number, proof, apply)
-    branch, sha = resolve_pr_revision(repo, pr)
     request_id = make_request_id(proof_id, pr_number, sha)
 
     artifact = None
@@ -955,6 +989,7 @@ def reconcile(
             proof_id = proof_for_label(policy, label)
             if not proof_id:
                 continue
+            actor = label_actor(repo, token, number, label)
             try:
                 result = evaluate_proof(
                     repo=repo,
