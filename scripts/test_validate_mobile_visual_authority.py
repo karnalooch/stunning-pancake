@@ -4,7 +4,12 @@ import copy
 import unittest
 from pathlib import Path
 
-from scripts.validate_mobile_visual_authority import load_policy, validate
+from scripts.validate_mobile_visual_authority import (
+    MAP_STYLE_PATH,
+    load_policy,
+    validate,
+    validate_mobile_map_style,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 POLICY = ROOT / "docs" / "design" / "MOBILE_UI_VISUAL_AUTHORITY_V1.json"
@@ -58,6 +63,22 @@ class MobileVisualAuthorityTests(unittest.TestCase):
         policy["toolingGate"]["acceptedIntegrationModes"] = []
         errors = validate(policy, ROOT)
         self.assertTrue(any("acceptedIntegrationModes" in error for error in errors))
+
+    def test_repository_map_style_passes(self):
+        style = __import__("json").loads(MAP_STYLE_PATH.read_text(encoding="utf-8"))
+        self.assertEqual(validate_mobile_map_style(style), [])
+
+    def test_map_style_cannot_restore_demo_or_public_osm_raster(self):
+        style = __import__("json").loads(MAP_STYLE_PATH.read_text(encoding="utf-8"))
+        style["sources"]["openmaptiles"]["url"] = "https://demotiles.maplibre.org/tiles/tiles.json"
+        errors = validate_mobile_map_style(style)
+        self.assertTrue(any("demotiles.maplibre.org" in error for error in errors))
+
+    def test_map_style_requires_attribution(self):
+        style = __import__("json").loads(MAP_STYLE_PATH.read_text(encoding="utf-8"))
+        style["sources"]["openmaptiles"]["attribution"] = ""
+        errors = validate_mobile_map_style(style)
+        self.assertTrue(any("attribution" in error for error in errors))
 
     def test_old_green_contract_phrase_is_forbidden(self):
         contract = (ROOT / "docs" / "design" / "MOBILE_UI_DESIGN_CONTRACT_V1.md").read_text(encoding="utf-8").lower()

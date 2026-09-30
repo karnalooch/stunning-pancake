@@ -56,6 +56,15 @@ Jeżeli po wyłączeniu artu znika primary action, układ się rozsypuje albo ni
 - wielki START;
 - diagnostyka tylko gdy blokuje start.
 
+## Mapa
+
+- kanoniczny styl mobile: `mobile/assets/map/4velo-ride-v1.json`;
+- format: MapLibre Style JSON, edytowalny w Maputniku;
+- GitHub jest authority; Maputnik jest edytorem;
+- runtime może użyć jawnego `EXPO_PUBLIC_MAP_STYLE_URL` tylko jako zgodnego override;
+- attribution OpenMapTiles/OpenStreetMap pozostaje obowiązkowe;
+- route overlay używa własnej warstwy 4VELO ponad basemapą.
+
 ## Active Ride
 
 Priorytet:
