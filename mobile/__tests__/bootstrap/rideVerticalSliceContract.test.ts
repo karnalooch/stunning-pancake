@@ -9,9 +9,9 @@ function source(relative: string): string {
 
 describe('T80-D deterministic Ride vertical slice contract', () => {
   test('critical screens expose stable automation ids', () => {
-    expect(source('screens/StartRideScreen.tsx')).toContain(
-      'testID="start-ride-primary"',
-    );
+    const startRide = source('screens/StartRideScreen.tsx');
+    expect(startRide).toContain('testID="start-ride-primary"');
+    expect(startRide).toContain('disabled={isStarting}');
     expect(source('screens/RideDashboardScreen.tsx')).toContain(
       'testID="home-open-start-ride"',
     );
@@ -19,8 +19,8 @@ describe('T80-D deterministic Ride vertical slice contract', () => {
     const active = source('screens/ActiveRideHUDScreen.tsx');
     const actions = source('components/ride/RideActionBar.tsx');
     expect(active).toContain('testID="active-ride-screen"');
-    expect(actions).toContain('testID="ride-pause-button"');
-    expect(actions).toContain('testID="ride-stop-button"');
+    expect(actions).toContain("pauseTestID = 'ride-pause-button'");
+    expect(actions).toContain("stopTestID = 'ride-stop-button'");
 
     const paused = source('screens/RidePausedScreen.tsx');
     expect(paused).toContain('testID="ride-paused-screen"');
@@ -37,7 +37,10 @@ describe('T80-D deterministic Ride vertical slice contract', () => {
     const navigation = source('bootstrap/NavigationShell.tsx');
 
     expect(navigation).toContain("screen: 'Tracking'");
-    expect(navigation).toContain("navigate('RidePaused')");
+    expect(navigation).toContain('onPauseRide');
+    expect(navigation).toContain('onResumeRide');
+    expect(navigation).not.toContain("navigate('RidePaused')");
+    expect(source('screens/ActiveRideHUDScreen.tsx')).toContain('<RidePausedScreen');
     expect(navigation).toContain("navigate('RideSummary', rideFinishState)");
     expect(navigation).toContain('setRideFinishState(null)');
     expect(navigation).toContain("screen: 'Today'");
