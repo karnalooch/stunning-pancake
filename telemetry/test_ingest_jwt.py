@@ -19,6 +19,7 @@ from ingest_auth import (  # noqa: E402
     IngestJwtMiddleware,
     _is_ingest_path,
     _validate_bearer_with_audience,
+    assert_runtime_security_configuration,
     audience_required,
     expected_audience,
     jwt_enforced,
@@ -316,3 +317,69 @@ def test_legacy_scope_can_roll_out_before_strict_audience_mode():
         user_ids=[42],
         require_scope=False,
     ) == (True, None)
+
+
+def _clear_runtime_security_env(monkeypatch):
+    for name in (
+        "SENTRY_ENVIRONMENT",
+        "RAILWAY_ENVIRONMENT",
+        "RAILWAY_SERVICE_NAME",
+        "DYNO",
+        "RENDER",
+        "TELEMETRY_INGEST_JWT_REQUIRED",
+        "TELEMETRY_INGEST_AUDIENCE_REQUIRED",
+        "TELEMETRY_INGEST_JWT_SECRET",
+        "SECRET_KEY",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+
+def test_runtime_security_guard_allows_local_dev_defaults(monkeypatch):
+    _clear_runtime_security_env(monkeypatch)
+    assert_runtime_security_configuration()
+
+
+@pytest.mark.parametrize(
+    ("missing_name", "configure"),
+    [
+        (
+            "TELEMETRY_INGEST_JWT_REQUIRED=1",
+            {
+                "TELEMETRY_INGEST_AUDIENCE_REQUIRED": "1",
+                "TELEMETRY_INGEST_JWT_SECRET": "x" * 32,
+            },
+        ),
+        (
+            "TELEMETRY_INGEST_AUDIENCE_REQUIRED=1",
+            {
+                "TELEMETRY_INGEST_JWT_REQUIRED": "1",
+                "TELEMETRY_INGEST_JWT_SECRET": "x" * 32,
+            },
+        ),
+        (
+            "TELEMETRY_INGEST_JWT_SECRET or SECRET_KEY",
+            {
+                "TELEMETRY_INGEST_JWT_REQUIRED": "1",
+                "TELEMETRY_INGEST_AUDIENCE_REQUIRED": "1",
+            },
+        ),
+    ],
+)
+def test_production_runtime_security_guard_fails_closed(monkeypatch, missing_name, configure):
+    _clear_runtime_security_env(monkeypatch)
+    monkeypatch.setenv("SENTRY_ENVIRONMENT", "production")
+    for name, value in configure.items():
+        monkeypatch.setenv(name, value)
+
+    with pytest.raises(RuntimeError, match=missing_name):
+        assert_runtime_security_configuration()
+
+
+def test_railway_runtime_security_guard_accepts_complete_contract(monkeypatch):
+    _clear_runtime_security_env(monkeypatch)
+    monkeypatch.setenv("RAILWAY_SERVICE_NAME", "telemetry")
+    monkeypatch.setenv("TELEMETRY_INGEST_JWT_REQUIRED", "1")
+    monkeypatch.setenv("TELEMETRY_INGEST_AUDIENCE_REQUIRED", "1")
+    monkeypatch.setenv("TELEMETRY_INGEST_JWT_SECRET", "railway-test-key-" * 4)
+
+    assert_runtime_security_configuration()

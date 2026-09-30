@@ -217,8 +217,9 @@ class ActivityViewSet(viewsets.ModelViewSet):
         """Issue a telemetry-scoped ingest token (aud='telemetry', exp=+5min).
 
         Required by ingest_auth.IngestJwtMiddleware when
-        ``TELEMETRY_INGEST_AUDIENCE_REQUIRED`` is enabled (default OFF —
-        opt-in). The Django access token cannot be reused here because its
+        ``TELEMETRY_INGEST_AUDIENCE_REQUIRED`` is enabled. Production/PaaS
+        startup requires this audience gate; local/dev may opt out. The Django
+        access token cannot be reused here because its
         ``aud`` claim is absent (or != 'telemetry').
         """
         activity = self.get_object()  # ownership enforced by get_queryset()

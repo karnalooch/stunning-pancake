@@ -427,7 +427,7 @@ Mobile GPS/OS/UX checklist: [Mobile-side guarantees](#mobile-side-guarantees) (P
 | Evaluate Kafka only if Redis queue SLO breached | New ADR or amendment — out of P1 scope | **Deferred** |
 | Server `GET …/gpx/` | [`backend/activities/gpx_export.py`](../../backend/activities/gpx_export.py) | **Done** |
 | Mobile WS ingest lane | [`mobile/src/services/gpsWsIngest.ts`](../../mobile/src/services/gpsWsIngest.ts) (`EXPO_PUBLIC_TELEMETRY_WS_INGEST=1`) | **Done** (opt-in) |
-| JWT on telemetry ingest | [`telemetry/ingest_auth.py`](../../telemetry/ingest_auth.py) (`TELEMETRY_INGEST_JWT_REQUIRED=0` default) | **Done** (optional env) |
+| JWT on telemetry ingest | [`telemetry/ingest_auth.py`](../../telemetry/ingest_auth.py) | **Done** — optional only in local/dev; production/PaaS startup requires JWT + audience + signing authority |
 | Local GPX snapshot on stop | [`mobile/src/services/gpsLocalExport.ts`](../../mobile/src/services/gpsLocalExport.ts) | **Done** |
 | Redis PEL reclaim + DLQ | [`telemetry/ingest_queue.py`](../../telemetry/ingest_queue.py), [TELEMETRY_INGEST_QUEUE](../operations/TELEMETRY_INGEST_QUEUE.md) | **Done** |
 | Timescale drain (sort + optional COPY) | [`telemetry/db.py`](../../telemetry/db.py), [`ingest_queue.py`](../../telemetry/ingest_queue.py) | **Done** (default: sorted `executemany`) |
