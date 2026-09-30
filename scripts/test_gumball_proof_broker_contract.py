@@ -25,6 +25,7 @@ class GumballProofBrokerContractTests(unittest.TestCase):
         self.assertFalse(proof["automatic"]["enabled"])
         self.assertEqual("$sha", proof["inputs"]["source_sha"])
         self.assertEqual("$request_id", proof["inputs"]["gumball_request_id"])
+        self.assertEqual(["karnalooch"], policy["defaults"]["trusted_actor_logins"])
 
     def test_native_workflow_satisfies_trusted_dispatch_contract(self):
         policy = json.loads(POLICY.read_text(encoding="utf-8"))
