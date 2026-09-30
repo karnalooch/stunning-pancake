@@ -2,7 +2,8 @@
 # Prerequisites: dev/preview APK on emulator or device, Maestro CLI, adb.
 param(
     [string]$Flow = "",
-    [string]$MaestroBin = ""
+    [string]$MaestroBin = "",
+    [string]$TestOutputDir = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -78,6 +79,14 @@ foreach ($name in @("E2E_EMAIL", "E2E_PASSWORD")) {
     }
 }
 
+$maestroTestArgs = @("test")
+if ($TestOutputDir) {
+    New-Item -ItemType Directory -Force -Path $TestOutputDir | Out-Null
+    $resolvedOutput = (Resolve-Path $TestOutputDir).Path
+    $maestroTestArgs += "--test-output-dir"
+    $maestroTestArgs += $resolvedOutput
+}
+
 Push-Location $mobileDir
 try {
     if ($Flow) {
@@ -86,10 +95,10 @@ try {
             Write-Error "Flow not found: $flowPath"
         }
         Write-Host "Running Maestro flow: $Flow"
-        & $maestro test @maestroEnvArgs $flowPath
+        & $maestro @maestroTestArgs @maestroEnvArgs $flowPath
     } else {
         Write-Host "Running all Maestro flows in $flowsDir"
-        & $maestro test @maestroEnvArgs $flowsDir
+        & $maestro @maestroTestArgs @maestroEnvArgs $flowsDir
     }
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE
