@@ -23,6 +23,7 @@ describe('repo-native visual workbench contract', () => {
       expect(gallery).toContain(token);
     }
 
+    expect(gallery).toContain("DATA_FIELD_REGISTRY[field].format(resolveFieldValue(field, fixture.metrics))");
     expect(gallery).toContain('<RideNavigationHint');
     expect(gallery).toContain('<RideStatusBar');
     expect(gallery).toContain('<RideActionBar');
