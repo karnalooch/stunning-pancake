@@ -391,7 +391,7 @@ class MobileHarnessContractTests(unittest.TestCase):
             "start-ride-primary",
             "active-ride-screen",
             "ride-pause-button",
-            "ride-paused-screen",
+            "ride-paused-overlay",
             "ride-paused-resume",
             "ride-paused-stop",
             "ride-summary-screen",
