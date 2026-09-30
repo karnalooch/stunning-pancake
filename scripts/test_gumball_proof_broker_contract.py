@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 import unittest
-from unittest import mock
 from pathlib import Path
+from unittest import mock
 
 from scripts.ops import proof_broker
 from scripts.ops.proof_broker import (
