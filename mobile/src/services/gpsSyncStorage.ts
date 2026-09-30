@@ -353,6 +353,59 @@ export function loadTrackingState(storage: GpsStorageAdapter): TrackingState | n
   return parseJson<TrackingState | null>(raw, null);
 }
 
+export function pauseTrackingState(
+  state: TrackingState,
+  nowMs: number,
+): TrackingState {
+  return {
+    ...state,
+    isTracking: false,
+    isPaused: true,
+    pausedAtMs: nowMs,
+    accumulatedPausedMs: state.accumulatedPausedMs ?? 0,
+    resumeSegmentBreakPending: true,
+  };
+}
+
+export function resumeTrackingState(
+  state: TrackingState,
+  nowMs: number,
+): TrackingState {
+  const pauseStartedMs = state.pausedAtMs ?? nowMs;
+  return {
+    ...state,
+    isTracking: true,
+    isPaused: false,
+    pausedAtMs: null,
+    accumulatedPausedMs:
+      (state.accumulatedPausedMs ?? 0) + Math.max(0, nowMs - pauseStartedMs),
+    resumeSegmentBreakPending: true,
+    lastCoord: null,
+    lastAltitude: null,
+  };
+}
+
+export function rideElapsedSeconds(
+  state: TrackingState | null,
+  wallStartMs: number | null,
+  nowMs: number,
+): number | undefined {
+  if (
+    wallStartMs == null ||
+    !state?.activityId ||
+    (!state.isTracking && !state.isPaused)
+  ) {
+    return undefined;
+  }
+
+  const endMs =
+    state.isPaused && state.pausedAtMs != null ? state.pausedAtMs : nowMs;
+  return Math.max(
+    0,
+    Math.floor((endMs - wallStartMs - (state.accumulatedPausedMs ?? 0)) / 1000),
+  );
+}
+
 export function buildRouteCoordinates(points: GpsPoint[]): [number, number][] {
   return points.map((p) => [p.lon, p.lat]);
 }
