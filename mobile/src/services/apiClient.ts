@@ -178,10 +178,11 @@ export type TelemetryIngestToken = {
 /**
  * Fetch a short-lived JWT scoped to one activity for telemetry ingest.
  *
- * The middleware in `telemetry/ingest_auth.py` enforces ``aud='telemetry'`` by
- * default so the Django access token cannot be replayed against the telemetry
- * service. This endpoint is the supported way for mobile clients to obtain
- * such a token once the activity has been created.
+ * The middleware in `telemetry/ingest_auth.py` enforces ``aud='telemetry'`` when
+ * the deployment enables audience enforcement, so the Django access token
+ * cannot be replayed against the telemetry service. This authenticated Django
+ * endpoint is the supported way for mobile clients to obtain the scoped token
+ * once the activity has been created.
  *
  * Returns null on failure; callers should fall back to skipping the batch
  * (the outbox retains points for the next attempt).
@@ -190,13 +191,13 @@ export async function getTelemetryIngestToken(
   activityId: number,
 ): Promise<TelemetryIngestToken | null> {
   try {
-    const res = await axios.post<{
+    const res = await api.post<{
       token: string;
       expires_at: string;
       audience: 'telemetry';
       activity_id: number;
     }>(
-      `${BASE_URL}${mobileActivityPaths.sessionTelemetryToken(activityId)}`,
+      mobileActivityPaths.sessionTelemetryToken(activityId),
       undefined,
       { timeout: 10_000 },
     );

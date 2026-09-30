@@ -5,7 +5,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-30 |
 | **Audience** | See canonical document |
 | **lang** | en |
 | **translation** | [Polski](../pl/adr/011-telemetry-ingest-durability-under-load.md) |
@@ -17,7 +17,7 @@
 |--|--|
 | **Status** | Accepted |
 | **Owner role** | Platform Operator / Tech Lead |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-30 |
 | **Language** | English |
 | **Index** | [docs/README.md](../README.md) |
 
@@ -28,6 +28,20 @@
 ## Status
 
 Accepted (2026-06-04)
+
+## 2026-09-30 amendment — ADR 015 acknowledgement authority
+
+[ADR 015](./015-critical-data-acknowledgement.md) is authoritative when this older ADR's queue-admission language conflicts with delete-safe acknowledgement semantics.
+
+For the current receipt-backed mobile activity path:
+
+- a critical activity batch is acknowledged only after PostgreSQL atomically commits its public GPS rows (if any) and the immutable `telemetry_ingest_receipts` proof used by durable finalization;
+- Redis Stream `XADD` is **not** a delete-safe ACK boundary for that path;
+- when the ingest guard would otherwise queue a receipt-backed activity batch, telemetry returns retryable `503 + Retry-After` and mobile retains its durable outbox copy;
+- the existing Redis Stream remains available for legacy/non-receipt traffic;
+- promoting Redis back to an ACK boundary for critical activity telemetry requires separate proof of restart persistence/replay **and** parity with the durable receipt/finalization contract.
+
+The original accept-and-queue design below remains useful as scaling history and as a target for a future qualified durable journal, but it must not be read as permission to delete the mobile outbox after volatile queue admission.
 
 ## Context
 

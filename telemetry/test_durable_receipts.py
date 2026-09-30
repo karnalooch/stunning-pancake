@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
+from fastapi import HTTPException
 
 import durable_routes
 import ingest_service
@@ -108,6 +109,82 @@ async def test_direct_race_retry_marks_result_deduped_after_db_validation(monkey
         "deduped": True,
     }
     mark.assert_awaited_once_with("batch-race")
+
+
+@pytest.mark.asyncio
+async def test_receipt_backed_activity_refuses_stream_ack_under_guard_pressure(monkeypatch):
+    rows = ingest_service.IngestRows([ingest_service.packet_to_row(packet(1))])
+    rows.point_count = 1
+    rows.activity_id = 42
+    rows.user_id = 7
+    rows.max_seq = 1
+    rows.payload_fingerprint = "b" * 64
+
+    enqueue = AsyncMock(return_value=True)
+    mark = AsyncMock()
+    monkeypatch.setattr(ingest_service, "is_active_activity", AsyncMock(return_value=True))
+    monkeypatch.setattr(ingest_service, "queue_enabled", lambda: True)
+    monkeypatch.setattr(ingest_service, "enqueue_stream_rows", enqueue)
+    monkeypatch.setattr(ingest_service, "mark_batch_acked", mark)
+
+    guard = SimpleNamespace(
+        allowed=True,
+        should_queue_active_sessions=True,
+        retry_after=7,
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await ingest_service.persist_ingest_rows(
+            rows,
+            client_batch_id="critical-batch",
+            activity_id=42,
+            guard=guard,
+        )
+
+    assert exc_info.value.status_code == 503
+    assert exc_info.value.headers["Retry-After"] == "7"
+    assert exc_info.value.headers["X-Ingest-Mode"] == "retry-durable"
+    enqueue.assert_not_awaited()
+    mark.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_legacy_non_receipt_activity_can_still_use_stream_queue(monkeypatch):
+    rows = [(1.0, "d1", 7, 52.1, 21.0, 1.0, 5.0, 42, 1)]
+    redis_client = object()
+    enqueue = AsyncMock(return_value=True)
+    mark = AsyncMock()
+
+    monkeypatch.setattr(ingest_service, "is_active_activity", AsyncMock(return_value=True))
+    monkeypatch.setattr(ingest_service, "queue_enabled", lambda: True)
+    monkeypatch.setattr(ingest_service, "get_ingest_redis", AsyncMock(return_value=redis_client))
+    monkeypatch.setattr(ingest_service, "is_queue_saturated", AsyncMock(return_value=False))
+    monkeypatch.setattr(ingest_service, "enqueue_stream_rows", enqueue)
+    monkeypatch.setattr(ingest_service, "mark_batch_acked", mark)
+
+    result = await ingest_service.persist_ingest_rows(
+        rows,
+        client_batch_id="legacy-batch",
+        activity_id=42,
+        guard=SimpleNamespace(
+            allowed=True,
+            should_queue_active_sessions=True,
+            retry_after=3,
+        ),
+    )
+
+    assert result == {
+        "inserted": 1,
+        "queued": True,
+        "ingest_mode": "stream",
+    }
+    enqueue.assert_awaited_once_with(
+        redis_client,
+        rows,
+        client_batch_id="legacy-batch",
+        activity_id=42,
+    )
+    mark.assert_awaited_once_with("legacy-batch")
 
 
 @pytest.mark.asyncio
