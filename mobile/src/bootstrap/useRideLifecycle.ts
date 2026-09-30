@@ -1,39 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
-
   getRideGpsManager,
-
-  resumeActiveRideIfNeeded,
-
+  pauseRideSession,
+  restoreRideSessionIfNeeded,
+  resumeRideSession,
   startRideSession,
-
   stopRideSession,
-
 } from '../services/rideSessionService';
-
 import type { ActivitySportType } from '../services/api';
-
 import {
-
   isTrackingRecoveryPending,
-
   recoverGpsDataOnLaunch,
-
   runManualGpsRecovery,
-
   startGpsBackgroundSync,
-
   type TrackingStats,
-
 } from '../services/GpsSyncManager';
-
 import { recordRideComplete } from '../game/progression';
-
 import { syncRideQuestProgress } from '../game/quests';
-
 import type { RideEdgeMessage } from '../services/apiRetry';
-
 import { useI18n } from '../i18n/useI18n';
 import {
   classifyRideFinishState,
@@ -45,154 +30,93 @@ import { applyDurableRideCompletionEffects } from '../features/ride/controller/a
 import { runE2eGpsRecoveryHarnessIfEnabled } from './e2eGpsRecoveryHarness';
 import { e2eConfig } from './e2eConfig';
 
-
-
 export type RideLifecycleOptions = {
-
   onStartRideError?: (message: string | null) => void;
-
   onStartRideSuccess?: () => void;
-
   onEdgeMessage?: (message: RideEdgeMessage | null) => void;
-
 };
 
-
-
 export function useRideLifecycle(options: RideLifecycleOptions = {}) {
-
   const { t } = useI18n();
-
   const userIdRef = useRef<number | null>(null);
 
   const [isRecording, setIsRecording] = useState(false);
-
   const [ridePaused, setRidePaused] = useState(false);
-
   const [liveSpeed, setLiveSpeed] = useState(0);
-
   const [liveDistanceKm, setLiveDistanceKm] = useState(0);
-
   const [liveElevationGainM, setLiveElevationGainM] = useState(0);
-
   const [liveElapsedS, setLiveElapsedS] = useState(0);
-
   const [liveCoord, setLiveCoord] = useState<[number, number] | null>(null);
-
   const [gpsRecoveryVisible, setGpsRecoveryVisible] = useState(false);
-
   const [gpsRecoveryBusy, setGpsRecoveryBusy] = useState(false);
-
   const [rideFinishState, setRideFinishState] = useState<RideFinishState | null>(null);
 
-
-
   const pushEdge = useCallback(
-
     (msg: RideEdgeMessage | null) => {
-
       options.onEdgeMessage?.(msg);
-
     },
-
     [options.onEdgeMessage],
-
   );
-
-
 
   const refreshGpsRecoveryFlag = useCallback(() => {
-
     setGpsRecoveryVisible(isTrackingRecoveryPending());
-
   }, []);
-
-
 
   const wireGpsStatsCallback = useCallback((uid: number | null) => {
-
     const manager = getRideGpsManager(uid);
-
     manager.setUpdateCallback((stats: TrackingStats) => {
-
       setLiveSpeed(stats.speedMs ?? 0);
-
       setLiveDistanceKm((stats.distanceM ?? 0) / 1000);
-
       setLiveElevationGainM(stats.elevationGainM ?? 0);
-
       setLiveElapsedS(stats.rideWallClockS ?? stats.gpsActiveTimeS ?? 0);
-
       setLiveCoord(stats.lastCoord ?? null);
-
       if (stats.pendingPoints > 0) {
-
         setGpsRecoveryVisible(true);
-
       }
-
     });
-
   }, []);
 
-
-
-  const onUserSessionReady = useCallback(
-
-    async (uid: number | null) => {
-
-      userIdRef.current = uid;
-
-      wireGpsStatsCallback(uid);
-
-      if (await resumeActiveRideIfNeeded(uid)) {
-
-        setIsRecording(true);
-
-      }
-
+  const applyRestoredRideState = useCallback(
+    (restored: 'active' | 'paused' | null) => {
+      if (!restored) return false;
+      setIsRecording(true);
+      setRidePaused(restored === 'paused');
+      if (restored === 'paused') setLiveSpeed(0);
+      return true;
     },
-
-    [wireGpsStatsCallback],
-
+    [],
   );
 
-
+  const onUserSessionReady = useCallback(
+    async (uid: number | null) => {
+      userIdRef.current = uid;
+      wireGpsStatsCallback(uid);
+      applyRestoredRideState(await restoreRideSessionIfNeeded(uid));
+    },
+    [applyRestoredRideState, wireGpsStatsCallback],
+  );
 
   useEffect(() => {
-
     // The destructive lost-key proof owns GPS storage exclusively. Running
     // normal launch recovery/background sync in parallel would invalidate the
     // physical acceptance test and could race key deletion.
     if (e2eConfig.gpsLostKeyDestructive) return;
 
     void (async () => {
-
       try {
-
         await runE2eGpsRecoveryHarnessIfEnabled();
-
       } catch (e) {
-
         console.warn('[E2E GPS RECOVERY] FAILED', e);
-
       }
 
       try {
-
         const result = await recoverGpsDataOnLaunch();
-
         if (result.needsResumeUi || isTrackingRecoveryPending()) {
-
           setGpsRecoveryVisible(true);
-
         }
 
-        const resumed = await resumeActiveRideIfNeeded(null);
-
-        if (resumed) {
-          setIsRecording(true);
-        } else {
+        const restored = await restoreRideSessionIfNeeded(null);
+        if (!applyRestoredRideState(restored)) {
           const recoveredFinishState = classifyRideRecoveryAfterLaunch(
             result.pendingFinalization,
           );
@@ -200,124 +124,120 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
             setRideFinishState(recoveredFinishState);
           }
         }
-
       } catch (e) {
-
         console.warn('[GPS] launch recovery failed', e);
-
       }
-
     })();
 
     startGpsBackgroundSync();
-
-  }, []);
-
-
+  }, [applyRestoredRideState]);
 
   const handleGpsRecoveryPress = useCallback(async () => {
-
     setGpsRecoveryBusy(true);
-
     try {
-
       const ok = await runManualGpsRecovery();
-
       if (ok) {
-
         setGpsRecoveryVisible(false);
-
         pushEdge({
-
           title: t.rideMessages.gpsRecovered,
-
           message: t.rideMessages.gpsRecovered,
-
           variant: 'success',
-
         });
-
       } else {
-
         pushEdge({
-
           title: t.rideMessages.gpsRecoverFail,
-
           message: t.rideMessages.gpsRecoverFail,
-
           variant: 'warning',
-
         });
-
         refreshGpsRecoveryFlag();
-
       }
-
     } catch (e: unknown) {
-
       const msg = e instanceof Error ? e.message : t.rideMessages.gpsRecoverError;
-
       pushEdge({ title: t.rideMessages.gpsRecoverError, message: msg, variant: 'error' });
-
     } finally {
-
       setGpsRecoveryBusy(false);
-
     }
-
   }, [pushEdge, refreshGpsRecoveryFlag, t]);
 
-
-
   const handleStartRide = useCallback(
-
     async (activityType: ActivitySportType = 'BIKE', eventId?: number) => {
-
       const userId = userIdRef.current;
-
       try {
-
         wireGpsStatsCallback(userId);
-
         await startRideSession({
-
           type: activityType,
-
           event_id: eventId,
-
           userId,
-
         });
-
         setIsRecording(true);
-
         setRidePaused(false);
-
         refreshGpsRecoveryFlag();
-
         options.onStartRideSuccess?.();
-
         return true;
-
       } catch (e: unknown) {
-
         const msg = e instanceof Error ? e.message : t.errors.startRide;
-
         options.onStartRideError?.(msg);
-
         refreshGpsRecoveryFlag();
-
         return false;
-
       }
-
     },
-
     [refreshGpsRecoveryFlag, wireGpsStatsCallback, options, t],
-
   );
 
+  const pause = useCallback(async () => {
+    if (!isRecording) return false;
+    if (ridePaused) return true;
 
+    try {
+      const ok = await pauseRideSession(userIdRef.current);
+      if (!ok) {
+        pushEdge({
+          title: t.rideMessages.pauseError,
+          message: t.rideMessages.pauseErrorBody,
+          variant: 'warning',
+        });
+        return false;
+      }
+      setRidePaused(true);
+      setLiveSpeed(0);
+      return true;
+    } catch (e) {
+      console.warn('[GPS] pause ride failed', e);
+      pushEdge({
+        title: t.rideMessages.pauseError,
+        message: t.rideMessages.pauseErrorBody,
+        variant: 'warning',
+      });
+      return false;
+    }
+  }, [isRecording, pushEdge, ridePaused, t]);
+
+  const resume = useCallback(async () => {
+    if (!isRecording) return false;
+    if (!ridePaused) return true;
+
+    try {
+      const ok = await resumeRideSession(userIdRef.current);
+      if (!ok) {
+        pushEdge({
+          title: t.rideMessages.resumeError,
+          message: t.rideMessages.resumeErrorBody,
+          variant: 'warning',
+        });
+        return false;
+      }
+      setRidePaused(false);
+      return true;
+    } catch (e) {
+      console.warn('[GPS] resume ride failed', e);
+      pushEdge({
+        title: t.rideMessages.resumeError,
+        message: t.rideMessages.resumeErrorBody,
+        variant: 'warning',
+      });
+      return false;
+    }
+  }, [isRecording, pushEdge, ridePaused, t]);
 
   const handleStopRide = useCallback(async () => {
     const userId = userIdRef.current;
@@ -389,37 +309,23 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
   ]);
 
   return {
-
     isRecording,
-
     ridePaused,
-
-    setRidePaused,
-
+    pause,
+    resume,
     liveSpeed,
-
     liveDistanceKm,
-
     liveElevationGainM,
-
     liveElapsedS,
-
     liveCoord,
-
     gpsRecoveryVisible,
-
     gpsRecoveryBusy,
     rideFinishState,
     setRideFinishState,
-onUserSessionReady,
-
+    onUserSessionReady,
     handleGpsRecoveryPress,
-
     handleStartRide,
-
     handleStopRide,
-
     clearEdgeMessage: () => pushEdge(null),
-
   };
 }
