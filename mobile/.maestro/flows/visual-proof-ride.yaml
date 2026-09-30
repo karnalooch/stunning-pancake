@@ -1,0 +1,42 @@
+appId: com.sport.athlete
+---
+# Exact-runtime visual proof for the primary Ride journey.
+# Every state is mandatory and selected through stable automation IDs.
+- launchApp
+- extendedWaitUntil:
+    id: "home-open-start-ride"
+    timeout: 60000
+- takeScreenshot:
+    path: 01_today
+
+- tapOn:
+    id: "home-open-start-ride"
+- extendedWaitUntil:
+    id: "start-ride-primary"
+    timeout: 12000
+- takeScreenshot:
+    path: 02_start
+
+- tapOn:
+    id: "start-ride-primary"
+- extendedWaitUntil:
+    id: "active-ride-screen"
+    timeout: 20000
+- takeScreenshot:
+    path: 03_active
+
+- tapOn:
+    id: "ride-pause-button"
+- extendedWaitUntil:
+    id: "ride-paused-screen"
+    timeout: 12000
+- takeScreenshot:
+    path: 04_paused
+
+- tapOn:
+    id: "ride-paused-stop"
+- extendedWaitUntil:
+    id: "ride-summary-screen"
+    timeout: 25000
+- takeScreenshot:
+    path: 05_summary
