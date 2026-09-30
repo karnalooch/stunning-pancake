@@ -273,15 +273,18 @@ export async function recoverGpsDataOnLaunch(): Promise<RecoveryResult> {
   const pendingSession = loadPendingSession(storage) != null;
   const pendingFinalization = loadPendingFinalization(storage) != null;
 
-  const needsResumeUi =
+  const recoveryPending =
     pendingSession ||
     pendingFinalization ||
-    Boolean(
-      state?.activityId &&
-        (state.isTracking || state.isPaused || buffer.length > 0 || outbox.length > 0),
-    );
+    buffer.length > 0 ||
+    outbox.length > 0;
+  const needsResumeUi =
+    recoveryPending ||
+    Boolean(state?.activityId && (state.isTracking || state.isPaused));
 
-  setRecoveryPending(storage, needsResumeUi);
+  // An ACTIVE/PAUSED ride is normal lifecycle state. Recovery means durable
+  // work is actually pending, not merely that the Ride UI should be restored.
+  setRecoveryPending(storage, recoveryPending);
 
   if (__DEV__ && (pendingPointCount(storage) > 0 || pendingFinalization)) {
     console.log(
