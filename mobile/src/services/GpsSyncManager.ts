@@ -592,6 +592,14 @@ export class GpsSyncManager {
 
   setUpdateCallback(cb: (stats: TrackingStats) => void): void {
     this._onUpdate = cb;
+    this._emitStats();
+  }
+
+  startStatsUpdates(): void {
+    if (!this._statsCheckTimer) {
+      this._statsCheckTimer = setInterval(() => this._emitStats(), 2000);
+    }
+    this._emitStats();
   }
 
   private _emitStats(): void {
@@ -739,7 +747,7 @@ export class GpsSyncManager {
     }
 
     startGpsBackgroundSync();
-    this._statsCheckTimer = setInterval(() => this._emitStats(), 2000);
+    this.startStatsUpdates();
   }
 
   async setResolution(resolution: PollingResolution): Promise<void> {
