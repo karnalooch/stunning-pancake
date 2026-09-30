@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 import warnings
 
+DEV_SECRET_KEY = "default-unsafe-key-for-dev"
+
 
 def parse_allowed_hosts(raw: str | None) -> list[str]:
     if not raw or not raw.strip():
@@ -37,3 +39,16 @@ def warn_insecure_allowed_hosts(hosts: list[str], *, debug: bool) -> None:
             "(e.g. your-app.up.railway.app).",
             stacklevel=2,
         )
+
+
+def resolve_secret_key(raw: str | None, *, debug: bool) -> str:
+    """Return the configured signing key or fail closed outside development."""
+    value = (raw or "").strip()
+    if debug:
+        return value or DEV_SECRET_KEY
+    if not value or value == DEV_SECRET_KEY:
+        raise RuntimeError(
+            "SECRET_KEY must be set in production. "
+            "Set a stable SECRET_KEY environment variable before startup."
+        )
+    return value
