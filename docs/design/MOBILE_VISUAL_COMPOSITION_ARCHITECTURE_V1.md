@@ -507,7 +507,21 @@ Current reference evidence:
 
 The acceptance rule is stricter than “the tool has a GitHub button”: the **accepted artifact must be reproducible and reviewable from repository evidence**.
 
-## 17. Review checklist
+## 17. Repo-native visual workbench
+
+The canonical component inspection surface is repository-owned and works without an external SaaS:
+
+- `mobile/src/dev/VisualDesignGalleryScreen.tsx`;
+- deterministic fixtures in `mobile/src/dev/visualWorkbenchFixtures.ts`;
+- dev/vision-only navigation boundary;
+- stable test IDs for Maestro/runtime screenshots;
+- explicit map/data/control/brand sections and asset-off inspection.
+
+The workbench renders production components rather than mock replicas.
+
+Storybook may later wrap the same components and fixtures when dependency/lockfile cost is justified. Storybook is an optional adapter, not a prerequisite and not an authority source.
+
+## 18. Review checklist
 
 For every primary mobile visual PR:
 
@@ -547,7 +561,7 @@ For every primary mobile visual PR:
 - [ ] pending/recovery cannot impersonate durable success;
 - [ ] celebration is durable-success-only.
 
-## 18. Implementation order after this decision
+## 19. Implementation order after this decision
 
 1. reconcile #388 visual slice against this composition contract;
 2. implement #392 semantic Pause/Resume and consume it as the paused overlay state;
@@ -556,6 +570,6 @@ For every primary mobile visual PR:
 5. recompose Summary around terminal truth first, celebration second;
 6. only then reopen planned asset production where a documented gap remains.
 
-## 19. One-sentence rule
+## 20. One-sentence rule
 
 > **4VELO should look complete before the artwork loads; artwork should make it recognisably 4VELO, not make it usable.**
