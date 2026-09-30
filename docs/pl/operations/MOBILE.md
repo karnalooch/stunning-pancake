@@ -5,7 +5,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-09-29 |
+| **Last reviewed** | 2026-09-30 |
 | **Audience** | See canonical document |
 | **lang** | pl |
 | **translation** | [English](../../en/operations/MOBILE.md) |
@@ -19,7 +19,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Mobile Lead |
-| **Last reviewed** | 2026-09-29 |
+| **Last reviewed** | 2026-09-30 |
 | **Cel** | Zbudować i wydać aplikację React Native/Expo oraz obsłużyć awarie GPS/telemetrii w polu. |
 | **Audience** | Mobile Lead, Platform Operator (env), QA |
 | **Architektura warstw GPS** | [DATA_RESILIENCE.md](../../DATA_RESILIENCE.md) |
@@ -180,7 +180,7 @@ Gdy PR rzeczywiście wymaga artefaktu natywnego, preferowaną ścieżką jest Gu
 /gumball proof android-native-release
 ```
 
-Równoważnie można użyć etykiety `proof:android-native-release`. Broker rozwiązuje aktualny HEAD PR, odrzuca duplikat queued/running i dispatchuje `mobile-native-smoke.yml` dla dokładnego SHA z `release=true`. Bezpośredni `workflow_dispatch` pozostaje fallbackiem operatora. Full / Release Validation uruchamia ten sam ciężki proof jawnie dla nocnego/release/tag/reusable przebiegu.
+Równoważnie można użyć etykiety `proof:android-native-release`. Dla otwartego PR broker rozwiązuje aktualny HEAD; dla jawnego zaufanego requestu na już scalonym PR wiąże proof z zapisanym przez GitHub `merge_commit_sha` i gałęzią bazową PR. Zamknięty niescalony PR nadal jest blokowany, a automatyczny dispatch po merge pozostaje wyłączony. Broker odrzuca duplikat queued/running i dispatchuje `mobile-native-smoke.yml` dla dokładnego SHA z `release=true`. Dzięki temu `merge -> exact-SHA runtime/visual proof` jest wspieraną ścieżką bez ponownego otwierania PR ani sztucznego commita. Bezpośredni `workflow_dispatch` pozostaje fallbackiem operatora. Full / Release Validation uruchamia ten sam ciężki proof jawnie dla nocnego/release/tag/reusable przebiegu.
 
 Czyste zmiany JS/UI w `mobile/src/**`, testy mobile, dokumentacja/design i inne zmiany bez wpływu native nadal przechodzą zwykłe lane'y jakości bez Gradle. Niejednoznaczne zmiany zależności/toolchainu pozostają fail-closed w klasyfikacji i mogą wymagać jawnego proofa; **nie są powodem do automatycznego APK builda na PR lub `main`**.
 
