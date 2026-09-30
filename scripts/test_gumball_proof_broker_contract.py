@@ -124,6 +124,7 @@ class GumballProofBrokerContractTests(unittest.TestCase):
 
         with (
             mock.patch.object(proof_broker, "get_pr", return_value=pr),
+            mock.patch.object(proof_broker, "find_artifact", return_value=None),
             mock.patch.object(proof_broker, "find_existing_run", return_value=None),
             mock.patch.object(
                 proof_broker,
@@ -182,6 +183,7 @@ class GumballProofBrokerContractTests(unittest.TestCase):
 
         with (
             mock.patch.object(proof_broker, "get_pr", return_value=pr),
+            mock.patch.object(proof_broker, "find_artifact", return_value=None),
             mock.patch.object(proof_broker, "find_existing_run", return_value=run),
             mock.patch.object(
                 proof_broker,
