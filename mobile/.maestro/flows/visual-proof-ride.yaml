@@ -1,53 +1,57 @@
 appId: com.sport.athlete
 ---
-# #401 Tranche D — deterministic visual proof for the canonical Ride slice.
-# The exact-SHA wrapper installs and verifies the artifact before this flow runs.
-- launchApp:
-    clearState: true
-
-# Vision-fixture builds bypass auth but a clean app state may still show onboarding.
+# Canonical exact-SHA Ride visual proof.
+# The PowerShell wrapper owns install/clear/ADB launch; this flow owns UI transitions only.
 - runFlow:
-    when:
-      visible: ".*(DALEJ|Wybierz miasto|Gotowy do startu).*"
     file: complete-onboarding.yaml
 
 - extendedWaitUntil:
-    visible: ".*(START JAZDY|START RIDE).*"
-    timeout: 60000
+    visible:
+      id: "home-open-start-ride"
+    timeout: 30000
 - takeScreenshot: 01_today
 
 - tapOn:
     id: "home-open-start-ride"
+    retryTapIfNoChange: true
 - extendedWaitUntil:
-    visible: ".*(START JAZDY|START RIDE).*"
+    visible:
+      id: "start-ride-primary"
     timeout: 12000
 - takeScreenshot: 02_start_ride
 
 - tapOn:
     id: "start-ride-primary"
+    retryTapIfNoChange: true
 - extendedWaitUntil:
-    visible: ".*(PAUZA|PAUSE|SZUKAM GPS|SEARCHING GPS).*"
+    visible:
+      id: "ride-pause-button"
     timeout: 20000
 - takeScreenshot: 03_active_ride
 
 - tapOn:
     id: "ride-pause-button"
+    retryTapIfNoChange: true
 - extendedWaitUntil:
-    visible: ".*(WZNÓW|RESUME|ZATRZYMAJ JAZDĘ|STOP RIDE).*"
+    visible:
+      id: "ride-paused-stop"
     timeout: 12000
 - takeScreenshot: 04_paused
 
 - tapOn:
     id: "ride-paused-stop"
+    retryTapIfNoChange: true
 - extendedWaitUntil:
-    visible: ".*(Jazda ukończona|Ride complete|UDOSTĘPNIJ|SHARE).*"
+    visible:
+      id: "ride-summary-screen"
     timeout: 25000
 - takeScreenshot: 05_summary
 
-# Close the canonical journey so the proof also detects a broken Summary -> Today return.
 - tapOn:
     id: "ride-summary-back-home"
+    retryTapIfNoChange: true
 - extendedWaitUntil:
-    visible: ".*(START JAZDY|START RIDE).*"
+    visible:
+      id: "home-open-start-ride"
     timeout: 15000
 - takeScreenshot: 06_today_after_summary
