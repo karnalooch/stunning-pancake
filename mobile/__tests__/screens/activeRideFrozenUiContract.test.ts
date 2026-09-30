@@ -29,6 +29,9 @@ describe('Frozen UI v1.2 Active Ride contract', () => {
     expect(hud).toContain('<RideStatusBar');
     expect(hud).toContain('<DataFieldGrid metrics={metrics} hudMode');
     expect(hud).toContain('<RideActionBar');
+    expect(hud).toContain('<RidePausedScreen');
+    expect(hud).toContain('testID="active-ride-map"');
+    expect(hud).toContain('testID="active-ride-metrics"');
     expect(hud).toContain("edges={['top', 'bottom']}");
   });
 
@@ -38,9 +41,23 @@ describe('Frozen UI v1.2 Active Ride contract', () => {
     expect(actions).toContain('const STOP_HOLD_MS = 900');
     expect(actions).toContain('onPressIn={startStopHold}');
     expect(actions).toContain('onPressOut={clearStopTimer}');
-    expect(actions).toContain('testID="ride-stop-button"');
-    expect(actions).toContain('testID="ride-pause-button"');
+    expect(actions).toContain("pauseTestID = 'ride-pause-button'");
+    expect(actions).toContain("stopTestID = 'ride-stop-button'");
+    expect(actions).toContain('styles.primaryAction');
     expect(actions).toContain('minHeight: 56');
+  });
+
+  test('active recording cannot enter data-field edit mode and pause is an overlay', () => {
+    const grid = source('components/ride/DataFieldGrid.tsx');
+    const hud = source('screens/ActiveRideHUDScreen.tsx');
+    const paused = source('screens/RidePausedScreen.tsx');
+
+    expect(grid).toContain('onLongPress={hudMode ? undefined : toggleEdit}');
+    expect(hud).toContain('isPaused ? (');
+    expect(hud).toContain('<RidePausedScreen');
+    expect(paused).toContain("position: 'absolute'");
+    expect(paused).toContain('resumeTestID="ride-paused-resume"');
+    expect(paused).toContain('stopTestID="ride-paused-stop"');
   });
 
   test('metric presentation uses semantic product typography', () => {
