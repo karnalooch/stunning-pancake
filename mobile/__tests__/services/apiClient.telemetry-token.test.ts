@@ -55,7 +55,9 @@ describe('getTelemetryIngestToken', () => {
     });
 
     expect(postSpy).toHaveBeenCalledTimes(1);
-    const [url, body, config] = postSpy.mock.calls[0];
+    const call = postSpy.mock.calls[0];
+    expect(call).toBeDefined();
+    const [url, body, config] = call!;
     expect(url).toMatch(/\/api\/activities\/sessions\/42\/telemetry-token\/$/);
     expect(body).toBeUndefined();
     expect(config).toMatchObject({ timeout: 10_000 });
