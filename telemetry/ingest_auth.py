@@ -2,9 +2,10 @@
 
 When ``TELEMETRY_INGEST_JWT_REQUIRED=1`` ingest POSTs must carry a Bearer JWT
 signed with ``TELEMETRY_INGEST_JWT_SECRET`` (or shared ``SECRET_KEY``). When
-``TELEMETRY_INGEST_AUDIENCE_REQUIRED=1`` (default OFF — opt-in) the token
-must also carry ``aud == "telemetry"`` so a Django access token cannot be
-replayed against the telemetry service.
+``TELEMETRY_INGEST_AUDIENCE_REQUIRED=1`` the token must also carry
+``aud == "telemetry"`` so a Django access token cannot be replayed against
+the telemetry service. Local/dev may leave the gates off; production/PaaS
+startup is validated separately and fails closed unless both gates are on.
 
 Per-activity tokens additionally carry ``activity_id`` and ``sub``. Whenever
 those claims are present they are enforced against the ingest payload; when
@@ -55,6 +56,37 @@ def expected_audience() -> str:
 def jwt_secret() -> str | None:
     secret = os.getenv("TELEMETRY_INGEST_JWT_SECRET") or os.getenv("SECRET_KEY")
     return secret.strip() if secret else None
+
+
+def is_production_runtime() -> bool:
+    env = (
+        (os.getenv("SENTRY_ENVIRONMENT") or os.getenv("RAILWAY_ENVIRONMENT") or "")
+        .strip()
+        .lower()
+    )
+    if env in ("production", "prod"):
+        return True
+    return bool(os.getenv("RAILWAY_SERVICE_NAME") or os.getenv("DYNO") or os.getenv("RENDER"))
+
+
+def assert_runtime_security_configuration() -> None:
+    """Fail closed when production telemetry ingest lacks auth/signing authority."""
+    if not is_production_runtime():
+        return
+
+    missing: list[str] = []
+    if not jwt_enforced():
+        missing.append("TELEMETRY_INGEST_JWT_REQUIRED=1")
+    if not audience_required():
+        missing.append("TELEMETRY_INGEST_AUDIENCE_REQUIRED=1")
+    if not jwt_secret():
+        missing.append("TELEMETRY_INGEST_JWT_SECRET or SECRET_KEY")
+
+    if missing:
+        raise RuntimeError(
+            "Production telemetry ingest security is misconfigured: "
+            + ", ".join(missing)
+        )
 
 
 def _is_ingest_path(path: str) -> bool:
