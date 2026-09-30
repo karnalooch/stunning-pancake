@@ -92,7 +92,7 @@ This is a migration contract, not permission to delete files blindly.
 | `SegmentsScreen` | **MOVE / MERGE** | Discover and/or Club depending on context |
 | `GpsDiagnosticsScreen` | **DEMOTE** | Start Ride / Settings -> Advanced diagnostics |
 | `ActiveRideHUDScreen` | **KEEP domain / REDESIGN chrome** | Live ride flow |
-| `RidePausedScreen` | **DELETE when overlay parity exists** | Active Ride pause sheet/overlay |
+| `RidePausedScreen` | **DELETED / SUPERSEDED** | PAUSED is rendered in-place by `RidePausedOverlay` over Active Ride |
 | `RideSummaryScreen` | **KEEP domain / REDESIGN** | End of live ride flow |
 | `SettingsScreen` | **KEEP capability / REDESIGN** | You -> Settings |
 | `MarketplaceScreen` | **MERGE / REHOME** | Discover/Club/You based on actual product purpose |
