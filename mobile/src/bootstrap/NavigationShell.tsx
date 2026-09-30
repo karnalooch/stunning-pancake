@@ -13,7 +13,6 @@ import { StartRideScreen } from '../screens/StartRideScreen';
 import { CityHubScreen } from '../screens/CityHubScreen';
 import { AthleteProfileScreen } from '../screens/AthleteProfileScreen';
 import { ActiveRideHUDScreen } from '../screens/ActiveRideHUDScreen';
-import { RidePausedScreen } from '../screens/RidePausedScreen';
 import { RideSummaryScreen } from '../screens/RideSummaryScreen';
 import { TrainingLogScreen } from '../screens/TrainingLogScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
@@ -54,7 +53,8 @@ export type NavigationShellProps = {
   user: (UserProfile & { username?: string; tenant_id?: string | null }) | Record<string, unknown>;
   isRecording: boolean;
   ridePaused: boolean;
-  setRidePaused: (v: boolean) => void;
+  onPauseRide: () => Promise<void>;
+  onResumeRide: () => Promise<void>;
   liveSpeed: number;
   liveDistanceKm: number;
   liveElevationGainM: number;
@@ -91,7 +91,8 @@ function MainTabs({
   user,
   isRecording,
   ridePaused,
-  setRidePaused,
+  onPauseRide,
+  onResumeRide,
   liveSpeed,
   liveDistanceKm,
   liveElevationGainM,
@@ -176,7 +177,7 @@ function MainTabs({
         {() => (
           <StartRideScreen
             isRecording={isRecording}
-            onStartRide={(sport) => void handleStartRide(sport)}
+            onStartRide={(sport) => handleStartRide(sport)}
             onGoToRide={() => navRef.current?.navigate('MainTabs', { screen: 'Tracking' })}
             onOpenGpsWizard={() => navRef.current?.navigate('GpsDiagnostics')}
             startRideError={startRideError}
@@ -219,11 +220,8 @@ function MainTabs({
             liveElevationGainM={liveElevationGainM}
             liveElapsedS={liveElapsedS}
             liveCoord={liveCoord}
-            onPause={() => {
-              setRidePaused(true);
-              navRef.current?.navigate('RidePaused');
-            }}
-            onResume={() => setRidePaused(false)}
+            onPause={() => void onPauseRide()}
+            onResume={() => void onResumeRide()}
             onStop={() => void handleStopRide()}
             {...gpsRecoveryProps}
           />
@@ -238,7 +236,8 @@ export function NavigationShell(props: NavigationShellProps) {
     user,
     isRecording,
     ridePaused,
-    setRidePaused,
+    onPauseRide,
+    onResumeRide,
     liveSpeed,
     liveDistanceKm,
     liveElevationGainM,
@@ -327,7 +326,8 @@ export function NavigationShell(props: NavigationShellProps) {
                 user={user}
                 isRecording={isRecording}
                 ridePaused={ridePaused}
-                setRidePaused={setRidePaused}
+                onPauseRide={onPauseRide}
+                onResumeRide={onResumeRide}
                 liveSpeed={liveSpeed}
                 liveDistanceKm={liveDistanceKm}
                 liveElevationGainM={liveElevationGainM}
@@ -435,29 +435,6 @@ export function NavigationShell(props: NavigationShellProps) {
             )}
           </Stack.Screen>
           <Stack.Screen
-            name="RidePaused"
-            options={{ presentation: 'transparentModal', animation: 'fade' }}
-          >
-            {({ navigation }: RootScreenProps<'RidePaused'>) => (
-              <RidePausedScreen
-                onResume={() => {
-                  setRidePaused(false);
-                  navigation.goBack();
-                }}
-                onStop={() => {
-                  navigation.goBack();
-                  setRidePaused(false);
-                  void (async () => {
-                    const result = await onStopRide();
-                    if (result && 'navigated' in result && result.navigated) {
-                      navRef.current?.navigate('MainTabs', { screen: result.target ?? 'Today' });
-                    }
-                  })();
-                }}
-              />
-            )}
-          </Stack.Screen>
-          <Stack.Screen
             name="RideSummary"
             options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           >
@@ -553,7 +530,6 @@ export function NavigationShell(props: NavigationShellProps) {
                             ];
                           })
                         : []),
-                      { label: 'Ride Paused', onPress: () => navigation.navigate('RidePaused') },
                     ]}
                   />
                 </View>
