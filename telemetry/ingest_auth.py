@@ -84,7 +84,8 @@ def assert_runtime_security_configuration() -> None:
 
     if missing:
         raise RuntimeError(
-            "Production telemetry ingest security is misconfigured: "\n            + ", ".join(missing)
+            "Production telemetry ingest security is misconfigured: "
+            + ", ".join(missing)
         )
 
 
