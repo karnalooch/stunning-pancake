@@ -537,6 +537,20 @@ The workbench renders production components rather than mock replicas.
 
 Storybook may later wrap the same components and fixtures when dependency/lockfile cost is justified. Storybook is an optional adapter, not a prerequisite and not an authority source.
 
+### Exact-SHA Maestro visual proof
+
+The canonical Ride visual proof is repository-owned:
+
+- flow: `mobile/.maestro/flows/visual-proof-ride.yaml`;
+- runner: `scripts/run-mobile-maestro-visual-proof.ps1`;
+- command: `pnpm mobile:visual:proof`.
+
+The runner is intentionally **artifact-consumer-only**. It does not prebuild or compile Android. It requires a clean worktree, resolves a successful `Mobile Native Smoke` artifact for the exact current Git SHA (or an explicitly supplied run ID), verifies `sourceHeadSha`, `builtGitSha`, package identity, runtime-fixture flags and the APK SHA-256, then installs that exact APK before Maestro starts.
+
+The proof captures deterministic checkpoints for `Today -> Start Ride -> Active Ride -> Paused -> Summary -> Today`. Maestro writes run artifacts under `artifacts/mobile-maestro-visual-proof/<sha>-<timestamp>/`; the wrapper adds a machine-readable `visual-proof-manifest.json` containing source/artifact/device identity and hashes for every mandatory screenshot plus `visual-proof-summary.md` for human sign-off.
+
+`PASS` means the exact artifact executed the canonical flow and produced complete, hashed evidence. It does **not** replace human visual acceptance. Routine PR/main CI must not invoke this proof or compile an APK merely because JS/UI changed; exact-SHA native evidence remains an explicit Gumball proof dependency.
+
 ## 18. Review checklist
 
 For every primary mobile visual PR:
