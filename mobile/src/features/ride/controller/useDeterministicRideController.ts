@@ -15,9 +15,17 @@ export function useDeterministicRideController(
     initialDeterministicRideState,
   );
 
-  const setRidePaused = useCallback((value: boolean) => {
-    dispatch({ type: 'set-paused', value });
-  }, []);
+  const pause = useCallback(async () => {
+    if (!state.isRecording || state.ridePaused) return false;
+    dispatch({ type: 'pause' });
+    return true;
+  }, [state.isRecording, state.ridePaused]);
+
+  const resume = useCallback(async () => {
+    if (!state.isRecording || !state.ridePaused) return false;
+    dispatch({ type: 'resume' });
+    return true;
+  }, [state.isRecording, state.ridePaused]);
 
   const setRideFinishState = useCallback((value: RideFinishState | null) => {
     dispatch({ type: 'set-finish-state', value });
@@ -57,7 +65,8 @@ export function useDeterministicRideController(
     ...state,
     gpsRecoveryVisible: false,
     gpsRecoveryBusy: false,
-    setRidePaused,
+    pause,
+    resume,
     setRideFinishState,
     onUserSessionReady,
     handleGpsRecoveryPress,
