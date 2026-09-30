@@ -42,7 +42,6 @@ export const mobileLinking: LinkingOptions<RootStackParamList> = {
       },
       PerformanceTrends: ROUTE_PATHS.performanceTrends,
       GlobalLeaderboard: ROUTE_PATHS.globalLeaderboard,
-      RidePaused: ROUTE_PATHS.ridePaused,
       VisionGallery: ROUTE_PATHS.visionGallery,
     },
   },
