@@ -111,6 +111,18 @@ Nowy dekoracyjny asset powstaje dopiero, gdy issue odpowie:
 
 W przeciwnym razie zostaje `planned`.
 
+## Repo-native visual workbench
+
+Kanoniczna powierzchnia inspekcji komponentów działa w repo i nie wymaga zewnętrznego SaaS:
+
+- `mobile/src/dev/VisualDesignGalleryScreen.tsx`;
+- deterministyczne fixtures: `mobile/src/dev/visualWorkbenchFixtures.ts`;
+- shell/deep-link pozostaje dev/vision-only;
+- stabilne `testID` służą Maestro i runtime screenshots;
+- workbench pokazuje map/data/control/brand oraz asset-off.
+
+Storybook może później zostać adapterem do tych samych komponentów i fixtures, ale nie jest wymagany do działania kontraktu ani nie staje się SSOT-em.
+
 ## Warunek toolingowy — GitHub
 
 **GitHub jest systemem zapisu zaakceptowanego wyniku.**
