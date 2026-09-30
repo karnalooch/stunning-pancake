@@ -155,6 +155,54 @@ class MobileHarnessContractTests(unittest.TestCase):
             with self.subTest(helper=helper):
                 self.assertIn(helper, source)
 
+    def test_maestro_visual_proof_is_exact_sha_provenanced_and_build_free(self):
+        script = read("scripts/run-mobile-maestro-visual-proof.ps1")
+        flow = read("mobile/.maestro/flows/visual-proof-ride.yaml")
+        gitignore = read(".gitignore")
+        package = json.loads(read("package.json"))
+
+        for token in (
+            "Worktree must be clean for exact-SHA Maestro visual proof",
+            'gh run list --workflow "Mobile Native Smoke"',
+            '"run", "download"',
+            "mobile-runtime-$CiRunId",
+            "CI artifact source SHA mismatch",
+            "CI artifact built SHA mismatch",
+            "CI artifact APK SHA-256 mismatch",
+            "EXPO_PUBLIC_VISION_FIXTURES=true",
+            "MOBILE_RUNTIME_ACCEPTANCE=true",
+            "--test-output-dir=$shotsDir",
+            "visual-proof-manifest.json",
+            "visual-proof-summary.md",
+            "Get-FileHash -Algorithm SHA256",
+            '"pm", "clear", "com.sport.athlete"',
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, script)
+
+        self.assertNotIn("gradlew", script.lower())
+        self.assertNotIn("expo prebuild", script.lower())
+        self.assertIn("artifacts/mobile-maestro-visual-proof/", gitignore)
+        self.assertIn("mobile:visual:proof", package["scripts"])
+
+        ordered_flow_tokens = (
+            "01_today",
+            'id: "home-open-start-ride"',
+            "02_start_ride",
+            'id: "start-ride-primary"',
+            "03_active_ride",
+            'id: "ride-pause-button"',
+            "04_paused",
+            'id: "ride-paused-stop"',
+            "05_summary",
+            'id: "ride-summary-back-home"',
+            "06_today_after_summary",
+        )
+        positions = [flow.index(token) for token in ordered_flow_tokens]
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn("clearState: true", flow)
+        self.assertIn("file: complete-onboarding.yaml", flow)
+
     def test_exact_sha_acceptance_harness_is_fail_closed_and_provenanced(self):
         source = read("scripts/mobile-runtime-acceptance.ps1")
         metro_config = read("mobile/metro.config.js")
