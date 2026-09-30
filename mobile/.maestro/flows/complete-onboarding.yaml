@@ -1,29 +1,44 @@
 appId: com.sport.athlete
 ---
-- launchApp
+# Fresh exact-SHA proof state is established by the wrapper with pm clear.
+# Prefer stable test IDs; visible copy is deliberately not part of this contract.
 - extendedWaitUntil:
-    visible: ".*(DALEJ|Wybierz miasto|JAZDA|TRWA JAZD).*"
+    visible:
+      id: "onboarding-city-option"
     timeout: 45000
 
 - tapOn:
-    text: "DALEJ"
-    optional: true
-- extendedWaitUntil:
-    visible: ".*(Wybierz dział|DALEJ).*"
-    timeout: 15000
-    optional: true
+    id: "onboarding-city-option"
+    index: 0
+    retryTapIfNoChange: true
 
-- tapOn:
-    text: "DALEJ"
-    optional: true
 - extendedWaitUntil:
-    visible: ".*(DOŁĄCZ|Gotowy do startu).*"
-    timeout: 15000
-    optional: true
+    visible:
+      id: "onboarding-city-next"
+      enabled: true
+    timeout: 12000
+- tapOn:
+    id: "onboarding-city-next"
+    retryTapIfNoChange: true
 
-- tapOn:
-    text: "DOŁĄCZ"
-    optional: true
 - extendedWaitUntil:
-    visible: ".*(JAZDA|TRWA JAZD|KREATOR|DO JAZDY).*"
+    visible:
+      id: "onboarding-department-skip"
+    timeout: 30000
+- tapOn:
+    id: "onboarding-department-skip"
+    retryTapIfNoChange: true
+
+- extendedWaitUntil:
+    visible:
+      id: "onboarding-finish-join"
+      enabled: true
+    timeout: 12000
+- tapOn:
+    id: "onboarding-finish-join"
+    retryTapIfNoChange: true
+
+- extendedWaitUntil:
+    visible:
+      id: "home-open-start-ride"
     timeout: 30000
