@@ -65,7 +65,10 @@ export interface PendingFinalizationPayload {
   attempts: number;
 }
 
+export type RideTrackingPhase = 'active' | 'paused';
+
 export interface TrackingState {
+  /** Session is still open. PAUSED keeps isTracking=true so finalization/recovery owns the same activity. */
   isTracking: boolean;
   activityId: number | null;
   deviceId: string;
@@ -73,6 +76,21 @@ export interface TrackingState {
   lastCoord: [number, number] | null;
   lastAltitude: number | null;
   resolution?: string;
+  /** Missing on legacy state means active when isTracking=true. */
+  ridePhase?: RideTrackingPhase;
+  /** Epoch ms for the currently open pause interval. */
+  pauseStartedAtMs?: number | null;
+  /** Accumulated completed pause intervals, excluded from ride duration. */
+  pausedDurationMs?: number;
+}
+
+export type PersistedRidePhase = 'idle' | RideTrackingPhase;
+
+export function getPersistedRidePhaseFromState(
+  state: TrackingState | null | undefined,
+): PersistedRidePhase {
+  if (!state?.isTracking || state.activityId == null) return 'idle';
+  return state.ridePhase === 'paused' ? 'paused' : 'active';
 }
 
 export interface TrackingStats {
