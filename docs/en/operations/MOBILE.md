@@ -4,7 +4,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-09-29 |
+| **Last reviewed** | 2026-09-30 |
 | **Audience** | See canonical document |
 | **lang** | en |
 | **translation** | [Polski](../../pl/operations/MOBILE.md) |
@@ -18,7 +18,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Mobile Lead |
-| **Last reviewed** | 2026-09-29 |
+| **Last reviewed** | 2026-09-30 |
 | **Target** | Build and release the React Native/Expo app; handle GPS/telemetry failures in the field. |
 | **Audience** | Mobile Lead, Platform Operator (env), QA |
 | **GPS architecture** | [DATA_RESILIENCE.md](../../DATA_RESILIENCE.md) |
@@ -181,7 +181,7 @@ When a PR really needs a native artifact, the preferred path is the Gumball Proo
 /gumball proof android-native-release
 ```
 
-The `proof:android-native-release` label is equivalent. The broker resolves the current PR head, rejects duplicate queued/running work, and dispatches `mobile-native-smoke.yml` for that exact SHA with `release=true`. Direct `workflow_dispatch` remains an operator fallback. Full / Release Validation explicitly requests the same heavyweight proof for nightly/release/tag/reusable runs.
+The `proof:android-native-release` label is equivalent. For an open PR, the broker resolves the current PR head; for an explicit trusted request on a merged PR, it binds GitHub's recorded `merge_commit_sha` and the PR base branch. Closed-unmerged PRs remain blocked, and automatic post-merge dispatch remains disabled. The broker rejects duplicate queued/running work and dispatches `mobile-native-smoke.yml` for that exact SHA with `release=true`. This makes `merge -> exact-SHA runtime/visual proof` a supported path without reopening the PR or creating a synthetic commit. Direct `workflow_dispatch` remains an operator fallback. Full / Release Validation explicitly requests the same heavyweight proof for nightly/release/tag/reusable runs.
 
 Pure JS/UI changes under `mobile/src/**`, mobile tests, docs/design, and other non-native changes remain covered by the normal quality lanes without Gradle. Ambiguous dependency/toolchain changes remain fail-closed in classification and may require an explicit proof; **they do not justify an automatic APK build on a PR or `main`**.
 
