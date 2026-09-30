@@ -4,7 +4,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-30 |
 | **Audience** | Architektura, Platform Operator |
 | **lang** | pl |
 | **translation** | [English](../../adr/011-telemetry-ingest-durability-under-load.md) |
@@ -15,6 +15,18 @@
 ## Stan
 
 **Zaakceptowano** (2026-06-04)
+
+## Poprawka 2026-09-30 — autorytet ACK z ADR 015
+
+[ADR 015](../../adr/015-critical-data-acknowledgement.md) jest nadrzędny tam, gdzie starszy tekst ADR 011 miesza przyjęcie do kolejki z bezpiecznym ACK.
+
+Dla obecnej ścieżki mobilnej opartej o trwały receipt:
+
+- krytyczny batch aktywności dostaje ACK dopiero po atomowym zapisie do PostgreSQL danych GPS (jeśli są publiczne) oraz `telemetry_ingest_receipts`;
+- samo `XADD` do Redis Stream **nie** jest granicą ACK pozwalającą skasować mobilny outbox;
+- pod presją guarda taki batch dostaje `503 + Retry-After` i pozostaje w trwałym outboxie telefonu;
+- kolejka Redis pozostaje dostępna dla ruchu legacy / bez kontraktu receipt;
+- powrót Redis jako granicy ACK dla krytycznej telemetrii wymaga osobnego dowodu trwałości/replay po restartach oraz pełnej zgodności z receiptami używanymi przy finalizacji.
 
 ## Kontekst (skrót)
 
