@@ -58,14 +58,14 @@ def jwt_secret() -> str | None:
 
 def is_production_runtime() -> bool:
     env = (
-        (os.getenv("SENTRY_ENVIRONMENT") or os.getenv("RAILWAY_ENVIRONMENT") or "")
-        .strip()
-        .lower()
-    )
+        os.getenv("SENTRY_ENVIRONMENT") or os.getenv("RAILWAY_ENVIRONMENT") or ""
+    ).strip().lower()
     if env in ("production", "prod"):
         return True
     return bool(
-        os.getenv("RAILWAY_SERVICE_NAME") or os.getenv("DYNO") or os.getenv("RENDER")
+        os.getenv("RAILWAY_SERVICE_NAME")
+        or os.getenv("DYNO")
+        or os.getenv("RENDER")
     )
 
 
@@ -84,8 +84,7 @@ def assert_runtime_security_configuration() -> None:
 
     if missing:
         raise RuntimeError(
-            "Production telemetry ingest security is misconfigured: "
-            + ", ".join(missing)
+            "Production telemetry ingest security is misconfigured: " + ", ".join(missing)
         )
 
 
