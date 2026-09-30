@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 import unittest
 from pathlib import Path
+from unittest import mock
 
+from scripts.ops import proof_broker
 from scripts.ops.proof_broker import (
     BrokerError,
     resolve_proof_revision,
@@ -106,6 +108,134 @@ class GumballProofBrokerContractTests(unittest.TestCase):
                 pr,
                 allow_merged=True,
             )
+
+    def test_post_dispatch_status_bookkeeping_failure_preserves_dispatch(self):
+        policy = json.loads(POLICY.read_text(encoding="utf-8"))
+        merged_sha = "d" * 40
+        pr = {
+            "state": "closed",
+            "merged_at": "2026-09-30T18:30:00Z",
+            "base": {"ref": "main"},
+            "merge_commit_sha": merged_sha,
+        }
+        error = proof_broker.github_ops.GitHubError(
+            "PUT /repos/karnalooch/stunning-pancake/issues/411/labels: HTTP 403: forbidden"
+        )
+
+        with (
+            mock.patch.object(proof_broker, "get_pr", return_value=pr),
+            mock.patch.object(proof_broker, "find_artifact", return_value=None),
+            mock.patch.object(proof_broker, "find_existing_run", return_value=None),
+            mock.patch.object(
+                proof_broker,
+                "get_pr_paths",
+                return_value=["mobile/src/screens/RideScreen.tsx"],
+            ),
+            mock.patch.object(proof_broker, "default_branch", return_value="main"),
+            mock.patch.object(
+                proof_broker,
+                "fetch_workflow_text",
+                return_value=NATIVE.read_text(encoding="utf-8"),
+            ),
+            mock.patch.object(proof_broker, "dispatch_workflow") as dispatch,
+            mock.patch.object(
+                proof_broker,
+                "set_status_label",
+                side_effect=error,
+            ),
+        ):
+            result = proof_broker.evaluate_proof(
+                repo="karnalooch/stunning-pancake",
+                token="token",
+                policy=policy,
+                proof_id="android-native-release",
+                pr_number=411,
+                actor="karnalooch",
+                explicit=True,
+                retry=False,
+                status_only=False,
+                apply=True,
+            )
+
+        self.assertEqual("DISPATCH", result["action"])
+        self.assertEqual(merged_sha, result["sha"])
+        self.assertIn("status-label bookkeeping failed", result["warning"])
+        dispatch.assert_called_once()
+
+    def test_existing_running_status_bookkeeping_failure_preserves_dedupe(self):
+        policy = json.loads(POLICY.read_text(encoding="utf-8"))
+        merged_sha = "d" * 40
+        pr = {
+            "state": "closed",
+            "merged_at": "2026-09-30T18:30:00Z",
+            "base": {"ref": "main"},
+            "merge_commit_sha": merged_sha,
+        }
+        run = {
+            "id": 36760185872,
+            "status": "in_progress",
+            "conclusion": None,
+            "html_url": "https://example/run/36760185872",
+        }
+        error = proof_broker.github_ops.GitHubError(
+            "PUT /repos/karnalooch/stunning-pancake/issues/411/labels: HTTP 403: forbidden"
+        )
+
+        with (
+            mock.patch.object(proof_broker, "get_pr", return_value=pr),
+            mock.patch.object(proof_broker, "find_artifact", return_value=None),
+            mock.patch.object(proof_broker, "find_existing_run", return_value=run),
+            mock.patch.object(
+                proof_broker,
+                "set_status_label",
+                side_effect=error,
+            ),
+            mock.patch.object(proof_broker, "dispatch_workflow") as dispatch,
+        ):
+            result = proof_broker.evaluate_proof(
+                repo="karnalooch/stunning-pancake",
+                token="token",
+                policy=policy,
+                proof_id="android-native-release",
+                pr_number=411,
+                actor="karnalooch",
+                explicit=True,
+                retry=False,
+                status_only=False,
+                apply=True,
+            )
+
+        self.assertEqual("ALREADY_RUNNING", result["action"])
+        self.assertEqual(merged_sha, result["sha"])
+        self.assertIn("status-label bookkeeping failed", result["warning"])
+        dispatch.assert_not_called()
+
+    def test_result_comment_bookkeeping_failure_is_warning(self):
+        result = {
+            "action": "DISPATCH",
+            "proof": "android-native-release",
+            "pr_number": 411,
+            "request_id": "gb-android-native-release-pr411-deb8833fc78a",
+        }
+        error = proof_broker.github_ops.GitHubError(
+            "POST /repos/karnalooch/stunning-pancake/issues/411/comments: HTTP 403: forbidden"
+        )
+        with mock.patch.object(
+            proof_broker,
+            "comment_result",
+            side_effect=error,
+        ):
+            warning = proof_broker.comment_result_best_effort(
+                "karnalooch/stunning-pancake",
+                "token",
+                411,
+                result,
+                True,
+            )
+
+        self.assertIsNotNone(warning)
+        self.assertIn("result comment bookkeeping failed", warning)
+        self.assertIn("DISPATCH", warning)
 
     def test_native_workflow_satisfies_trusted_dispatch_contract(self):
         policy = json.loads(POLICY.read_text(encoding="utf-8"))

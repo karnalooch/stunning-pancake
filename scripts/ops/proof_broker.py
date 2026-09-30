@@ -1,4 +1,4 @@
-# Synced from karnalooch/engineering-platform@21df6e660ef895086f0462f9eb0b2db75629e58d (Gumball v0.6 lineage).
+# Synced from karnalooch/engineering-platform@a4cb7a21e71881d630e930c954861f4f9f435f8a (Gumball v0.6 lineage).
 #!/usr/bin/env python3
 """Trusted Gumball broker for heavyweight workflow_dispatch proofs."""
 
@@ -657,6 +657,35 @@ def set_status_label(
         )
 
 
+def _result_with_status_bookkeeping(
+    result: dict[str, Any],
+    *,
+    repo: str,
+    token: str,
+    pr_number: int,
+    policy: dict[str, Any],
+    proof_id: str,
+    status: str | None,
+    apply: bool,
+) -> dict[str, Any]:
+    try:
+        set_status_label(
+            repo,
+            token,
+            pr_number,
+            policy,
+            proof_id,
+            status,
+            apply,
+        )
+    except (github_ops.GitHubError, BrokerError) as exc:
+        result["warning"] = (
+            "status-label bookkeeping failed; "
+            f"proof action {result.get('action')!r} is preserved: {exc}"
+        )
+    return result
+
+
 def ensure_request_label(
     repo: str,
     token: str,
@@ -705,6 +734,23 @@ def comment_result(
         f"/repos/{repo}/issues/{pr_number}/comments",
         {"body": "\n".join(lines)},
     )
+
+
+def comment_result_best_effort(
+    repo: str,
+    token: str,
+    pr_number: int,
+    result: dict[str, Any],
+    apply: bool,
+) -> str | None:
+    try:
+        comment_result(repo, token, pr_number, result, apply)
+    except github_ops.GitHubError as exc:
+        return (
+            "result comment bookkeeping failed; "
+            f"proof action {result.get('action')!r} is preserved: {exc}"
+        )
+    return None
 
 
 def status_from_existing(
@@ -798,62 +844,108 @@ def evaluate_proof(
     }
 
     if status_only:
-        set_status_label(repo, token, pr_number, policy, proof_id, existing_status, apply)
-        return {
-            **base_result,
-            "action": existing_action,
-            "message": "status-only query",
-            "url": _artifact_url(artifact) or _run_url(run),
-        }
+        return _result_with_status_bookkeeping(
+            {
+                **base_result,
+                "action": existing_action,
+                "message": "status-only query",
+                "url": _artifact_url(artifact) or _run_url(run),
+            },
+            repo=repo,
+            token=token,
+            pr_number=pr_number,
+            policy=policy,
+            proof_id=proof_id,
+            status=existing_status,
+            apply=apply,
+        )
 
     if artifact is not None:
-        set_status_label(repo, token, pr_number, policy, proof_id, "reused", apply)
-        return {
-            **base_result,
-            "action": "REUSE",
-            "message": f"artifact {artifact_key!r} already exists",
-            "url": _artifact_url(artifact),
-        }
+        return _result_with_status_bookkeeping(
+            {
+                **base_result,
+                "action": "REUSE",
+                "message": f"artifact {artifact_key!r} already exists",
+                "url": _artifact_url(artifact),
+            },
+            repo=repo,
+            token=token,
+            pr_number=pr_number,
+            policy=policy,
+            proof_id=proof_id,
+            status="reused",
+            apply=apply,
+        )
 
     if run is not None:
         status = str(run.get("status") or "")
         conclusion = run.get("conclusion")
         if status in ACTIVE_STATUSES:
-            set_status_label(repo, token, pr_number, policy, proof_id, "running", apply)
-            return {
-                **base_result,
-                "action": "ALREADY_RUNNING",
-                "message": "identical proof request is already queued/running",
-                "url": _run_url(run),
-            }
+            return _result_with_status_bookkeeping(
+                {
+                    **base_result,
+                    "action": "ALREADY_RUNNING",
+                    "message": "identical proof request is already queued/running",
+                    "url": _run_url(run),
+                },
+                repo=repo,
+                token=token,
+                pr_number=pr_number,
+                policy=policy,
+                proof_id=proof_id,
+                status="running",
+                apply=apply,
+            )
         if status == "completed" and conclusion == "success":
-            set_status_label(repo, token, pr_number, policy, proof_id, "passed", apply)
-            return {
-                **base_result,
-                "action": "REUSE_RUN",
-                "message": "identical proof already succeeded",
-                "url": _run_url(run),
-            }
+            return _result_with_status_bookkeeping(
+                {
+                    **base_result,
+                    "action": "REUSE_RUN",
+                    "message": "identical proof already succeeded",
+                    "url": _run_url(run),
+                },
+                repo=repo,
+                token=token,
+                pr_number=pr_number,
+                policy=policy,
+                proof_id=proof_id,
+                status="passed",
+                apply=apply,
+            )
         if status == "completed" and conclusion in FAILED_CONCLUSIONS:
             if retry:
                 if apply:
                     rerun_workflow(repo, token, int(run["id"]))
-                set_status_label(
-                    repo, token, pr_number, policy, proof_id, "running", apply
+                return _result_with_status_bookkeeping(
+                    {
+                        **base_result,
+                        "action": "RERUN",
+                        "message": f"rerunning existing {conclusion} proof",
+                        "url": _run_url(run),
+                    },
+                    repo=repo,
+                    token=token,
+                    pr_number=pr_number,
+                    policy=policy,
+                    proof_id=proof_id,
+                    status="running",
+                    apply=apply,
                 )
-                return {
+            return _result_with_status_bookkeeping(
+                {
                     **base_result,
-                    "action": "RERUN",
-                    "message": f"rerunning existing {conclusion} proof",
+                    "action": "FAILED_EXISTING",
+                    "message": "existing proof failed; explicit retry is required",
                     "url": _run_url(run),
-                }
-            set_status_label(repo, token, pr_number, policy, proof_id, "failed", apply)
-            return {
-                **base_result,
-                "action": "FAILED_EXISTING",
-                "message": "existing proof failed; explicit retry is required",
-                "url": _run_url(run),
-            }
+                },
+                repo=repo,
+                token=token,
+                pr_number=pr_number,
+                policy=policy,
+                proof_id=proof_id,
+                status="failed",
+                apply=apply,
+            )
 
     paths = get_pr_paths(repo, token, pr_number)
     ci_plan = repository_os.plan_ci(paths)
@@ -878,17 +970,23 @@ def evaluate_proof(
                 ),
             }
         if proof.get("cost_class") == "heavy" and not proof.get("merge_critical"):
-            set_status_label(
-                repo, token, pr_number, policy, proof_id, "deferred", apply
+            return _result_with_status_bookkeeping(
+                {
+                    **base_result,
+                    "action": "DEFER",
+                    "message": (
+                        "automatic non-merge-critical heavy proof deferred by "
+                        "CI Cost Governor"
+                    ),
+                },
+                repo=repo,
+                token=token,
+                pr_number=pr_number,
+                policy=policy,
+                proof_id=proof_id,
+                status="deferred",
+                apply=apply,
             )
-            return {
-                **base_result,
-                "action": "DEFER",
-                "message": (
-                    "automatic non-merge-critical heavy proof deferred by "
-                    "CI Cost Governor"
-                ),
-            }
 
     trusted_ref = default_branch(repo, token)
     dispatch_ref = proof.get(
@@ -926,16 +1024,25 @@ def evaluate_proof(
     )
     if apply:
         dispatch_workflow(repo, token, proof, trusted_ref, inputs)
-    set_status_label(repo, token, pr_number, policy, proof_id, "running", apply)
-    return {
-        **base_result,
-        "action": "DISPATCH",
-        "message": (
-            f"trusted workflow dispatched from {trusted_ref!r}; "
-            f"CI class={ci_plan.get('class')}"
-        ),
-        "input_keys": sorted(inputs),
-    }
+
+    return _result_with_status_bookkeeping(
+        {
+            **base_result,
+            "action": "DISPATCH",
+            "message": (
+                f"trusted workflow dispatched from {trusted_ref!r}; "
+                f"CI class={ci_plan.get('class')}"
+            ),
+            "input_keys": sorted(inputs),
+        },
+        repo=repo,
+        token=token,
+        pr_number=pr_number,
+        policy=policy,
+        proof_id=proof_id,
+        status="running",
+        apply=apply,
+    )
 
 
 def proof_for_label(
@@ -1187,14 +1294,22 @@ def main() -> int:
                 args.apply,
             )
             for result, should_comment in results:
+                warning = result.get("warning")
+                if warning:
+                    print(f"proof-broker: WARN - {warning}", file=sys.stderr)
                 if should_comment and "pr_number" in result:
-                    comment_result(
+                    comment_warning = comment_result_best_effort(
                         args.repo,
                         args.token,
                         int(result["pr_number"]),
                         result,
                         args.apply,
                     )
+                    if comment_warning:
+                        print(
+                            f"proof-broker: WARN - {comment_warning}",
+                            file=sys.stderr,
+                        )
             print("proof-broker: event processed")
             return 0
 
@@ -1202,9 +1317,9 @@ def main() -> int:
     except BrokerError as exc:
         print(f"proof-broker: BLOCKED - {exc}", file=sys.stderr)
         return 2
-    except github_ops.GitHubError:
+    except github_ops.GitHubError as exc:
         print(
-            "proof-broker: BLOCKED - GitHub API request failed",
+            f"proof-broker: BLOCKED - GitHub API request failed before completion: {exc}",
             file=sys.stderr,
         )
         return 2
