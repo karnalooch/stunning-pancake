@@ -107,6 +107,7 @@ export const stringsEn = {
     currentRide: 'Current ride',
     inProgress: 'In progress',
     startRide: 'START RIDE',
+    startingRide: 'STARTING…',
     goToRide: 'GO TO RIDE',
     lastRide: 'Last ride',
     noRides: 'No saved rides yet.',
