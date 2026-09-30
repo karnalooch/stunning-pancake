@@ -74,8 +74,10 @@ export async function stopRideSession(
 export async function restoreRideSessionIfNeeded(
   userId: number | null,
 ): Promise<'active' | 'paused' | null> {
-  getRideGpsManager(userId);
-  return restoreRideTrackingAfterRelaunch();
+  const manager = getRideGpsManager(userId);
+  const restored = await restoreRideTrackingAfterRelaunch();
+  if (restored) manager.startStatsUpdates();
+  return restored;
 }
 
 export { createSessionWithDurability } from './sessionDurability';
