@@ -7,6 +7,7 @@ import json
 import sys
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 POLICY_PATH = REPO_ROOT / "docs" / "design" / "MOBILE_UI_VISUAL_AUTHORITY_V1.json"
@@ -48,14 +49,26 @@ def validate_mobile_map_style(style: dict[str, Any]) -> list[str]:
         if metadata.get(key) != value:
             errors.append(f"mobile map style metadata {key} must be {value!r}")
 
-    serialized = json.dumps(style)
-    for forbidden in (
-        "demotiles.maplibre.org",
-        "tile.openstreetmap.org",
-        "__TILEJSON_DOMAIN__",
-    ):
-        if forbidden in serialized:
-            errors.append(f"mobile map style contains forbidden source: {forbidden}")
+    forbidden_hosts = {"demotiles.maplibre.org", "tile.openstreetmap.org"}
+    source_values: list[Any] = [style.get("sources", {})]
+    while source_values:
+        value = source_values.pop()
+        if isinstance(value, dict):
+            source_values.extend(value.values())
+            continue
+        if isinstance(value, list):
+            source_values.extend(value)
+            continue
+        if not isinstance(value, str):
+            continue
+
+        if "__TILEJSON_DOMAIN__" in value:
+            errors.append("mobile map style contains unresolved tile source placeholder")
+            continue
+
+        hostname = urlparse(value).hostname
+        if hostname is not None and hostname.casefold() in forbidden_hosts:
+            errors.append(f"mobile map style contains forbidden source host: {hostname.casefold()}")
 
     source = style.get("sources", {}).get("openmaptiles", {})
     if source.get("url") != "https://tiles.openfreemap.org/planet":
