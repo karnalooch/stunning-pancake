@@ -103,13 +103,13 @@ def raise_ingest_throttled(retry_after: int) -> None:
     )
 
 
-def raise_system_overload(retry_after: int = 5) -> None:
+def raise_system_overload(retry_after: int = 5, *, mode: str = "queue-only") -> None:
     raise HTTPException(
         status_code=503,
         detail="Telemetry ingest temporarily unavailable — system capacity exceeded.",
         headers={
             "Retry-After": str(max(1, retry_after)),
-            "X-Ingest-Mode": "queue-only",
+            "X-Ingest-Mode": mode,
         },
     )
 
@@ -182,6 +182,14 @@ async def persist_ingest_rows(
             if await is_queue_saturated(await get_ingest_redis()):
                 raise_system_overload(guard.retry_after or 5)
             raise_ingest_throttled(guard.retry_after or 1)
+
+    # ADR 015: receipt-backed activity telemetry is critical data. Until the
+    # Redis Stream has separately proven durable-journal semantics *and* can
+    # persist the same immutable receipt used by finalization, queue admission
+    # is not a delete-safe ACK boundary. Under guard pressure tell the mobile
+    # outbox to retry instead of XADD -> ACK -> local deletion.
+    if use_stream and receipt is not None:
+        raise_system_overload(guard.retry_after or 5, mode="retry-durable")
 
     if use_stream and queue_enabled():
         if not rows:
