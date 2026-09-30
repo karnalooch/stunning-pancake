@@ -158,6 +158,8 @@ class MobileHarnessContractTests(unittest.TestCase):
     def test_maestro_visual_proof_is_exact_sha_provenanced_and_build_free(self):
         script = read("scripts/run-mobile-maestro-visual-proof.ps1")
         flow = read("mobile/.maestro/flows/visual-proof-ride.yaml")
+        onboarding_flow = read("mobile/.maestro/flows/complete-onboarding.yaml")
+        onboarding_screen = read("mobile/src/screens/OnboardingScreen.tsx")
         gitignore = read(".gitignore")
         package = json.loads(read("package.json"))
 
@@ -176,6 +178,13 @@ class MobileHarnessContractTests(unittest.TestCase):
             "visual-proof-summary.md",
             "Get-FileHash -Algorithm SHA256",
             '"pm", "clear", "com.sport.athlete"',
+            '"reverse", "tcp:8000", "tcp:8000"',
+            '"reverse", "tcp:8001", "tcp:8001"',
+            '"shell", "monkey"',
+            "android.intent.category.LAUNCHER",
+            "Explicit ADB launch did not keep com.sport.athlete running.",
+            "Get-ChildItem -Path $shotsDir -Recurse -File -Filter $name",
+            '$canonicalShotsDir = Join-Path $runDir "screenshots"',
         ):
             with self.subTest(token=token):
                 self.assertIn(token, script)
@@ -186,22 +195,36 @@ class MobileHarnessContractTests(unittest.TestCase):
         self.assertIn("mobile:visual:proof", package["scripts"])
 
         ordered_flow_tokens = (
-            "01_today",
             'id: "home-open-start-ride"',
-            "02_start_ride",
+            "01_today",
             'id: "start-ride-primary"',
-            "03_active_ride",
+            "02_start_ride",
             'id: "ride-pause-button"',
-            "04_paused",
+            "03_active_ride",
             'id: "ride-paused-stop"',
+            "04_paused",
+            'id: "ride-summary-screen"',
             "05_summary",
             'id: "ride-summary-back-home"',
             "06_today_after_summary",
         )
         positions = [flow.index(token) for token in ordered_flow_tokens]
         self.assertEqual(positions, sorted(positions))
-        self.assertIn("clearState: true", flow)
+        self.assertNotIn("launchApp", flow)
         self.assertIn("file: complete-onboarding.yaml", flow)
+        self.assertNotIn("optional: true", onboarding_flow)
+        for selector in (
+            'id: "onboarding-city-option"',
+            'id: "onboarding-city-next"',
+            'id: "onboarding-department-skip"',
+            'id: "onboarding-finish-join"',
+            'id: "home-open-start-ride"',
+        ):
+            with self.subTest(selector=selector):
+                self.assertIn(selector, onboarding_flow)
+
+        self.assertIn('testID="onboarding-city-option"', onboarding_screen)
+        self.assertIn('testID="onboarding-department-option"', onboarding_screen)
 
     def test_exact_sha_acceptance_harness_is_fail_closed_and_provenanced(self):
         source = read("scripts/mobile-runtime-acceptance.ps1")

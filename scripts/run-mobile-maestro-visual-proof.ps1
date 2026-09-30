@@ -137,9 +137,10 @@ $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $runDir = Join-Path $OutputRoot "$gitShort-$timestamp"
 $artifactDir = Join-Path $runDir "source-artifact"
 $shotsDir = Join-Path $runDir "maestro"
+$canonicalShotsDir = Join-Path $runDir "screenshots"
 $manifestOut = Join-Path $runDir "visual-proof-manifest.json"
 $summaryOut = Join-Path $runDir "visual-proof-summary.md"
-New-Item -ItemType Directory -Force -Path $artifactDir, $shotsDir | Out-Null
+New-Item -ItemType Directory -Force -Path $artifactDir, $shotsDir, $canonicalShotsDir | Out-Null
 
 if (-not $CiRunId) {
   $runsJson = ((& gh run list --workflow "Mobile Native Smoke" --status success --commit $gitSha --limit 30 --json databaseId,headSha,headBranch,conclusion 2>&1) | Out-String).Trim()
@@ -193,6 +194,18 @@ if ($apkSha256 -ne $expectedApkSha256) {
   throw "CI artifact APK SHA-256 mismatch. Expected $expectedApkSha256, got $apkSha256."
 }
 
+$buildProfile = [string]$sourceManifest.buildProfile
+if ($buildProfile -eq "pilot-local") {
+  try {
+    $backendHealth = Invoke-WebRequest -Uri "http://127.0.0.1:8000/health/" -UseBasicParsing -TimeoutSec 10
+  } catch {
+    throw "pilot-local visual proof requires the Home Lab backend on http://127.0.0.1:8000 before device launch. $($_.Exception.Message)"
+  }
+  if ($backendHealth.StatusCode -ne 200) {
+    throw "pilot-local backend health check returned HTTP $($backendHealth.StatusCode), expected 200."
+  }
+}
+
 Write-Host ""
 Write-Host "=== Exact-SHA Maestro visual proof ===" -ForegroundColor Cyan
 Write-Host "  Git SHA:   $gitSha"
@@ -203,6 +216,39 @@ Write-Host "  Evidence:  $runDir"
 
 Invoke-Checked $adbPath @("-s", $selectedDevice, "install", "-r", $apkPath) $repoRoot
 Invoke-Checked $adbPath @("-s", $selectedDevice, "shell", "pm", "clear", "com.sport.athlete") $repoRoot
+
+if ($buildProfile -eq "pilot-local") {
+  Invoke-Checked $adbPath @("-s", $selectedDevice, "reverse", "tcp:8000", "tcp:8000") $repoRoot
+  Invoke-Checked $adbPath @("-s", $selectedDevice, "reverse", "tcp:8001", "tcp:8001") $repoRoot
+}
+
+foreach ($permission in @(
+  "android.permission.ACCESS_FINE_LOCATION",
+  "android.permission.ACCESS_COARSE_LOCATION",
+  "android.permission.ACCESS_BACKGROUND_LOCATION"
+)) {
+  Invoke-Checked $adbPath @("-s", $selectedDevice, "shell", "pm", "grant", "com.sport.athlete", $permission) $repoRoot
+}
+
+Invoke-Checked $adbPath @(
+  "-s", $selectedDevice,
+  "shell", "monkey",
+  "-p", "com.sport.athlete",
+  "-c", "android.intent.category.LAUNCHER",
+  "1"
+) $repoRoot
+
+$packagePid = ""
+$launchDeadline = (Get-Date).AddSeconds(10)
+do {
+  $packagePid = ((& $adbPath -s $selectedDevice shell pidof com.sport.athlete 2>$null) | Out-String).Trim()
+  if ($packagePid) { break }
+  Start-Sleep -Milliseconds 500
+} while ((Get-Date) -lt $launchDeadline)
+
+if (-not $packagePid) {
+  throw "Explicit ADB launch did not keep com.sport.athlete running."
+}
 
 $packageDump = @(& $adbPath -s $selectedDevice shell dumpsys package com.sport.athlete)
 $versionName = (($packageDump | Select-String "versionName=" | Select-Object -First 1).Line).Trim()
@@ -226,8 +272,18 @@ $requiredScreens = @(
 )
 $screenEvidence = @()
 foreach ($name in $requiredScreens) {
-  $path = Join-Path $shotsDir $name
-  if (-not (Test-Path $path -PathType Leaf)) { throw "Mandatory Maestro screenshot missing: $name" }
+  $matches = @(
+    Get-ChildItem -Path $shotsDir -Recurse -File -Filter $name -ErrorAction SilentlyContinue
+  )
+  if ($matches.Count -eq 0) { throw "Mandatory Maestro screenshot missing: $name" }
+  if ($matches.Count -gt 1) {
+    throw "Mandatory Maestro screenshot is ambiguous ($($matches.Count) matches): $name"
+  }
+
+  $sourcePath = $matches[0].FullName
+  $path = Join-Path $canonicalShotsDir $name
+  Copy-Item -LiteralPath $sourcePath -Destination $path -Force
+
   $file = Get-Item $path
   if ($file.Length -lt 10000) { throw "Mandatory Maestro screenshot is implausibly small: $name" }
   $screenEvidence += [ordered]@{
@@ -255,6 +311,7 @@ $proof = [ordered]@{
     builtGitSha = [string]$sourceManifest.builtGitSha
     apkSha256 = $apkSha256
     packageId = [string]$sourceManifest.packageId
+    buildProfile = $buildProfile
     versionName = $versionName
     versionCode = $versionCode
     otaUpdatesEnabled = [bool]$sourceManifest.updatesEnabled
@@ -263,7 +320,9 @@ $proof = [ordered]@{
   maestro = [ordered]@{
     version = $maestroVersion
     flow = "mobile/.maestro/flows/visual-proof-ride.yaml"
-    outputDirectory = "maestro"
+    rawOutputDirectory = "maestro"
+    screenshotDirectory = "screenshots"
+    explicitAdbLaunch = $true
   }
   device = [ordered]@{
     serialHash = $deviceHash
