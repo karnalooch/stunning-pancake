@@ -195,14 +195,14 @@ class MobileHarnessContractTests(unittest.TestCase):
         self.assertIn("mobile:visual:proof", package["scripts"])
 
         ordered_flow_tokens = (
-            "01_today",
             'id: "home-open-start-ride"',
-            "02_start_ride",
+            "01_today",
             'id: "start-ride-primary"',
-            "03_active_ride",
+            "02_start_ride",
             'id: "ride-pause-button"',
-            "04_paused",
+            "03_active_ride",
             'id: "ride-paused-stop"',
+            "04_paused",
             'id: "ride-summary-screen"',
             "05_summary",
             'id: "ride-summary-back-home"',
