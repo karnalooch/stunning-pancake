@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "authorityVersion": "2.1.0",
+  "authorityVersion": "2.2.0",
   "visualFreezeVersion": "1.2.0",
   "decisionDate": "2026-09-30",
   "scope": "mobile_visual_only",
@@ -70,5 +70,16 @@
   "supersededAuthoritySources": [
     "docs/design/MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md"
   ],
-  "compositionArchitectureVersion": "1.0.0"
+  "compositionArchitectureVersion": "1.0.0",
+  "toolingGate": {
+    "githubSystemOfRecord": true,
+    "acceptedIntegrationModes": [
+      "native_github_repository_or_component_integration",
+      "deterministic_cli_api_export_to_versioned_repo_artifact"
+    ],
+    "saasOnlyAuthorityAllowed": false,
+    "researchOnlySourcesExempt": true,
+    "licenseAndProvenanceRequired": true,
+    "vendorLockInFallbackRequired": true
+  }
 }

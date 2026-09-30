@@ -16,7 +16,10 @@ Before a planned decorative target moves to candidate, its issue must document:
 4. the functional fallback when the asset is absent;
 5. the real runtime slot/dimensions;
 6. accessibility/reduced-motion implications;
-7. whether an approved family can be reused.
+7. whether an approved family can be reused;
+8. how the source/output is connected back to GitHub as a versioned, reviewable artifact or reproducible mapping.
+
+A production asset tool must also satisfy the [GitHub-connected tooling gate](./MOBILE_VISUAL_COMPOSITION_ARCHITECTURE_V1.md#16-tooling-qualification-gate--github-connected-by-default). The accepted source/output cannot live only in an external SaaS workspace.
 
 Every target must pass the [asset-off test](./MOBILE_VISUAL_COMPOSITION_ARCHITECTURE_V1.md#4-asset-off-test): removing optional brand artwork must not destroy task clarity, hierarchy or operability.
 

@@ -111,6 +111,28 @@ Nowy dekoracyjny asset powstaje dopiero, gdy issue odpowie:
 
 W przeciwnym razie zostaje `planned`.
 
+## Warunek toolingowy — GitHub
+
+**GitHub jest systemem zapisu zaakceptowanego wyniku.**
+
+Narzędzie produkcyjne przechodzi tylko wtedy, gdy ma:
+
+- natywne połączenie z GitHub/repo **albo**
+- deterministyczny CLI/API/export do pliku wersjonowanego w repo;
+- ścieżkę PR/CI;
+- jawny status licencji/provenance;
+- możliwość odzyskania/wyeksportowania zaakceptowanego stanu bez vendor lock-in.
+
+Samo „projekt jest w SaaS” nie wystarcza.
+
+Praktycznie:
+
+- **Figma** — PASS warunkowy: Code Connect / Variables API / CLI albo inny deterministyczny sync do repo; bez tego jest warsztatem/reference, nie SSOT;
+- **Maputnik** — PASS: Style JSON w Git;
+- **Storybook** — PASS: stories/components w repo;
+- **Maestro** — PASS: YAML flows w repo, GitHub Actions opcjonalne;
+- **Mobbin / YouTube / screenshoty vendorów** — research-only, więc nie muszą być repo authority.
+
 ## Referencje
 
 Nie kopiujemy wyglądu; kopiujemy pytania i ograniczenia.

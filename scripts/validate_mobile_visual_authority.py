@@ -70,6 +70,30 @@ def validate(policy: dict[str, Any], repo_root: Path = REPO_ROOT) -> list[str]:
             if marker not in path.read_text(encoding="utf-8", errors="replace"):
                 errors.append(f"legacy visual source lacks superseded marker: {relative}")
 
+    tooling_gate = policy.get("toolingGate", {})
+    if tooling_gate.get("githubSystemOfRecord") is not True:
+        errors.append("toolingGate.githubSystemOfRecord must remain true")
+    if tooling_gate.get("saasOnlyAuthorityAllowed") is not False:
+        errors.append("toolingGate.saasOnlyAuthorityAllowed must remain false")
+    if tooling_gate.get("researchOnlySourcesExempt") is not True:
+        errors.append("toolingGate.researchOnlySourcesExempt must remain true")
+    if tooling_gate.get("licenseAndProvenanceRequired") is not True:
+        errors.append("toolingGate.licenseAndProvenanceRequired must remain true")
+    if tooling_gate.get("vendorLockInFallbackRequired") is not True:
+        errors.append("toolingGate.vendorLockInFallbackRequired must remain true")
+
+    required_modes = {
+        "native_github_repository_or_component_integration",
+        "deterministic_cli_api_export_to_versioned_repo_artifact",
+    }
+    modes = set(tooling_gate.get("acceptedIntegrationModes", []))
+    missing_modes = required_modes - modes
+    if missing_modes:
+        errors.append(
+            "toolingGate.acceptedIntegrationModes missing: "
+            + ", ".join(sorted(missing_modes))
+        )
+
     expected = {
         "shell": "navy",
         "canvas": "cream",
