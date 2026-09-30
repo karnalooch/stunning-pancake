@@ -16,7 +16,8 @@ export type DeterministicRideState = {
 
 export type DeterministicRideAction =
   | { type: 'start' }
-  | { type: 'set-paused'; value: boolean }
+  | { type: 'pause' }
+  | { type: 'resume' }
   | { type: 'finish'; kind?: RideFinishState['kind'] }
   | { type: 'set-finish-state'; value: RideFinishState | null };
 
@@ -81,9 +82,12 @@ export function deterministicRideReducer(
         ridePaused: false,
         rideFinishState: null,
       };
-    case 'set-paused':
+    case 'pause':
       if (!state.isRecording) return state;
-      return { ...state, ridePaused: action.value };
+      return { ...state, ridePaused: true, liveSpeed: 0 };
+    case 'resume':
+      if (!state.isRecording || !state.ridePaused) return state;
+      return { ...state, ridePaused: false, liveSpeed: DETERMINISTIC_RIDE_METRICS.liveSpeed };
     case 'finish':
       return {
         ...initialDeterministicRideState,
