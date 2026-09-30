@@ -2,6 +2,11 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from core.production_guards import (
+    parse_allowed_hosts,
+    resolve_secret_key,
+    warn_insecure_allowed_hosts,
+)
 from core.sentry import init_sentry
 
 init_sentry()  # Phase 10: Observability
@@ -12,12 +17,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DEBUG = os.getenv("DEBUG", "0") == "1"
 # Never enable DEBUG=1 in production at 300k scale: Django's django.db.backends logger
 # can emit full INSERT SQL including password hashes from bulk_create. Use Railway logs only.
-
-from core.production_guards import (
-    parse_allowed_hosts,
-    resolve_secret_key,
-    warn_insecure_allowed_hosts,
-)
 
 # Stable signing authority is mandatory whenever DEBUG=0. Production/PaaS must
 # never synthesize a per-process key because replicas/restarts would disagree.
