@@ -132,6 +132,20 @@ Kanoniczna powierzchnia inspekcji komponentów działa w repo i nie wymaga zewn�
 
 Storybook może później zostać adapterem do tych samych komponentów i fixtures, ale nie jest wymagany do działania kontraktu ani nie staje się SSOT-em.
 
+### Exact-SHA visual proof w Maestro
+
+Kanoniczny proof Ride jest własnością repo:
+
+- flow: `mobile/.maestro/flows/visual-proof-ride.yaml`;
+- runner: `scripts/run-mobile-maestro-visual-proof.ps1`;
+- komenda: `pnpm mobile:visual:proof`.
+
+Runner jest celowo tylko **konsumentem artefaktu**. Nie robi prebuilda ani kompilacji Androida. Wymaga czystego worktree, bierze udany artefakt `Mobile Native Smoke` dla dokładnie bieżącego Git SHA (albo jawnie podanego run ID), sprawdza `sourceHeadSha`, `builtGitSha`, package identity, flagi deterministycznego runtime i SHA-256 APK, a dopiero potem instaluje dokładnie ten APK i uruchamia Maestro.
+
+Proof robi deterministyczne checkpointy `Today -> Start Ride -> Active Ride -> Paused -> Summary -> Today`. Artefakty Maestro trafiają lokalnie do `artifacts/mobile-maestro-visual-proof/<sha>-<timestamp>/`; wrapper dopisuje `visual-proof-manifest.json` z identyfikacją źródła/artefaktu/urządzenia i hashami wszystkich wymaganych screenshotów oraz `visual-proof-summary.md` do ręcznego sign-offu.
+
+`PASS` oznacza, że dokładny artefakt przeszedł kanoniczny flow i powstał kompletny, zahashowany evidence bundle. Nie zastępuje to oceny człowieka. Zwykłe PR/main CI nie uruchamia tego proofa i nie kompiluje APK tylko dlatego, że zmienił się JS/UI; exact-SHA native evidence pozostaje jawną zależnością proofa Gumballa.
+
 ## Warunek toolingowy — GitHub
 
 **GitHub jest systemem zapisu zaakceptowanego wyniku.**
