@@ -81,7 +81,7 @@ Szczegóły: [DOCUMENTATION_STANDARDS.md § Język](./DOCUMENTATION_STANDARDS.md
 | [DEPLOYMENT.md](./DEPLOYMENT.md) | ✅ Active | Wdrożenie, SSL, Railway |
 | [UPDATES.md](./UPDATES.md) | ✅ Active | Proces aktualizacji zależności |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | ✅ Active | Backend, mobile, anti-cheat, PostGIS |
-| [DEPARTMENT_ARCHITECTURE.md](./DEPARTMENT_ARCHITECTURE.md) | ✅ Active | Działy / tenant |
+| [DEPARTMENT_ARCHITECTURE.md](./DEPARTMENT_ARCHITECTURE.md) | 📦 Superseded | Historyczna propozycja Department/Class; nie jest SSOT |
 | [diagrams/architecture_c4.md](./diagrams/architecture_c4.md) | ✅ Active | Diagramy C4 (Mermaid) |
 | [API.md](./API.md) | ✅ Active | REST, auth, admin simulator |
 | [RBAC.md](./RBAC.md) | ✅ Active | Role i uprawnienia |

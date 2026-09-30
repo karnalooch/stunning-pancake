@@ -70,7 +70,7 @@
 | API.md | **en-only + pl summary** | `docs/pl/API.md` | `docs/API.md` | PL: short summary in `docs/pl/adr/` |
 | ARCHITECTURE.md | **en-only + pl summary** | `docs/pl/ARCHITECTURE.md` | `docs/ARCHITECTURE.md` | PL: short summary in `docs/pl/adr/` |
 | DATA_RESILIENCE.md | **en-only + pl summary** | `docs/pl/DATA_RESILIENCE.md` | `docs/DATA_RESILIENCE.md` | PL: short summary in `docs/pl/adr/` |
-| DEPARTMENT_ARCHITECTURE.md | **en-only + pl summary** | `docs/pl/DEPARTMENT_ARCHITECTURE.md` | `docs/DEPARTMENT_ARCHITECTURE.md` | PL: short summary in `docs/pl/adr/` |
+| DEPARTMENT_ARCHITECTURE.md | **compatibility stubs / superseded** | `docs/pl/DEPARTMENT_ARCHITECTURE.md` | `docs/DEPARTMENT_ARCHITECTURE.md` | Original proposal archived in `docs/archive/plans/DEPARTMENT_ARCHITECTURE_2026-06-03.md` |
 | SIMULATOR_ARCHITECTURE.md | **en-only + pl summary** | `docs/pl/SIMULATOR_ARCHITECTURE.md` | `docs/SIMULATOR_ARCHITECTURE.md` | PL: short summary in `docs/pl/adr/` |
 
 ## ADR (`docs/adr/` + `docs/pl/adr/` summaries)
