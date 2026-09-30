@@ -32,6 +32,9 @@ import {
   loadPendingSession,
   loadTrackingState,
   mergeRouteCoordinates,
+  pauseTrackingState,
+  resumeTrackingState,
+  rideElapsedSeconds,
   nextPointSeq,
   pendingPointCount,
   savePendingFinalization,
@@ -612,21 +615,9 @@ export class GpsSyncManager {
         '{"distanceM":0,"elevationGainM":0,"speedMs":0,"paceSecPerKm":0}',
     );
     const tracking = loadTrackingState(storage);
-    const wallStart = storage.getString('ride_wall_start_ms');
-    const accumulatedPausedMs = tracking?.accumulatedPausedMs ?? 0;
-    const clockEndMs =
-      tracking?.isPaused && tracking.pausedAtMs != null
-        ? tracking.pausedAtMs
-        : Date.now();
-    const rideWallClockS =
-      wallStart && tracking?.activityId && (tracking.isTracking || tracking.isPaused)
-        ? Math.max(
-            0,
-            Math.floor(
-              (clockEndMs - parseInt(wallStart, 10) - accumulatedPausedMs) / 1000,
-            ),
-          )
-        : undefined;
+    const wallStartRaw = storage.getString('ride_wall_start_ms');
+    const wallStartMs = wallStartRaw ? parseInt(wallStartRaw, 10) : null;
+    const rideWallClockS = rideElapsedSeconds(tracking, wallStartMs, Date.now());
 
     this._onUpdate({
       ...currentStats,
@@ -786,15 +777,7 @@ export class GpsSyncManager {
     }
     if (!state.isTracking) return false;
 
-    const pausedAtMs = Date.now();
-    const pausedState: TrackingState = {
-      ...state,
-      isTracking: false,
-      isPaused: true,
-      pausedAtMs,
-      accumulatedPausedMs: state.accumulatedPausedMs ?? 0,
-      resumeSegmentBreakPending: true,
-    };
+    const pausedState = pauseTrackingState(state, Date.now());
 
     // Persist PAUSED before touching the native producer. A late TaskManager
     // callback will observe isTracking=false/isPaused=true and cannot append.
@@ -838,8 +821,6 @@ export class GpsSyncManager {
     const activityId = state.activityId;
     const now = Date.now();
     const pauseStarted = state.pausedAtMs ?? now;
-    const accumulatedPausedMs =
-      (state.accumulatedPausedMs ?? 0) + Math.max(0, now - pauseStarted);
     const resolution =
       (state.resolution as PollingResolution) ?? PollingResolution.BALANCED;
 
@@ -849,14 +830,7 @@ export class GpsSyncManager {
     persistFilterStates(storage);
 
     const activeState: TrackingState = {
-      ...state,
-      isTracking: true,
-      isPaused: false,
-      pausedAtMs: null,
-      accumulatedPausedMs,
-      resumeSegmentBreakPending: true,
-      lastCoord: null,
-      lastAltitude: null,
+      ...resumeTrackingState(state, now),
       resolution,
     };
     storage.set(GPS_STORAGE_KEYS.TRACKING_STATE, JSON.stringify(activeState));
