@@ -4,6 +4,7 @@
 |---|---|
 | **Status** | APPROVED / NORMATIVE / CURRENT |
 | **Data decyzji** | 2026-09-30 |
+| **Last reviewed** | 2026-09-30 |
 | **Owner** | Product / Mobile / Design |
 | **Tracker** | #397 |
 | **Nadrzędny product authority** | [Product UX v2](../../design/PRODUCT_UX_V2.md) |
