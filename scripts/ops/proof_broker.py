@@ -1,4 +1,4 @@
-# Synced from karnalooch/engineering-platform@21df6e660ef895086f0462f9eb0b2db75629e58d (Gumball v0.6 lineage).
+# Synced from karnalooch/engineering-platform@6ba96c2a1642a3d651e0dd7dac35f43cf7ac7048 (Gumball v0.6 lineage).
 #!/usr/bin/env python3
 """Trusted Gumball broker for heavyweight workflow_dispatch proofs."""
 
@@ -707,6 +707,23 @@ def comment_result(
     )
 
 
+def comment_result_best_effort(
+    repo: str,
+    token: str,
+    pr_number: int,
+    result: dict[str, Any],
+    apply: bool,
+) -> str | None:
+    try:
+        comment_result(repo, token, pr_number, result, apply)
+    except github_ops.GitHubError as exc:
+        return (
+            "result comment bookkeeping failed; "
+            f"proof action {result.get('action')!r} is preserved: {exc}"
+        )
+    return None
+
+
 def status_from_existing(
     artifact: dict[str, Any] | None,
     run: dict[str, Any] | None,
@@ -926,8 +943,17 @@ def evaluate_proof(
     )
     if apply:
         dispatch_workflow(repo, token, proof, trusted_ref, inputs)
-    set_status_label(repo, token, pr_number, policy, proof_id, "running", apply)
-    return {
+
+    bookkeeping_warning = None
+    try:
+        set_status_label(repo, token, pr_number, policy, proof_id, "running", apply)
+    except github_ops.GitHubError as exc:
+        bookkeeping_warning = (
+            "post-dispatch status bookkeeping failed; proof dispatch is preserved: "
+            f"{exc}"
+        )
+
+    result = {
         **base_result,
         "action": "DISPATCH",
         "message": (
@@ -936,6 +962,9 @@ def evaluate_proof(
         ),
         "input_keys": sorted(inputs),
     }
+    if bookkeeping_warning:
+        result["warning"] = bookkeeping_warning
+    return result
 
 
 def proof_for_label(
@@ -1187,14 +1216,22 @@ def main() -> int:
                 args.apply,
             )
             for result, should_comment in results:
+                warning = result.get("warning")
+                if warning:
+                    print(f"proof-broker: WARN - {warning}", file=sys.stderr)
                 if should_comment and "pr_number" in result:
-                    comment_result(
+                    comment_warning = comment_result_best_effort(
                         args.repo,
                         args.token,
                         int(result["pr_number"]),
                         result,
                         args.apply,
                     )
+                    if comment_warning:
+                        print(
+                            f"proof-broker: WARN - {comment_warning}",
+                            file=sys.stderr,
+                        )
             print("proof-broker: event processed")
             return 0
 
@@ -1202,9 +1239,9 @@ def main() -> int:
     except BrokerError as exc:
         print(f"proof-broker: BLOCKED - {exc}", file=sys.stderr)
         return 2
-    except github_ops.GitHubError:
+    except github_ops.GitHubError as exc:
         print(
-            "proof-broker: BLOCKED - GitHub API request failed",
+            f"proof-broker: BLOCKED - GitHub API request failed before completion: {exc}",
             file=sys.stderr,
         )
         return 2
