@@ -86,7 +86,7 @@ To stan Active Ride, nie osobny produktowy ekran.
 - overlay/sheet;
 - RESUME = dominant;
 - FINISH = protected/destructive;
-- docelowo stan pochodzi z #392, nie z lokalnego flag UI.
+- stan pochodzi z semantic `pause()` / `resume()` controller commands i persystowanego lifecycle; lokalny UI flag nie jest authority.
 
 ## Summary
 

@@ -212,13 +212,20 @@ python manage.py test activities
 
 Exact CI/runtime acceptance is determined by the repository's affected-test planner and release gates; these examples are not a substitute for the required CI matrix.
 
-## 12. Open architecture decisions
+## 12. Ride PAUSE/RESUME durability decision
+
+As of 2026-09-30, Ride PAUSE/RESUME is no longer an open durability question.
+
+PAUSED is persisted in the encrypted tracking state under the same Activity identity. The GPS producer is fenced/stopped, but already-recorded buffer/outbox data may continue delivery. Paused wall time is excluded from ride elapsed time. Relaunch restores PAUSED without restarting the producer. Resume resets GPS continuity and emits a segment boundary before accepting the first new point.
+
+Normative state-machine details live in [Mobile Ride Flow v1](./design/MOBILE_RIDE_FLOW_V1.md).
+
+## 13. Open architecture decisions
 
 Tracked separately, not papered over here:
 
-1. semantic Ride PAUSE/RESUME and persisted paused-state recovery;
-2. product SLO for background live-delivery freshness;
-3. fail-closed production authority for telemetry auth/signing configuration;
-4. whether Redis is ever promoted to a qualified durable journal for critical Activity telemetry.
+1. product SLO for background live-delivery freshness;
+2. fail-closed production authority for telemetry auth/signing configuration;
+3. whether Redis is ever promoted to a qualified durable journal for critical Activity telemetry.
 
 Until those decisions land, the conservative durability rule wins: **preserve the last retryable copy rather than acknowledge data whose durable authority is unproven.**

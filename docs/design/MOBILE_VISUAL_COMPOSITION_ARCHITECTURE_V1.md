@@ -310,7 +310,7 @@ Rules:
 - do not duplicate the entire Ride UI;
 - Resume is the clear primary action;
 - Finish remains available but protected;
-- future #392 domain pause/resume semantics must drive this surface; presentation state alone is not authority.
+- semantic `pause()` / `resume()` controller commands and persisted lifecycle state drive this surface; presentation state alone is not authority.
 
 ## 10. Summary composition contract
 

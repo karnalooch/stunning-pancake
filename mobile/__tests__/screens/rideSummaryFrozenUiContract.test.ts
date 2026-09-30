@@ -25,6 +25,9 @@ describe('T81 Ride Summary Frozen UI v1.2 contract', () => {
     expect(text).not.toContain('shadowOffset');
     expect(text).not.toContain('shadowOpacity');
     expect(text).not.toContain('shadowRadius');
+    expect(text).not.toContain('ShareResultCard');
+    expect(text).not.toContain('computeRideRank');
+    expect(text).not.toContain('estimateXpGain');
   });
 
   test('durable success exclusively owns production celebration art and share action', () => {

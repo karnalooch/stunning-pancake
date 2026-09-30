@@ -18,17 +18,19 @@ describe('deterministicRideReducer', () => {
 
   test('pauses and resumes only while recording', () => {
     const idlePause = deterministicRideReducer(initialDeterministicRideState, {
-      type: 'set-paused',
-      value: true,
+      type: 'pause',
     });
     expect(idlePause).toBe(initialDeterministicRideState);
 
     const active = deterministicRideReducer(initialDeterministicRideState, { type: 'start' });
-    const paused = deterministicRideReducer(active, { type: 'set-paused', value: true });
-    const resumed = deterministicRideReducer(paused, { type: 'set-paused', value: false });
+    const paused = deterministicRideReducer(active, { type: 'pause' });
+    const resumed = deterministicRideReducer(paused, { type: 'resume' });
 
     expect(paused.ridePaused).toBe(true);
+    expect(paused.liveSpeed).toBe(0);
     expect(resumed.ridePaused).toBe(false);
+    expect(resumed.liveDistanceKm).toBe(active.liveDistanceKm);
+    expect(resumed.liveElapsedS).toBe(active.liveElapsedS);
   });
 
   test('finishes into a stable summary and clears live state', () => {

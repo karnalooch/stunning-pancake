@@ -107,6 +107,7 @@ export const stringsPl = {
     currentRide: 'Trwa jazda',
     inProgress: 'W toku',
     startRide: 'START JAZDY',
+    startingRide: 'URUCHAMIANIE…',
     goToRide: 'DO JAZDY',
     lastRide: 'Ostatni przejazd',
     noRides: 'Brak zapisanych przejazdów.',
@@ -213,6 +214,10 @@ export const stringsPl = {
     stopDoneBody: 'Nagrywanie GPS zakończone.',
     stopError: 'Nie udało się zakończyć jazdy',
     stopErrorBody: 'Sprawdź baner odzyskiwania GPS i spróbuj ponownie.',
+    pauseError: 'Nie udało się wstrzymać jazdy',
+    pauseErrorBody: 'Nagrywanie GPS nie przeszło bezpiecznie w stan pauzy.',
+    resumeError: 'Nie udało się wznowić jazdy',
+    resumeErrorBody: 'Nagrywanie GPS nadal jest wstrzymane. Spróbuj ponownie.',
   },
   authErrors: {
     missingFields: 'Uzupełnij wszystkie pola',

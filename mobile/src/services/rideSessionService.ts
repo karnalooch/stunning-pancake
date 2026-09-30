@@ -7,7 +7,7 @@ import { ActivityService, type ActivitySportType } from './api';
 import {
   GpsSyncManager,
   PollingResolution,
-  resumeTrackingAfterRelaunch,
+  restoreRideTrackingAfterRelaunch,
 } from './GpsSyncManager';
 
 const DEVICE_ID_KEY = 'gps_device_id';
@@ -55,6 +55,14 @@ export async function startRideSession(options: {
   return activityId;
 }
 
+export async function pauseRideSession(userId: number | null): Promise<boolean> {
+  return getRideGpsManager(userId).pauseTracking();
+}
+
+export async function resumeRideSession(userId: number | null): Promise<boolean> {
+  return getRideGpsManager(userId).resumeTracking();
+}
+
 export async function stopRideSession(
   userId: number | null,
 ): Promise<{ finalized: boolean; pendingUpload: number }> {
@@ -62,12 +70,14 @@ export async function stopRideSession(
   return manager.stopTracking();
 }
 
-/** After app relaunch — restore UI + background GPS if a ride was in progress. */
-export async function resumeActiveRideIfNeeded(
+/** After app relaunch — restore ACTIVE or PAUSED truth without changing activity identity. */
+export async function restoreRideSessionIfNeeded(
   userId: number | null,
-): Promise<boolean> {
-  getRideGpsManager(userId);
-  return resumeTrackingAfterRelaunch();
+): Promise<'active' | 'paused' | null> {
+  const manager = getRideGpsManager(userId);
+  const restored = await restoreRideTrackingAfterRelaunch();
+  if (restored) manager.startStatsUpdates();
+  return restored;
 }
 
 export { createSessionWithDurability } from './sessionDurability';

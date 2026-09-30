@@ -35,7 +35,8 @@ export function LegacyNavigationBridge({
       user={user}
       isRecording={ride.isRecording}
       ridePaused={ride.ridePaused}
-      setRidePaused={ride.setRidePaused}
+      onPauseRide={() => ride.pause()}
+      onResumeRide={() => ride.resume()}
       liveSpeed={ride.liveSpeed}
       liveDistanceKm={ride.liveDistanceKm}
       liveElevationGainM={ride.liveElevationGainM}

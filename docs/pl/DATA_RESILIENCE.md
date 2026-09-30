@@ -82,7 +82,21 @@ Django finalizuje Activity dopiero na podstawie trwałych danych/receiptów i od
 
 Proofy mobile potwierdzają trwałość background/locked recording i recovery. Nie dowodzą automatycznie, że zdalny live tracking ma określony freshness przy screen-off.
 
-Live SLO, offline start i semantyka PAUSE są osobnymi decyzjami architektonicznymi.
+## PAUSE/RESUME — decyzja trwałości
+
+Od 2026-09-30 semantyka PAUSE nie jest już otwartą decyzją.
+
+- PAUSED zachowuje ten sam Activity identity;
+- stan PAUSED jest persystowany w zaszyfrowanym tracking state;
+- producer GPS jest fence'owany/zatrzymany, ale zapisany już buffer/outbox może dalej się synchronizować;
+- czas pauzy nie wchodzi do ride elapsed;
+- relaunch przywraca PAUSED bez automatycznego startu producenta GPS;
+- Resume resetuje ciągłość GPS i pierwszy zaakceptowany punkt zaczyna nowy segment;
+- Finish z PAUSED używa normalnej trwałej finalizacji.
+
+Pełny kontrakt: [Mobile Ride Flow v1](../design/MOBILE_RIDE_FLOW_V1.md).
+
+Live-delivery freshness SLO i offline start pozostają osobnymi decyzjami architektonicznymi.
 
 ## Powiązane
 

@@ -66,7 +66,16 @@ export interface PendingFinalizationPayload {
 }
 
 export interface TrackingState {
+  /** True only while the GPS producer is allowed to append new ride points. */
   isTracking: boolean;
+  /** Persisted Ride lifecycle state. PAUSED survives process death. */
+  isPaused?: boolean;
+  /** Wall-clock instant when the current pause started. */
+  pausedAtMs?: number | null;
+  /** Sum of completed pause intervals, excluded from ride elapsed time. */
+  accumulatedPausedMs?: number;
+  /** Forces the first accepted point after resume to start a new route segment. */
+  resumeSegmentBreakPending?: boolean;
   activityId: number | null;
   deviceId: string;
   userId: number | null;
@@ -342,6 +351,59 @@ export function loadTrackingState(storage: GpsStorageAdapter): TrackingState | n
   const raw = storage.getString(GPS_STORAGE_KEYS.TRACKING_STATE);
   if (!raw) return null;
   return parseJson<TrackingState | null>(raw, null);
+}
+
+export function pauseTrackingState(
+  state: TrackingState,
+  nowMs: number,
+): TrackingState {
+  return {
+    ...state,
+    isTracking: false,
+    isPaused: true,
+    pausedAtMs: nowMs,
+    accumulatedPausedMs: state.accumulatedPausedMs ?? 0,
+    resumeSegmentBreakPending: true,
+  };
+}
+
+export function resumeTrackingState(
+  state: TrackingState,
+  nowMs: number,
+): TrackingState {
+  const pauseStartedMs = state.pausedAtMs ?? nowMs;
+  return {
+    ...state,
+    isTracking: true,
+    isPaused: false,
+    pausedAtMs: null,
+    accumulatedPausedMs:
+      (state.accumulatedPausedMs ?? 0) + Math.max(0, nowMs - pauseStartedMs),
+    resumeSegmentBreakPending: true,
+    lastCoord: null,
+    lastAltitude: null,
+  };
+}
+
+export function rideElapsedSeconds(
+  state: TrackingState | null,
+  wallStartMs: number | null,
+  nowMs: number,
+): number | undefined {
+  if (
+    wallStartMs == null ||
+    !state?.activityId ||
+    (!state.isTracking && !state.isPaused)
+  ) {
+    return undefined;
+  }
+
+  const endMs =
+    state.isPaused && state.pausedAtMs != null ? state.pausedAtMs : nowMs;
+  return Math.max(
+    0,
+    Math.floor((endMs - wallStartMs - (state.accumulatedPausedMs ?? 0)) / 1000),
+  );
 }
 
 export function buildRouteCoordinates(points: GpsPoint[]): [number, number][] {

@@ -32,6 +32,9 @@ import {
   loadPendingSession,
   loadTrackingState,
   mergeRouteCoordinates,
+  pauseTrackingState,
+  resumeTrackingState,
+  rideElapsedSeconds,
   nextPointSeq,
   pendingPointCount,
   savePendingFinalization,
@@ -270,12 +273,18 @@ export async function recoverGpsDataOnLaunch(): Promise<RecoveryResult> {
   const pendingSession = loadPendingSession(storage) != null;
   const pendingFinalization = loadPendingFinalization(storage) != null;
 
-  const needsResumeUi =
+  const recoveryPending =
     pendingSession ||
     pendingFinalization ||
-    Boolean(state?.activityId && (state.isTracking || buffer.length > 0 || outbox.length > 0));
+    buffer.length > 0 ||
+    outbox.length > 0;
+  const needsResumeUi =
+    recoveryPending ||
+    Boolean(state?.activityId && (state.isTracking || state.isPaused));
 
-  setRecoveryPending(storage, needsResumeUi);
+  // An ACTIVE/PAUSED ride is normal lifecycle state. Recovery means durable
+  // work is actually pending, not merely that the Ride UI should be restored.
+  setRecoveryPending(storage, recoveryPending);
 
   if (__DEV__ && (pendingPointCount(storage) > 0 || pendingFinalization)) {
     console.log(
@@ -309,7 +318,7 @@ export async function resumeTrackingAfterRelaunch(): Promise<boolean> {
   const storage = await initializeGpsStorage();
   if (!storage) return false;
   const state = loadTrackingState(storage);
-  if (!state?.isTracking || !state.activityId) return false;
+  if (!state?.isTracking || state.isPaused || !state.activityId) return false;
 
   let started = false;
   try {
@@ -351,6 +360,25 @@ export async function resumeTrackingAfterRelaunch(): Promise<boolean> {
   }
 
   return true;
+}
+
+export type RestoredRideTrackingState = 'active' | 'paused';
+
+export async function restoreRideTrackingAfterRelaunch(): Promise<RestoredRideTrackingState | null> {
+  const storage = await initializeGpsStorage();
+  if (!storage) return null;
+
+  const state = loadTrackingState(storage);
+  if (!state?.activityId) return null;
+
+  if (state.isPaused) {
+    // Keep delivery of already-recorded points alive, but do not restart the GPS producer.
+    startGpsBackgroundSync();
+    return 'paused';
+  }
+
+  if (!state.isTracking) return null;
+  return (await resumeTrackingAfterRelaunch()) ? 'active' : null;
 }
 
 export function clearTrackingRecoveryPending(): void {
@@ -448,7 +476,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
     const { locations } = data as { locations: Location.LocationObject[] };
     let state = loadTrackingState(storage);
 
-    if (!state?.isTracking) return;
+    if (!state?.isTracking || state.isPaused) return;
     const activityId = state.activityId;
     if (activityId == null) return;
 
@@ -479,6 +507,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
 
       const filterState = loadFilterState(storage, activityId);
       const prevAcceptedTs = filterState.lastAccepted?.timestamp ?? 0;
+      const resumeSegmentBreak = Boolean(state.resumeSegmentBreakPending);
       const seq = nextPointSeq(storage, activityId);
       const candidate = buildGpsPoint(
         {
@@ -519,13 +548,14 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
 
       appendToBuffer(storage, {
         ...candidate,
-        segment_break: filterState.segmentBreak || undefined,
+        segment_break: resumeSegmentBreak || filterState.segmentBreak || undefined,
       });
 
       state = {
         ...state,
         lastCoord: [loc.coords.longitude, loc.coords.latitude],
         lastAltitude: loc.coords.altitude,
+        resumeSegmentBreakPending: false,
       };
       storage.set(GPS_STORAGE_KEYS.CURRENT_STATS, JSON.stringify(newStats));
       storage.set(GPS_STORAGE_KEYS.TRACKING_STATE, JSON.stringify(state));
@@ -571,6 +601,18 @@ export class GpsSyncManager {
 
   setUpdateCallback(cb: (stats: TrackingStats) => void): void {
     this._onUpdate = cb;
+    this._emitStats();
+  }
+
+  startStatsUpdates(): void {
+    if (!this._statsCheckTimer) {
+      this._statsCheckTimer = setInterval(() => this._emitStats(), 2000);
+      // Node/Jest timers expose unref(); React Native timers do not. Avoid a
+      // test/runtime-tool process being kept alive solely by the UI heartbeat.
+      const timer = this._statsCheckTimer as unknown as { unref?: () => void };
+      timer.unref?.();
+    }
+    this._emitStats();
   }
 
   private _emitStats(): void {
@@ -583,11 +625,9 @@ export class GpsSyncManager {
         '{"distanceM":0,"elevationGainM":0,"speedMs":0,"paceSecPerKm":0}',
     );
     const tracking = loadTrackingState(storage);
-    const wallStart = storage.getString('ride_wall_start_ms');
-    const rideWallClockS =
-      wallStart && tracking?.isTracking
-        ? Math.max(0, Math.floor((Date.now() - parseInt(wallStart, 10)) / 1000))
-        : undefined;
+    const wallStartRaw = storage.getString('ride_wall_start_ms');
+    const wallStartMs = wallStartRaw ? parseInt(wallStartRaw, 10) : null;
+    const rideWallClockS = rideElapsedSeconds(tracking, wallStartMs, Date.now());
 
     this._onUpdate({
       ...currentStats,
@@ -609,6 +649,8 @@ export class GpsSyncManager {
       GPS_STORAGE_KEYS.TRACKING_STATE,
       JSON.stringify({
         isTracking: false,
+        isPaused: false,
+        pausedAtMs: null,
         activityId,
         deviceId: this._deviceId,
         userId: this._userId,
@@ -650,6 +692,10 @@ export class GpsSyncManager {
       GPS_STORAGE_KEYS.TRACKING_STATE,
       JSON.stringify({
         isTracking: true,
+        isPaused: false,
+        pausedAtMs: null,
+        accumulatedPausedMs: 0,
+        resumeSegmentBreakPending: false,
         activityId,
         deviceId: this._deviceId,
         userId: this._userId,
@@ -702,7 +748,7 @@ export class GpsSyncManager {
     }
 
     startGpsBackgroundSync();
-    this._statsCheckTimer = setInterval(() => this._emitStats(), 2000);
+    this.startStatsUpdates();
   }
 
   async setResolution(resolution: PollingResolution): Promise<void> {
@@ -727,6 +773,116 @@ export class GpsSyncManager {
     });
   }
 
+  async pauseTracking(): Promise<boolean> {
+    const storage = await initializeGpsStorage();
+    if (!storage) {
+      throw new Error('Durable encrypted GPS storage unavailable while pausing ride');
+    }
+
+    const state = loadTrackingState(storage);
+    if (!state?.activityId) return false;
+    if (state.isPaused) {
+      this._emitStats();
+      return true;
+    }
+    if (!state.isTracking) return false;
+
+    const pausedState = pauseTrackingState(state, Date.now());
+
+    // Persist PAUSED before touching the native producer. A late TaskManager
+    // callback will observe isTracking=false/isPaused=true and cannot append.
+    storage.set(GPS_STORAGE_KEYS.TRACKING_STATE, JSON.stringify(pausedState));
+
+    const currentStats = JSON.parse(
+      storage.getString(GPS_STORAGE_KEYS.CURRENT_STATS) ||
+        '{"distanceM":0,"elevationGainM":0,"speedMs":0,"paceSecPerKm":0}',
+    );
+    storage.set(
+      GPS_STORAGE_KEYS.CURRENT_STATS,
+      JSON.stringify({ ...currentStats, speedMs: 0, paceSecPerKm: 0 }),
+    );
+
+    try {
+      await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+    } catch (error) {
+      // Logical producer fencing is already durable above; native cleanup can
+      // fail without allowing new points into the ride.
+      firebaseCapture(error, 'GPS_LOCATION_PAUSE_STOP_FAILED');
+    }
+
+    this._emitStats();
+    return true;
+  }
+
+  async resumeTracking(): Promise<boolean> {
+    const storage = await initializeGpsStorage();
+    if (!storage) {
+      throw new Error('Durable encrypted GPS storage unavailable while resuming ride');
+    }
+
+    const state = loadTrackingState(storage);
+    if (!state?.activityId) return false;
+    if (state.isTracking && !state.isPaused) {
+      this._emitStats();
+      return true;
+    }
+    if (!state.isPaused) return false;
+
+    const activityId = state.activityId;
+    const now = Date.now();
+    const pauseStarted = state.pausedAtMs ?? now;
+    const resolution =
+      (state.resolution as PollingResolution) ?? PollingResolution.BALANCED;
+
+    // Reset local point comparison so the pause interval is excluded from
+    // gpsActiveTime and the first resumed point cannot create a distance jump.
+    _filterStateByActivity.set(activityId, createGpsFilterState());
+    persistFilterStates(storage);
+
+    const activeState: TrackingState = {
+      ...resumeTrackingState(state, now),
+      resolution,
+    };
+    storage.set(GPS_STORAGE_KEYS.TRACKING_STATE, JSON.stringify(activeState));
+
+    try {
+      let started = false;
+      try {
+        started = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+      } catch {
+        started = false;
+      }
+
+      if (!started) {
+        const config = RESOLUTION_CONFIG[resolution];
+        await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
+          ...config,
+          foregroundService: {
+            notificationTitle: '4VELO — Tracking Active',
+            notificationBody: `Your route is being recorded (${resolution.toLowerCase()})`,
+            notificationColor: '#00FFFF',
+          },
+        });
+      }
+    } catch (error) {
+      storage.set(
+        GPS_STORAGE_KEYS.TRACKING_STATE,
+        JSON.stringify({
+          ...state,
+          isTracking: false,
+          isPaused: true,
+          pausedAtMs: pauseStarted,
+        } satisfies TrackingState),
+      );
+      firebaseCapture(error, 'GPS_LOCATION_RESUME_FAILED');
+      throw error;
+    }
+
+    startGpsBackgroundSync();
+    this._emitStats();
+    return true;
+  }
+
   async stopTracking(): Promise<{ finalized: boolean; pendingUpload: number }> {
     stopGpsBackgroundSync();
     if (this._statsCheckTimer) {
@@ -749,6 +905,8 @@ export class GpsSyncManager {
         lastAltitude: null,
       }),
       isTracking: false,
+      isPaused: false,
+      pausedAtMs: null,
       activityId,
     };
 
@@ -800,6 +958,8 @@ export class GpsSyncManager {
       JSON.stringify({
         ...latestState,
         isTracking: false,
+        isPaused: false,
+        pausedAtMs: null,
         activityId: pendingUpload > 0 || finalizationPending ? activityId : null,
       }),
     );
