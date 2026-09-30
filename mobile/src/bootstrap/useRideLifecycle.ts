@@ -111,18 +111,27 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
 
       try {
         const result = await recoverGpsDataOnLaunch();
-        if (result.needsResumeUi || isTrackingRecoveryPending()) {
-          setGpsRecoveryVisible(true);
-        }
-
         const restored = await restoreRideSessionIfNeeded(null);
         if (!applyRestoredRideState(restored)) {
+          const recoveryWorkPending =
+            result.pendingBuffer > 0 ||
+            result.outboxCount > 0 ||
+            result.pendingSession ||
+            result.pendingFinalization ||
+            isTrackingRecoveryPending();
+          setGpsRecoveryVisible(recoveryWorkPending);
+
           const recoveredFinishState = classifyRideRecoveryAfterLaunch(
             result.pendingFinalization,
           );
           if (recoveredFinishState) {
             setRideFinishState(recoveredFinishState);
           }
+        } else {
+          // ACTIVE/PAUSED lifecycle restoration is normal product state, not a
+          // recovery warning. The stats callback can still surface pending
+          // points if durable delivery actually needs attention.
+          setGpsRecoveryVisible(result.pendingBuffer > 0 || result.outboxCount > 0);
         }
       } catch (e) {
         console.warn('[GPS] launch recovery failed', e);
