@@ -346,6 +346,44 @@ class MobileHarnessContractTests(unittest.TestCase):
         self.assertFalse((ROOT / "mobile" / "eas-wsl-build.sh").exists())
         self.assertFalse((ROOT / "mobile" / "scripts" / "register_pilot.sh").exists())
 
+    def test_lightweight_visual_proof_is_exact_sha_and_build_free(self):
+        flow = read("mobile/.maestro/flows/visual-proof-ride.yaml")
+        runner = read("scripts/run-mobile-e2e.ps1")
+        collector = read("scripts/mobile-visual-proof.ps1")
+        gitignore = read(".gitignore")
+
+        self.assertNotIn("optional: true", flow)
+        for token in (
+            'id: "home-open-start-ride"',
+            'id: "start-ride-primary"',
+            'id: "active-ride-screen"',
+            'id: "ride-pause-button"',
+            'id: "ride-paused-screen"',
+            'id: "ride-paused-stop"',
+            'id: "ride-summary-screen"',
+            "01_today",
+            "02_start",
+            "03_active",
+            "04_paused",
+            "05_summary",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, flow)
+
+        self.assertIn("[string]$TestOutputDir", runner)
+        self.assertIn("--test-output-dir", runner)
+        self.assertIn("visual-proof-ride.yaml", collector)
+        self.assertIn("Visual proof requires a clean exact-SHA checkout", collector)
+        self.assertIn("Get-FileHash -Algorithm SHA256", collector)
+        self.assertIn('evidenceType = "mobile-ride-visual-proof"', collector)
+        self.assertIn("sourceSha = $gitSha", collector)
+        self.assertIn("buildPerformed = $false", collector)
+        self.assertIn("artifacts/mobile-visual-proof/", gitignore)
+
+        for forbidden in ("expo prebuild", "gradlew", "eas-cli", "assembleDebug", "assembleRelease"):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, collector.lower() if forbidden.islower() else collector)
+
     def test_ride_lifecycle_smoke_is_real_and_blocking(self):
         source = read("mobile/.maestro/flows/ride-lifecycle.yaml")
         self.assertNotIn("optional: true", source)
