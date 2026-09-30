@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 import unittest
 from pathlib import Path
+from unittest import mock
 
+from scripts.ops import proof_broker
 from scripts.ops.proof_broker import (
     BrokerError,
     resolve_proof_revision,
@@ -106,6 +108,99 @@ class GumballProofBrokerContractTests(unittest.TestCase):
                 pr,
                 allow_merged=True,
             )
+
+    def test_post_dispatch_bookkeeping_failure_preserves_dispatch(self):
+        policy = json.loads(POLICY.read_text(encoding="utf-8"))
+        source_sha = "d" * 40
+        pr = {
+            "state": "open",
+            "head": {
+                "ref": "feat/example",
+                "sha": source_sha,
+                "repo": {"full_name": "karnalooch/stunning-pancake"},
+            },
+            "base": {"ref": "main"},
+        }
+        error = proof_broker.github_ops.GitHubError(
+            "PUT /repos/karnalooch/stunning-pancake/issues/411/labels: "
+            "HTTP 403: forbidden"
+        )
+
+        with (
+            mock.patch.object(proof_broker, "authorize_actor", return_value="write"),
+            mock.patch.object(proof_broker, "get_pr", return_value=pr),
+            mock.patch.object(proof_broker, "ensure_request_label"),
+            mock.patch.object(proof_broker, "find_artifact", return_value=None),
+            mock.patch.object(proof_broker, "find_existing_run", return_value=None),
+            mock.patch.object(
+                proof_broker,
+                "get_pr_paths",
+                return_value=["mobile/src/features/ride/example.ts"],
+            ),
+            mock.patch.object(
+                proof_broker.repository_os,
+                "plan_ci",
+                return_value={"class": "heavy"},
+            ),
+            mock.patch.object(proof_broker, "default_branch", return_value="main"),
+            mock.patch.object(
+                proof_broker,
+                "fetch_workflow_text",
+                return_value=NATIVE.read_text(encoding="utf-8"),
+            ),
+            mock.patch.object(proof_broker, "dispatch_workflow") as dispatch,
+            mock.patch.object(
+                proof_broker,
+                "set_status_label",
+                side_effect=error,
+            ),
+        ):
+            result = proof_broker.evaluate_proof(
+                repo="karnalooch/stunning-pancake",
+                token="token",
+                policy=policy,
+                proof_id="android-native-release",
+                pr_number=411,
+                actor="karnalooch",
+                explicit=True,
+                retry=False,
+                status_only=False,
+                apply=True,
+            )
+
+        self.assertEqual("DISPATCH", result["action"])
+        self.assertEqual(source_sha, result["sha"])
+        self.assertIn("post-dispatch status bookkeeping failed", result["warning"])
+        dispatch.assert_called_once()
+
+    def test_comment_bookkeeping_failure_is_best_effort(self):
+        error = proof_broker.github_ops.GitHubError(
+            "POST /repos/karnalooch/stunning-pancake/issues/411/comments: "
+            "HTTP 403: forbidden"
+        )
+        result = {
+            "action": "DISPATCH",
+            "proof": "android-native-release",
+            "pr_number": 411,
+            "request_id": "gb-android-native-release-pr411-deb8833fc78a",
+        }
+
+        with mock.patch.object(
+            proof_broker,
+            "comment_result",
+            side_effect=error,
+        ):
+            warning = proof_broker.comment_result_best_effort(
+                "karnalooch/stunning-pancake",
+                "token",
+                411,
+                result,
+                True,
+            )
+
+        self.assertIsNotNone(warning)
+        self.assertIn("result comment bookkeeping failed", warning)
+        self.assertIn("DISPATCH", warning)
 
     def test_native_workflow_satisfies_trusted_dispatch_contract(self):
         policy = json.loads(POLICY.read_text(encoding="utf-8"))
