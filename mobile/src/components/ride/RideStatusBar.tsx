@@ -9,6 +9,8 @@ interface RideStatusBarProps {
   gpsLocked: boolean;
   /** 0–100 when known */
   batteryPct?: number | null;
+  /** Deterministic visual-proof override; production leaves this undefined. */
+  clockText?: string;
 }
 
 function formatClock(date: Date): string {
@@ -26,6 +28,7 @@ function formatBatteryPct(value: number | null | undefined): string {
 export const RideStatusBar: React.FC<RideStatusBarProps> = ({
   gpsLocked,
   batteryPct = null,
+  clockText,
 }) => {
   const { theme } = useUnistyles();
   const { t } = useI18n();
@@ -34,9 +37,10 @@ export const RideStatusBar: React.FC<RideStatusBarProps> = ({
   const [clock, setClock] = useState(() => formatClock(new Date()));
 
   useEffect(() => {
+    if (clockText !== undefined) return undefined;
     const id = setInterval(() => setClock(formatClock(new Date())), 30_000);
     return () => clearInterval(id);
-  }, []);
+  }, [clockText]);
 
   const gpsLabel = gpsLocked ? t.ride.status.gpsLocked : t.ride.status.gpsSearching;
   const gpsColor = gpsLocked ? semantic.ride.gpsLocked : semantic.status.warning;
@@ -67,7 +71,7 @@ export const RideStatusBar: React.FC<RideStatusBarProps> = ({
         {t.ride.status.battery} {batteryLabel}
       </Text>
       <Text style={[styles.clock, { color: c.hudOutline }]}>
-        {clock}
+        {clockText ?? clock}
       </Text>
     </View>
   );
