@@ -71,10 +71,15 @@ describe('ride controller adapters', () => {
     expect(captured.liveDistanceKm).toBeGreaterThan(0);
     expect(onStartRideSuccess).toHaveBeenCalledTimes(1);
 
-    act(() => captured.setRidePaused(true));
+    await act(async () => {
+      await captured.pause();
+    });
     expect(captured.ridePaused).toBe(true);
+    expect(captured.liveSpeed).toBe(0);
 
-    act(() => captured.setRidePaused(false));
+    await act(async () => {
+      await captured.resume();
+    });
     expect(captured.ridePaused).toBe(false);
 
     await act(async () => {
