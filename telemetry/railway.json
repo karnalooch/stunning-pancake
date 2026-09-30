@@ -6,7 +6,9 @@
   },
   "deploy": {
     "multiRegionConfig": {
-      "europe-west4-drams3a": { "numReplicas": 1 }
+      "europe-west4-drams3a": {
+        "numReplicas": 1
+      }
     },
     "sleepApplication": false,
     "restartPolicy": "ALWAYS",
@@ -21,6 +23,9 @@
     "TELEMETRY_SKIP_DB": "0",
     "TELEMETRY_DB_POOL_MAX": "30",
     "TELEMETRY_INGEST_BATCH_SIZE": "200",
-    "UVICORN_WORKERS": "2"
+    "UVICORN_WORKERS": "2",
+    "TELEMETRY_INGEST_JWT_REQUIRED": "1",
+    "TELEMETRY_INGEST_AUDIENCE_REQUIRED": "1",
+    "TELEMETRY_INGEST_AUDIENCE": "telemetry"
   }
 }
