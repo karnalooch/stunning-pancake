@@ -42,9 +42,7 @@ def jwt_enforced() -> bool:
 
 
 def audience_required() -> bool:
-    # Default False so existing deployments do not silently reject telemetry
-    # batches the day the backend ships — mobile must opt in by sending a
-    # JWT with aud='telemetry'. Operators flip this after mobile rollout.
+    # Local/dev remains opt-in. Production/PaaS startup requires this gate.
     return _truthy("TELEMETRY_INGEST_AUDIENCE_REQUIRED")
 
 
@@ -66,7 +64,9 @@ def is_production_runtime() -> bool:
     )
     if env in ("production", "prod"):
         return True
-    return bool(os.getenv("RAILWAY_SERVICE_NAME") or os.getenv("DYNO") or os.getenv("RENDER"))
+    return bool(
+        os.getenv("RAILWAY_SERVICE_NAME") or os.getenv("DYNO") or os.getenv("RENDER")
+    )
 
 
 def assert_runtime_security_configuration() -> None:
