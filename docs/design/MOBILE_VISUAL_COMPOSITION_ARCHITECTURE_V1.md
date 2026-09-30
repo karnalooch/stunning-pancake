@@ -467,7 +467,47 @@ External references do **not** authorize:
 
 We copy questions, constraints and hierarchy principles.
 
-## 16. Review checklist
+## 16. Tooling qualification gate — GitHub-connected by default
+
+GitHub is the system of record for accepted mobile visual/tooling outputs.
+
+A production design/visual tool may participate in the 4VELO workflow only if it provides at least one of:
+
+1. **native GitHub repository/component integration**; or
+2. a **deterministic CLI/API/export** that produces versionable repository files which can be reviewed in PRs and validated in CI.
+
+A SaaS workspace by itself is not visual authority.
+
+Required for every production-capable tool:
+
+- documented GitHub/repository integration path;
+- a versioned artifact path or explicit component-to-code mapping;
+- reproducible export/sync procedure;
+- PR/CI review path;
+- license/provenance status;
+- fallback/export path that avoids trapping the accepted state in one vendor.
+
+### Tool disposition
+
+| Tool | GitHub fit | 4VELO role |
+|---|---|---|
+| Figma | **CONDITIONAL PASS** | Use Code Connect / Variables API / CLI or another deterministic repo sync. If the active plan cannot provide that, Figma is a design workspace/reference, not the final SSOT. |
+| Maputnik | **PASS** | MapLibre Style JSON is versioned in Git; local CLI/export is preferred. GitHub Gist export is useful for sharing but not our authority. |
+| Storybook | **PASS** | Stories and components live in the repository; optional visual-regression services may integrate through GitHub Actions. |
+| Maestro | **PASS** | YAML flows live in-repo; local CLI is sufficient. Cloud/GitHub Actions is optional and must not force unnecessary native builds. |
+| Lucide / Skia / RN libraries | **PASS** | Dependency versions and implementation live in the repository and are reviewed by normal PR/CI. |
+| Mobbin / YouTube / vendor screenshots | **RESEARCH-ONLY EXEMPTION** | Reference evidence only; never owns production state or assets. |
+
+Current reference evidence:
+
+- Figma Code Connect can map Figma components directly to a GitHub repository; direct UI integration is plan-dependent: https://help.figma.com/hc/en-us/articles/23920389749655-Code-Connect
+- Figma Variables REST API supports automated design-token synchronization with a codebase/GitHub workflow: https://help.figma.com/hc/en-us/articles/15339657135383-Guide-to-variables-in-Figma
+- Maputnik supports local CLI/style JSON export and GitHub Gist export: https://github.com/maplibre/maputnik/wiki/Design-a-Map-Style
+- Maestro supports repository-stored flows and optional GitHub Actions/PR integration through Maestro Cloud: https://docs.maestro.dev/maestro-cloud/ci-cd-integration/github-actions
+
+The acceptance rule is stricter than “the tool has a GitHub button”: the **accepted artifact must be reproducible and reviewable from repository evidence**.
+
+## 17. Review checklist
 
 For every primary mobile visual PR:
 
@@ -507,7 +547,7 @@ For every primary mobile visual PR:
 - [ ] pending/recovery cannot impersonate durable success;
 - [ ] celebration is durable-success-only.
 
-## 17. Implementation order after this decision
+## 18. Implementation order after this decision
 
 1. reconcile #388 visual slice against this composition contract;
 2. implement #392 semantic Pause/Resume and consume it as the paused overlay state;
@@ -516,6 +556,6 @@ For every primary mobile visual PR:
 5. recompose Summary around terminal truth first, celebration second;
 6. only then reopen planned asset production where a documented gap remains.
 
-## 18. One-sentence rule
+## 19. One-sentence rule
 
 > **4VELO should look complete before the artwork loads; artwork should make it recognisably 4VELO, not make it usable.**
