@@ -71,6 +71,22 @@ Rules:
 - map failure must not erase ride state, controls or recorded metrics;
 - map-specific loading/degraded states are explicit.
 
+### 3.1.1 Mobile basemap authority
+
+The canonical mobile basemap style is:
+
+`mobile/assets/map/4velo-ride-v1.json`
+
+It is a repository-owned, Maputnik-editable MapLibre Style JSON derived from OpenFreeMap Liberty with preserved upstream provenance/license notice.
+
+Rules:
+
+- GitHub owns the accepted style artifact; Maputnik is an editor, not the SSOT;
+- production code must not fall back to MapLibre demo tiles or direct `tile.openstreetmap.org` raster usage;
+- a deployment may set `EXPO_PUBLIC_MAP_STYLE_URL` to another compliant style URL;
+- OpenMapTiles/OpenStreetMap attribution remains visible;
+- route geometry is rendered as a separate 4VELO overlay above the basemap so product hierarchy does not depend on upstream road colors.
+
 ### 3.2 Data plane
 
 Purpose: workout truth at a glance.

@@ -131,7 +131,7 @@ export const ExploreMapScreen: React.FC<{ onOpenMarketplace?: () => void }> = ({
   const [loadError, setLoadError] = useState(false);
 
   const mapStyle = useMemo<string | StyleSpecification>(
-    () => resolveRideMapStyle(false) as string | StyleSpecification,
+    () => resolveRideMapStyle() as string | StyleSpecification,
     [],
   );
 

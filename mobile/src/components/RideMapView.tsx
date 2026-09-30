@@ -8,9 +8,13 @@ import {
   type CameraRef,
   type StyleSpecification,
 } from '@maplibre/maplibre-react-native';
-import { DEFAULT_RIDE_MAP_ZOOM, resolveRideMapStyle } from '../map/mapStyle';
+import {
+  DEFAULT_RIDE_MAP_ZOOM,
+  RIDE_ROUTE_CASING_COLOR,
+  RIDE_ROUTE_COLOR,
+  resolveRideMapStyle,
+} from '../map/mapStyle';
 import { APPROVED_ASSETS } from '../assets/approvedAssets';
-import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
 
 export interface RideMapViewProps {
   /** [longitude, latitude] — when provided, map centers on rider position. */
@@ -32,12 +36,11 @@ export const RideMapView: React.FC<RideMapViewProps> = ({
   routeCoordinates = [],
   showRiderMarker = true,
 }) => {
-  const { enabled: immersiveEnabled } = useImmersiveTheme();
   const cameraRef = useRef<CameraRef>(null);
   const center = userCoordinate ?? FALLBACK_CENTER;
   const mapStyle = useMemo<string | StyleSpecification>(
-    () => resolveRideMapStyle(immersiveEnabled) as string | StyleSpecification,
-    [immersiveEnabled],
+    () => resolveRideMapStyle() as string | StyleSpecification,
+    [],
   );
   const routeGeoJson = useMemo(() => {
     if (!routeCoordinates.length) return null;
@@ -83,13 +86,23 @@ export const RideMapView: React.FC<RideMapViewProps> = ({
         {routeGeoJson ? (
           <GeoJSONSource id="ride-route" data={routeGeoJson}>
             <Layer
+              id="ride-route-casing"
+              type="line"
+              source="ride-route"
+              style={{
+                lineColor: RIDE_ROUTE_CASING_COLOR,
+                lineWidth: 8,
+                lineOpacity: 0.92,
+              }}
+            />
+            <Layer
               id="ride-route-line"
               type="line"
               source="ride-route"
               style={{
-                lineColor: '#D4A373',
-                lineWidth: 4,
-                lineOpacity: 0.95,
+                lineColor: RIDE_ROUTE_COLOR,
+                lineWidth: 4.5,
+                lineOpacity: 1,
               }}
             />
           </GeoJSONSource>

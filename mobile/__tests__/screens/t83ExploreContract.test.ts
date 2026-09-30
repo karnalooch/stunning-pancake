@@ -38,7 +38,7 @@ describe('Discover map-first truth contract', () => {
     expect(map).toContain('<GeoJSONSource');
     expect(map).toContain('<Layer');
     expect(map).toContain('coordinates: [poi.longitude, poi.latitude]');
-    expect(map).toContain('resolveRideMapStyle(false)');
+    expect(map).toContain('resolveRideMapStyle()');
     expect(map).not.toContain('poi.latitude.toFixed(4)');
     expect(map).not.toContain('poi.longitude.toFixed(4)');
     expect(map).not.toContain('SceneBackground');

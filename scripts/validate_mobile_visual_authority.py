@@ -10,6 +10,7 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 POLICY_PATH = REPO_ROOT / "docs" / "design" / "MOBILE_UI_VISUAL_AUTHORITY_V1.json"
+MAP_STYLE_PATH = REPO_ROOT / "mobile" / "assets" / "map" / "4velo-ride-v1.json"
 
 FORBIDDEN_CURRENT_CONTRACT_PHRASES = (
     "deep/dark green as the principal brand field",
@@ -29,6 +30,46 @@ REQUIRED_ARCHITECTURE_PHRASES = (
 
 def load_policy(path: Path = POLICY_PATH) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def validate_mobile_map_style(style: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+
+    if style.get("version") != 8:
+        errors.append("mobile map style version must be 8")
+
+    metadata = style.get("metadata", {})
+    expected_metadata = {
+        "4velo:role": "mobile-ride-basemap",
+        "4velo:authority": "github",
+        "4velo:editor": "Maputnik",
+    }
+    for key, value in expected_metadata.items():
+        if metadata.get(key) != value:
+            errors.append(f"mobile map style metadata {key} must be {value!r}")
+
+    serialized = json.dumps(style)
+    for forbidden in (
+        "demotiles.maplibre.org",
+        "tile.openstreetmap.org",
+        "__TILEJSON_DOMAIN__",
+    ):
+        if forbidden in serialized:
+            errors.append(f"mobile map style contains forbidden source: {forbidden}")
+
+    source = style.get("sources", {}).get("openmaptiles", {})
+    if source.get("url") != "https://tiles.openfreemap.org/planet":
+        errors.append("mobile map style must use the declared OpenFreeMap vector source")
+
+    attribution = str(source.get("attribution", ""))
+    if "OpenMapTiles" not in attribution or "OpenStreetMap" not in attribution:
+        errors.append("mobile map style must retain OpenMapTiles and OpenStreetMap attribution")
+
+    layers = style.get("layers", [])
+    if not isinstance(layers, list) or len(layers) < 50:
+        errors.append("mobile map style unexpectedly lost its full vector layer set")
+
+    return errors
 
 
 def validate(policy: dict[str, Any], repo_root: Path = REPO_ROOT) -> list[str]:
@@ -129,6 +170,16 @@ def validate(policy: dict[str, Any], repo_root: Path = REPO_ROOT) -> list[str]:
         for phrase in FORBIDDEN_CURRENT_CONTRACT_PHRASES:
             if phrase in text:
                 errors.append(f"current design contract still contains superseded rule: {phrase}")
+
+    if not MAP_STYLE_PATH.exists():
+        errors.append("repo-owned mobile map style is missing")
+    else:
+        try:
+            style = json.loads(MAP_STYLE_PATH.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            errors.append(f"repo-owned mobile map style is invalid JSON: {exc}")
+        else:
+            errors.extend(validate_mobile_map_style(style))
 
     globs = set(policy.get("nonNormativeGlobs", []))
     for required_glob in (
