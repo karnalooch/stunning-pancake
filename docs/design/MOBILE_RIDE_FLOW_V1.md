@@ -2,7 +2,7 @@
 
 > **Status:** NORMATIVE for #152/#153/#154  
 > **Decision date:** 2026-09-24  
-> **Related:** #149, #152, #153, #154, #157
+> **Related:** #149, #152, #153, #154, #157, #392
 
 ## 1. Canonical first vertical slice
 
@@ -103,17 +103,36 @@ Requirements:
 
 ## 6. Pause/resume contract
 
-Pause must not finalize the ride.
+PAUSE / RESUME are semantic Ride lifecycle transitions owned by the controller/domain layer.
 
-Paused state must preserve:
+```text
+ACTIVE
+  | pause()
+  v
+PAUSED
+  | resume()
+  v
+ACTIVE
+```
 
-- ride identity;
-- elapsed/metric truth;
-- durable tracking state required by current services;
-- a clear Resume action;
-- a protected Finish path.
+Contract:
 
-Resume returns to the same ride identity.
+- the Activity/session identity remains unchanged;
+- PAUSED is persisted in encrypted tracking state and survives process death;
+- the native GPS producer is stopped while PAUSED;
+- queued/outbox data may continue to reconcile in the background;
+- paused movement does not contribute to distance/elevation;
+- paused wall-clock time is excluded from Ride elapsed time;
+- Resume restarts the native producer for the same Activity identity;
+- continuity/filter state is reset before accepting resumed points so the pause interval is not counted as GPS-active time or movement;
+- relaunch from PAUSED restores PAUSED UI truth and must not silently restart location production;
+- Finish from PAUSED uses the same durable finalization path as Finish from ACTIVE.
+
+Presentation rule:
+
+PAUSED is rendered as an in-place overlay/sheet over the same Active Ride experience. It is not a separate navigation destination.
+
+The public `RideController` exposes `pause()` / `resume()`; presentation must not mutate a pause boolean directly.
 
 ## 7. Finish/finalization contract
 
