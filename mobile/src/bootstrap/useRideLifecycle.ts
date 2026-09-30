@@ -4,7 +4,13 @@ import {
 
   getRideGpsManager,
 
+  getRideSessionPhase,
+
+  pauseRideSession,
+
   resumeActiveRideIfNeeded,
+
+  resumeRideSession,
 
   startRideSession,
 
@@ -148,6 +154,7 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
       if (await resumeActiveRideIfNeeded(uid)) {
 
         setIsRecording(true);
+        setRidePaused(getRideSessionPhase() === 'paused');
 
       }
 
@@ -192,6 +199,7 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
 
         if (resumed) {
           setIsRecording(true);
+          setRidePaused(getRideSessionPhase() === 'paused');
         } else {
           const recoveredFinishState = classifyRideRecoveryAfterLaunch(
             result.pendingFinalization,
@@ -268,6 +276,37 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
   }, [pushEdge, refreshGpsRecoveryFlag, t]);
 
 
+
+  const pause = useCallback(async () => {
+    if (!isRecording || ridePaused) return;
+    try {
+      await pauseRideSession(userIdRef.current);
+      setRidePaused(true);
+      setLiveSpeed(0);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Could not pause ride';
+      pushEdge({
+        title: t.ride.actions.pause,
+        message,
+        variant: 'error',
+      });
+    }
+  }, [isRecording, pushEdge, ridePaused, t]);
+
+  const resume = useCallback(async () => {
+    if (!isRecording || !ridePaused) return;
+    try {
+      await resumeRideSession(userIdRef.current);
+      setRidePaused(false);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Could not resume ride';
+      pushEdge({
+        title: t.ride.actions.resume,
+        message,
+        variant: 'error',
+      });
+    }
+  }, [isRecording, pushEdge, ridePaused, t]);
 
   const handleStartRide = useCallback(
 
@@ -394,7 +433,9 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
 
     ridePaused,
 
-    setRidePaused,
+    pause,
+
+    resume,
 
     liveSpeed,
 
