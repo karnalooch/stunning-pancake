@@ -583,17 +583,17 @@ def main() -> int:
         write_report()
         return 2
 
-    if not wait_for_ui(r"ride-paused-screen|ride-paused-resume|ride-paused-stop|Jazda wstrzymana|Ride paused|WZNÓW|RESUME|ZATRZYMAJ JAZDĘ|STOP RIDE", 12):
+    if not wait_for_ui(r"ride-paused-overlay|ride-paused-resume|ride-paused-stop|Jazda wstrzymana|Ride paused|WZNÓW|RESUME|ZATRZYMAJ JAZDĘ|STOP RIDE", 12):
         capture_raw(
             "03_ride_paused",
-            "Modal pauzy jazdy — transition FAIL",
-            notes=["PAUZA nie doprowadziła do ekranu RidePaused"],
+            "Overlay pauzy jazdy — transition FAIL",
+            notes=["PAUZA nie pokazała in-place RidePausedOverlay"],
             status="fail",
         )
         write_report()
         return 2
 
-    capture("03_ride_paused", "Modal pauzy jazdy")
+    capture("03_ride_paused", "Overlay pauzy jazdy")
 
     if not tap_pattern(r"ride-paused-resume|WZNÓW|RESUME", None):
         steps.append(
@@ -601,7 +601,7 @@ def main() -> int:
                 id="03b_ride_resumed",
                 title="Wznowienie jazdy",
                 status="fail",
-                notes=["RidePaused nie udostępnia przycisku WZNÓW/RESUME"],
+                notes=["RidePausedOverlay nie udostępnia przycisku WZNÓW/RESUME"],
             )
         )
         write_report()
@@ -635,7 +635,7 @@ def main() -> int:
         capture_raw(
             "03c_ride_repaused",
             "Ponowna pauza — transition FAIL",
-            notes=["Nie osiągnięto ekranu zatrzymania po ponownej pauzie"],
+            notes=["Nie osiągnięto paused overlay po ponownej pauzie"],
             status="fail",
         )
         write_report()
