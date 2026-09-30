@@ -276,7 +276,10 @@ export async function recoverGpsDataOnLaunch(): Promise<RecoveryResult> {
   const needsResumeUi =
     pendingSession ||
     pendingFinalization ||
-    Boolean(state?.activityId && (state.isTracking || buffer.length > 0 || outbox.length > 0));
+    Boolean(
+      state?.activityId &&
+        (state.isTracking || state.isPaused || buffer.length > 0 || outbox.length > 0),
+    );
 
   setRecoveryPending(storage, needsResumeUi);
 
