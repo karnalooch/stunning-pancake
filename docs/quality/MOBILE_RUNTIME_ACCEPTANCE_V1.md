@@ -214,6 +214,43 @@ A prior T84 PASS may be referenced only when it was captured on the same exact S
 
 The detailed procedure and verdict boundary are defined in `docs/quality/T91_EXACT_RC_VALIDATION.md`.
 
+## 10.3 Lightweight Maestro visual proof
+
+For a visual-composition review on an **already installed exact-SHA runtime**, use:
+
+```powershell
+pwsh -NoProfile -File scripts/mobile-visual-proof.ps1
+```
+
+This path is intentionally lighter than full runtime acceptance:
+
+- requires a clean checkout and records the exact Git HEAD;
+- runs only `mobile/.maestro/flows/visual-proof-ride.yaml`;
+- captures mandatory Today → Start → Active → Pause → Summary states;
+- uses stable automation IDs rather than localized text selectors;
+- writes Maestro artifacts under an explicit `--test-output-dir`;
+- copies the five canonical PNGs into a stable evidence directory;
+- computes SHA-256 and byte size for every screenshot;
+- writes a machine-readable `manifest.json` bound to source SHA;
+- **does not** run dependency installation, Expo prebuild, Gradle, EAS, or APK compilation.
+
+Evidence is local/ignored by default:
+
+```text
+artifacts/mobile-visual-proof/<sha>-<timestamp>/
+  manifest.json
+  screenshots/
+    01_today.png
+    02_start.png
+    03_active.png
+    04_paused.png
+    05_summary.png
+  maestro/
+    ...
+```
+
+This proof is for fast visual review and PR evidence. It does not replace T84/T91 physical-device sign-off or the full release/runtime provenance gate when those are required.
+
 ## 11. Failure classification
 
 Runtime results use only:
