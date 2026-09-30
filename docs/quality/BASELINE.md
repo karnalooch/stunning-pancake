@@ -44,7 +44,7 @@ Wynik **Fazy 0 + P1** dla całego monorepo. Odśwież po większych zmianach: `.
 | Coverage >80% backend | Gate **40%** phased (pytest-cov) | Podnieść etapami do 80% |
 | Vitest admin | CI `admin` job | `npm run test -- --run` |
 | GPX F1 | `GET …/sessions/{id}/gpx/` | F2+ w P2_ROADMAP |
-| Telemetry JWT ingest | Opcjonalne (`TELEMETRY_INGEST_JWT_REQUIRED`) | ADR 011 |
+| Telemetry JWT ingest | Wymagane fail-closed w production/PaaS; opcjonalne tylko local/dev | ADR 011 + architecture SSOT |
 | Mobile ESLint ajv moderate | Dev dependency chain | P1-7 partial — po bump eslint-config-expo |
 
 ## Następny krok
