@@ -22,7 +22,6 @@ export type RootStackParamList = {
   ActivityDetail: { activityId: number };
   PerformanceTrends: undefined;
   GlobalLeaderboard: undefined;
-  RidePaused: undefined;
   RideSummary: RideFinishState;
   VisionGallery: undefined;
 };
