@@ -82,6 +82,10 @@ describe('Product UX v2 Today context contract', () => {
     expect(startRide).toContain('GpsRecoveryBanner');
     expect(startRide).toContain('startRideError');
     expect(startRide).toContain('start-ride-gps-diagnostics');
+    expect(startRide).toContain('const [isStarting, setIsStarting] = useState(false)');
+    expect(startRide).toContain('if (isStarting) return;');
+    expect(startRide).toContain('disabled={isStarting}');
+    expect(startRide).toContain('t.dashboard.startingRide');
   });
 
   test('refreshes rider history when Today regains focus', () => {
