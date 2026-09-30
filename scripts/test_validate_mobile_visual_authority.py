@@ -72,7 +72,7 @@ class MobileVisualAuthorityTests(unittest.TestCase):
         style = __import__("json").loads(MAP_STYLE_PATH.read_text(encoding="utf-8"))
         style["sources"]["openmaptiles"]["url"] = "https://demotiles.maplibre.org/tiles/tiles.json"
         errors = validate_mobile_map_style(style)
-        self.assertTrue(any("demotiles.maplibre.org" in error for error in errors))
+        self.assertIn("mobile map style contains forbidden source host: demotiles.maplibre.org", errors)
 
     def test_map_style_requires_attribution(self):
         style = __import__("json").loads(MAP_STYLE_PATH.read_text(encoding="utf-8"))
