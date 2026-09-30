@@ -166,7 +166,7 @@ Terminal UI/business effects must distinguish:
 - `pending-finalization`;
 - `recovery-required`.
 
-PAUSE/RESUME semantics are a domain lifecycle concern, not a presentation flag. Until that transition is fully implemented and persisted, UI state alone must not be treated as authoritative lifecycle truth.
+PAUSE/RESUME semantics are a domain lifecycle concern, not a presentation flag. The mobile controller exposes semantic `pause()` / `resume()` commands backed by persisted encrypted Ride phase; presentation consumes that truth and does not own the transition.
 
 ## 7. Background recording vs live delivery
 
