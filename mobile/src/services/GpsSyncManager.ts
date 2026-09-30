@@ -607,6 +607,10 @@ export class GpsSyncManager {
   startStatsUpdates(): void {
     if (!this._statsCheckTimer) {
       this._statsCheckTimer = setInterval(() => this._emitStats(), 2000);
+      // Node/Jest timers expose unref(); React Native timers do not. Avoid a
+      // test/runtime-tool process being kept alive solely by the UI heartbeat.
+      const timer = this._statsCheckTimer as unknown as { unref?: () => void };
+      timer.unref?.();
     }
     this._emitStats();
   }
