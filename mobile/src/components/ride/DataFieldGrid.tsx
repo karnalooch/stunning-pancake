@@ -165,9 +165,9 @@ export const DataFieldGrid: React.FC<DataFieldGridProps> = ({ metrics, layout: l
   return (
     <Pressable
       style={s.wrap}
-      onLongPress={toggleEdit}
-      delayLongPress={450}
-      accessibilityHint="Long press to customize data fields"
+      onLongPress={hudMode ? undefined : toggleEdit}
+      delayLongPress={hudMode ? undefined : 450}
+      accessibilityHint={hudMode ? undefined : 'Long press to customize data fields'}
     >
       {editMode && (
         <View style={s.editBanner}>
