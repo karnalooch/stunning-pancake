@@ -1,34 +1,39 @@
 /**
- * Tests for the activity-scoped telemetry JWT helper.
+ * Tests for the authenticated activity-scoped telemetry JWT bootstrap.
  *
- * The helper posts to /api/activities/sessions/<id>/telemetry-token/ and
- * returns { token, expiresAt, audience, activityId }. On failure it returns
- * null so callers can fall back to skipping the batch (outbox retains).
+ * The helper must use the normal Django API client so the current access token
+ * and the existing 401 refresh/session-expiry interceptor apply to token
+ * issuance. On failure it returns null and the GPS outbox retains the batch.
  */
 
-import { getTelemetryIngestToken } from '../../src/services/apiClient';
-
-const mockPost = jest.fn();
-
-jest.mock('axios', () => {
-  const actual = jest.requireActual('axios');
-  return {
-    ...actual,
-    post: (...args: unknown[]) => mockPost(...args),
-  };
-});
+import {
+  api,
+  getTelemetryIngestToken,
+  setAuthToken,
+} from '../../src/services/apiClient';
 
 jest.mock('../../src/services/FirebaseService', () => ({
   firebaseCapture: jest.fn(),
 }));
 
 describe('getTelemetryIngestToken', () => {
+  const postSpy = jest.spyOn(api, 'post');
+
   beforeEach(() => {
-    mockPost.mockReset();
+    postSpy.mockReset();
+    setAuthToken('django-access-token');
   });
 
-  test('posts to the SSOT telemetry-token path and returns the body', async () => {
-    mockPost.mockResolvedValue({
+  afterEach(() => {
+    setAuthToken(null);
+  });
+
+  afterAll(() => {
+    postSpy.mockRestore();
+  });
+
+  test('uses the authenticated Django API client and SSOT telemetry-token path', async () => {
+    postSpy.mockResolvedValue({
       data: {
         token: 'aud-telemetry.jwt.body',
         expires_at: '2026-09-16T12:30:00Z',
@@ -39,6 +44,9 @@ describe('getTelemetryIngestToken', () => {
 
     const result = await getTelemetryIngestToken(42);
 
+    expect(api.defaults.headers.common.Authorization).toBe(
+      'Bearer django-access-token',
+    );
     expect(result).toEqual({
       token: 'aud-telemetry.jwt.body',
       expiresAt: '2026-09-16T12:30:00Z',
@@ -46,15 +54,15 @@ describe('getTelemetryIngestToken', () => {
       activityId: 42,
     });
 
-    expect(mockPost).toHaveBeenCalledTimes(1);
-    const [url, body, config] = mockPost.mock.calls[0];
+    expect(postSpy).toHaveBeenCalledTimes(1);
+    const [url, body, config] = postSpy.mock.calls[0];
     expect(url).toMatch(/\/api\/activities\/sessions\/42\/telemetry-token\/$/);
     expect(body).toBeUndefined();
-    expect(config.timeout).toBe(10_000);
+    expect(config).toMatchObject({ timeout: 10_000 });
   });
 
   test('returns null when response body is missing the audience claim', async () => {
-    mockPost.mockResolvedValue({
+    postSpy.mockResolvedValue({
       data: {
         token: 'wrong-aud.jwt',
         expires_at: '2026-09-16T12:30:00Z',
@@ -63,37 +71,29 @@ describe('getTelemetryIngestToken', () => {
       },
     });
 
-    const result = await getTelemetryIngestToken(1);
-
-    expect(result).toBeNull();
+    await expect(getTelemetryIngestToken(1)).resolves.toBeNull();
   });
 
   test('returns null when response body has no token', async () => {
-    mockPost.mockResolvedValue({
+    postSpy.mockResolvedValue({
       data: { audience: 'telemetry', activity_id: 1 },
     });
 
-    const result = await getTelemetryIngestToken(1);
-
-    expect(result).toBeNull();
+    await expect(getTelemetryIngestToken(1)).resolves.toBeNull();
   });
 
-  test('returns null when the endpoint rejects', async () => {
-    mockPost.mockRejectedValue(new Error('Network Error'));
+  test('returns null when the authenticated endpoint rejects', async () => {
+    postSpy.mockRejectedValue(new Error('Network Error'));
 
-    const result = await getTelemetryIngestToken(7);
-
-    expect(result).toBeNull();
+    await expect(getTelemetryIngestToken(7)).resolves.toBeNull();
   });
 
   test('returns null on non-2xx HTTP responses', async () => {
-    mockPost.mockRejectedValue({
+    postSpy.mockRejectedValue({
       isAxiosError: true,
       response: { status: 401 },
     });
 
-    const result = await getTelemetryIngestToken(99);
-
-    expect(result).toBeNull();
+    await expect(getTelemetryIngestToken(99)).resolves.toBeNull();
   });
 });
