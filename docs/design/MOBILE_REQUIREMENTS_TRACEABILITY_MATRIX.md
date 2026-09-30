@@ -71,7 +71,7 @@ Use this file as the release gate for "are we really done?".
 | `AuthScreen` | login/register works, social callback safe fallback, clear error message |
 | `RideDashboardScreen` / Today | rider/current-ride/weekly/history context renders; settings works; new-ride CTA navigates to Start Ride without duplicating sport/GPS setup |
 | `ActiveRideHUDScreen` | map + metrics + status bar + action bar + recovery banner + motion-safe behavior |
-| `RidePausedScreen` | resume/stop flow correct, no navigation dead end |
+| `RidePausedOverlay` | persisted PAUSED keeps the same Ride; Resume dominant, Finish protected, no separate navigation destination |
 | `RideSummaryScreen` | summary values valid, share action does not crash, return to hub works |
 | `CityHubScreen` / Club | city/community/challenges render with cache fallback; challenge ride entry routes through Start Ride; global leaderboard is reachable from Club |
 | `StartRideScreen` | owns sport selection, start errors/GPS recovery, GPS diagnostics entry and the primary ride-start action into the focused live ride flow |
