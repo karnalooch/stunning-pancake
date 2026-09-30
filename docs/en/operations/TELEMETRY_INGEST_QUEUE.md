@@ -4,7 +4,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-30 |
 | **Audience** | See canonical document |
 | **lang** | en |
 | **translation** | [Polski](../../pl/operations/TELEMETRY_INGEST_QUEUE.md) |
@@ -18,14 +18,14 @@
 |--|--|
 | **Status** | Active |
 | **Owner role** | Platform Operator |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-30 |
 | **Audience** | Platform Operator, Backend |
 
-**Related:** [ADR 011](../../adr/011-telemetry-ingest-durability-under-load.md) · [TELEMETRY_LOAD_TEST.md](./TELEMETRY_LOAD_TEST.md) · [EVENT_BURST_50K.md](../../EVENT_BURST_50K.md)
+**Related:** [ADR 011](../../adr/011-telemetry-ingest-durability-under-load.md) · [ADR 015](../../adr/015-critical-data-acknowledgement.md) · [TELEMETRY_LOAD_TEST.md](./TELEMETRY_LOAD_TEST.md) · [EVENT_BURST_50K.md](../../EVENT_BURST_50K.md)
 
 ## Overview
 
-When the ingest guard engages, active-session batches may be **202-accepted** into a Redis Stream (`telemetry:ingest:queue` by default). Background drain workers (`telemetry/ingest_queue.py`) `XREADGROUP` → sort → Timescale insert → `XACK`.
+When the ingest guard engages, Redis Stream remains a buffering mechanism for legacy/non-receipt traffic. **Receipt-backed mobile activity batches are no longer ACKed by `XADD` alone**: under ADR 015 they receive `503 + Retry-After` under guard pressure and remain in the durable mobile outbox until PostgreSQL + `telemetry_ingest_receipts` commit. Background drain workers (`telemetry/ingest_queue.py`) continue to process eligible queued traffic through `XREADGROUP` → sort → Timescale insert → `XACK`.
 
 | Stream | Purpose |
 |--------|---------|
