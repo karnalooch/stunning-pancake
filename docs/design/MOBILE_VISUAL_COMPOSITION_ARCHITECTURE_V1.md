@@ -310,7 +310,7 @@ Rules:
 - do not duplicate the entire Ride UI;
 - Resume is the clear primary action;
 - Finish remains available but protected;
-- future #392 domain pause/resume semantics must drive this surface; presentation state alone is not authority.
+- #392 semantic pause/resume lifecycle drives this surface from persisted controller/domain truth; presentation state alone is not authority.
 
 ## 10. Summary composition contract
 
@@ -580,7 +580,7 @@ For every primary mobile visual PR:
 ## 19. Implementation order after this decision
 
 1. reconcile #388 visual slice against this composition contract;
-2. implement #392 semantic Pause/Resume and consume it as the paused overlay state;
+2. keep #392 semantic Pause/Resume as the only paused-state authority; the in-place overlay consumes it;
 3. simplify Active Ride chrome into coherent map/data/control planes;
 4. recompose Today and Start Ride around Product UX v2 jobs;
 5. recompose Summary around terminal truth first, celebration second;
