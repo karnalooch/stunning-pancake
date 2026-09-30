@@ -71,7 +71,7 @@ To jest główna odpowiedź na pytanie "czy naprawdę jesteśmy gotowi?".
 | `AuthScreen` | login/register działa, social callback ma bezpieczny fallback, error jest czytelny |
 | `RideDashboardScreen` / Today | kontekst zawodnika/aktywnej jazdy/tygodnia/historii działa; settings pozostaje dostępne; CTA nowej jazdy przechodzi do Start Ride bez duplikowania wyboru sportu/GPS |
 | `ActiveRideHUDScreen` | mapa + metryki + status bar + action bar + recovery banner + motion-safe behavior |
-| `RidePausedScreen` | resume/stop flow poprawny, brak dead-end nawigacji |
+| `RidePausedOverlay` | persisted PAUSED zachowuje ten sam Ride; Resume jest dominant, Finish chroniony, brak osobnej nawigacji |
 | `RideSummaryScreen` | wartości poprawne, share nie crashuje, powrót do hub działa |
 | `CityHubScreen` / Club | city/community/challenges działają z fallback cache; wejście w jazdę z wyzwania przechodzi przez Start Ride; globalny ranking jest dostępny z Club |
 | `StartRideScreen` | posiada wybór sportu, błędy startu/GPS recovery, wejście do diagnostyki GPS i główną akcję uruchomienia jazdy do skupionego live ride flow |
