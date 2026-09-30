@@ -28,6 +28,7 @@ jobs:
       mobile: ${{ steps.classifier.outputs.lane_mobile_runtime }}
       admin: ${{ steps.filter.outputs.admin }}
       packages: ${{ steps.filter.outputs.packages }}
+      dependency_security: ${{ steps.filter.outputs.dependency_security }}
       scripts: ${{ steps.filter.outputs.scripts }}
       docs: ${{ steps.classifier.outputs.lane_docs_policy }}
       visual: ${{ steps.classifier.outputs.visual_contract_required }}
@@ -72,6 +73,14 @@ jobs:
               - 'package.json'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
+            dependency_security:
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'admin/package.json'
+              - 'mobile/package.json'
+              - 'backend/requirements*.txt'
+              - 'telemetry/requirements*.txt'
             scripts:
               - 'scripts/**'
               - '.gumball/**'
@@ -976,7 +985,7 @@ jobs:
     name: Trivy CVE Scan
     runs-on: ubuntu-latest
     needs: [changes]
-    if: needs.changes.outputs.full == 'true'
+    if: needs.changes.outputs.full == 'true' || needs.changes.outputs.dependency_security == 'true'
     permissions:
       contents: read
       security-events: write

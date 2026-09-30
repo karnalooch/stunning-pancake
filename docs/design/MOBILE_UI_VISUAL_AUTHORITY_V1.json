@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "authorityVersion": "2.0.0",
+  "authorityVersion": "2.2.0",
   "visualFreezeVersion": "1.2.0",
-  "decisionDate": "2026-09-28",
+  "decisionDate": "2026-09-30",
   "scope": "mobile_visual_only",
   "supersessionBoundary": {
     "rule": "all mobile visual/design/art-direction/mockup decisions authored before takeover master plan T00 / PR #60 are non-normative",
@@ -13,6 +13,7 @@
   },
   "currentAuthority": [
     "docs/design/PRODUCT_UX_V2.md",
+    "docs/design/MOBILE_VISUAL_COMPOSITION_ARCHITECTURE_V1.md",
     "docs/design/MOBILE_UI_DESIGN_CONTRACT_V1.md",
     "docs/design/MOBILE_ASSET_BIBLE_V1.md",
     "docs/design/MOBILE_ASSET_PRODUCTION_LIST_V1.md",
@@ -68,5 +69,17 @@
   "productUxVersion": "2.0.0",
   "supersededAuthoritySources": [
     "docs/design/MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md"
-  ]
+  ],
+  "compositionArchitectureVersion": "1.0.0",
+  "toolingGate": {
+    "githubSystemOfRecord": true,
+    "acceptedIntegrationModes": [
+      "native_github_repository_or_component_integration",
+      "deterministic_cli_api_export_to_versioned_repo_artifact"
+    ],
+    "saasOnlyAuthorityAllowed": false,
+    "researchOnlySourcesExempt": true,
+    "licenseAndProvenanceRequired": true,
+    "vendorLockInFallbackRequired": true
+  }
 }

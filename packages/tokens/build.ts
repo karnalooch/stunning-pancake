@@ -1,9 +1,8 @@
 #!/usr/bin/env npx tsx
-// packages/tokens/build.ts — resolves {primitive.*} references → platform configs
+// packages/tokens/build.ts — resolves repo-owned design tokens into reviewable artifacts
 import * as fs from 'fs';
 import * as path from 'path';
 
-// ── Types ──────────────────────────────────────────────
 interface TokenEntry {
     value: string | number;
     description?: string;
@@ -21,10 +20,13 @@ interface ColorsJSON {
         grandPrix: TokenMap;
         grandPrixNight: TokenMap;
     };
+    spacing?: unknown;
+    typography?: unknown;
+    borders?: unknown;
+    shadows?: unknown;
     [key: string]: unknown;
 }
 
-// ── Load source ────────────────────────────────────────
 const srcPath = path.join(__dirname, 'colors.json');
 if (!fs.existsSync(srcPath)) {
     console.error(`ERROR: colors.json not found at ${srcPath}`);
@@ -33,13 +35,6 @@ if (!fs.existsSync(srcPath)) {
 
 const tokens: ColorsJSON = JSON.parse(fs.readFileSync(srcPath, 'utf-8'));
 
-// ── Resolution ─────────────────────────────────────────
-
-/**
- * Resolve {primitive.xxx} references → actual hex values.
- * Supports recursive resolution (references within resolved values).
- * Throws on circular or unresolved references.
- */
 function resolve(
     value: string,
     primitives: TokenMap,
@@ -59,15 +54,12 @@ function resolve(
             );
         }
 
-        const rawValue = String(primitives[key].value);
-        // Recursively resolve in case primitive values reference other primitives
         const nextSeen = new Set(seen);
         nextSeen.add(refPath);
-        return resolve(rawValue, primitives, nextSeen);
+        return resolve(String(primitives[key].value), primitives, nextSeen);
     });
 }
 
-/** Flatten a theme section into { [tokenName]: hexString } */
 function flattenTheme(
     theme: TokenMap,
     primitives: TokenMap
@@ -79,13 +71,8 @@ function flattenTheme(
     return result;
 }
 
-// ── Check mode ─────────────────────────────────────────
-const isCheck = process.argv.includes('--check');
-
-// ── Build output ───────────────────────────────────────
 const { primitive, semantic, grandPrix, grandPrixNight } = tokens.colors;
 
-// Resolve semantics (they reference primitives)
 const resolvedSemantic: Record<string, string> = {};
 for (const [key, entry] of Object.entries(semantic)) {
     resolvedSemantic[key] = resolve(String(entry.value), primitive);
@@ -93,71 +80,113 @@ for (const [key, entry] of Object.entries(semantic)) {
 
 const output = {
     primitive: Object.fromEntries(
-        Object.entries(primitive).map(([k, v]) => [k, v.value])
+        Object.entries(primitive).map(([key, value]) => [key, value.value])
     ) as Record<string, string | number>,
     semantic: resolvedSemantic,
     grandPrix: flattenTheme(grandPrix, primitive),
     grandPrixNight: flattenTheme(grandPrixNight, primitive),
 };
 
-// ── Ensure output directory ────────────────────────────
+function collection(
+    name: string,
+    modes: Record<string, Record<string, string | number>>
+) {
+    return {
+        name,
+        modes: Object.entries(modes).map(([mode, values]) => ({
+            name: mode,
+            variables: Object.entries(values).map(([tokenName, value]) => ({
+                name: tokenName,
+                resolvedType: typeof value === 'number' ? 'FLOAT' : 'COLOR',
+                value,
+            })),
+        })),
+    };
+}
+
+/**
+ * Repository-owned interchange for optional Figma synchronization.
+ *
+ * This is deliberately not a Figma API response and does not require a paid
+ * Figma plan. A future sync adapter may translate this stable artifact into
+ * Variables API calls when credentials/plan support are available.
+ */
+const figmaBridge = {
+    schemaVersion: 1,
+    authority: 'github',
+    source: 'packages/tokens/colors.json',
+    generatedBy: 'packages/tokens/build.ts',
+    collections: [
+        collection('4VELO / Primitive', { Default: output.primitive }),
+        collection('4VELO / Semantic', { Default: output.semantic }),
+        collection('4VELO / Theme', {
+            Day: output.grandPrix,
+            Night: output.grandPrixNight,
+        }),
+    ],
+    nonColorTokens: {
+        spacing: tokens.spacing ?? null,
+        typography: tokens.typography ?? null,
+        borders: tokens.borders ?? null,
+        shadows: tokens.shadows ?? null,
+    },
+};
+
 const outDir = path.join(__dirname, 'generated');
-
-// ── Check mode: verify outputs exist and are not stale ─
-if (isCheck) {
-    const tsOut = path.join(outDir, 'restyle-colors.ts');
-    const jsonOut = path.join(outDir, 'colors-flat.json');
-
-    const srcStat = fs.statSync(srcPath);
-    let stale = false;
-
-    for (const outPath of [tsOut, jsonOut]) {
-        if (!fs.existsSync(outPath)) {
-            console.error(`ERROR: Missing generated file: ${outPath}`);
-            stale = true;
-        } else {
-            const outStat = fs.statSync(outPath);
-            if (outStat.mtime < srcStat.mtime) {
-                console.error(`ERROR: Stale generated file (source newer): ${outPath}`);
-                stale = true;
-            }
-        }
-    }
-
-    if (stale) {
-        console.error('\n❌ tokens:check FAILED — run "npm run tokens:build" to regenerate.');
-        process.exit(1);
-    }
-
-    console.log('✅ tokens:check passed — generated files are up-to-date.');
-    process.exit(0);
-}
-
-if (!fs.existsSync(outDir)) {
-    fs.mkdirSync(outDir, { recursive: true });
-}
-
-// ── Write TypeScript constants ─────────────────────────
 const tsHeader = `// AUTO-GENERATED by packages/tokens/build.ts — DO NOT EDIT
 // Run: pnpm tokens:build
 // Source: packages/tokens/colors.json
 `;
 
-const restyleOutput =
-    tsHeader +
-    `export const colors = ${JSON.stringify(output, null, 2)} as const;\n`;
+const expectedFiles = new Map<string, string>([
+    [
+        path.join(outDir, 'restyle-colors.ts'),
+        tsHeader + `export const colors = ${JSON.stringify(output, null, 2)} as const;\n`,
+    ],
+    [
+        path.join(outDir, 'colors-flat.json'),
+        JSON.stringify(output, null, 2) + '\n',
+    ],
+    [
+        path.join(outDir, 'figma-variables-bridge.json'),
+        JSON.stringify(figmaBridge, null, 2) + '\n',
+    ],
+]);
 
-fs.writeFileSync(path.join(outDir, 'restyle-colors.ts'), restyleOutput);
-console.log(`  ✓  generated/restyle-colors.ts`);
+const isCheck = process.argv.includes('--check');
 
-// ── Write flat JSON ────────────────────────────────────
-fs.writeFileSync(
-    path.join(outDir, 'colors-flat.json'),
-    JSON.stringify(output, null, 2) + '\n'
-);
-console.log(`  ✓  generated/colors-flat.json`);
+if (isCheck) {
+    let stale = false;
+    for (const [outPath, expected] of expectedFiles) {
+        if (!fs.existsSync(outPath)) {
+            console.error(`ERROR: Missing generated file: ${outPath}`);
+            stale = true;
+            continue;
+        }
 
-// ── Summary ────────────────────────────────────────────
+        const actual = fs.readFileSync(outPath, 'utf-8');
+        if (actual !== expected) {
+            console.error(`ERROR: Stale generated file content: ${outPath}`);
+            stale = true;
+        }
+    }
+
+    if (stale) {
+        console.error('\n❌ tokens:check FAILED — run "pnpm tokens:build" to regenerate.');
+        process.exit(1);
+    }
+
+    console.log('✅ tokens:check passed — generated files match repository token source.');
+    process.exit(0);
+}
+
+fs.mkdirSync(outDir, { recursive: true });
+
+for (const [outPath, expected] of expectedFiles) {
+    fs.writeFileSync(outPath, expected);
+    console.log(`  ✓  generated/${path.basename(outPath)}`);
+}
+
 const themeCounts = {
     primitive: Object.keys(output.primitive).length,
     semantic: Object.keys(output.semantic).length,
@@ -168,3 +197,4 @@ const themeCounts = {
 console.log(
     `\n✅ Token resolution complete — ${themeCounts.primitive} primitives, ${themeCounts.semantic} semantic, ${themeCounts.grandPrix} grandPrix, ${themeCounts.grandPrixNight} grandPrixNight tokens resolved`
 );
+console.log('✅ Figma bridge regenerated from GitHub-owned token source.');

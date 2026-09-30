@@ -57,6 +57,7 @@ BASE_OUTPUT_KEYS = (
     "mobile",
     "admin",
     "packages",
+    "dependency_security",
     "scripts",
     "docs",
     "visual",
@@ -71,6 +72,7 @@ ROUTE_TABLE = {
     "mobile": ("mobile", "security"),
     "admin": ("admin", "audit", "security", "e2e"),
     "packages": ("mobile", "admin", "repo-assets"),
+    "dependency_security": ("trivy",),
     "scripts": ("scripts-python", "audit"),
     "docs": ("docs-links",),
     "visual": ("mobile-visual-contract",),
@@ -342,6 +344,26 @@ class WorkflowStructureTests(unittest.TestCase):
         filters = _path_filter_patterns(_workflow_text())
         pkgs = filters.get("packages", [])
         self.assertNotIn("turbo.json", pkgs)
+
+
+    def test_dependency_manifests_route_to_security_scan(self):
+        filters = _path_filter_patterns(_workflow_text())
+        dependency_security = filters.get("dependency_security", [])
+        for path in (
+            "package.json",
+            "pnpm-lock.yaml",
+            "pnpm-workspace.yaml",
+            "admin/package.json",
+            "mobile/package.json",
+            "backend/requirements*.txt",
+            "telemetry/requirements*.txt",
+        ):
+            with self.subTest(path=path):
+                self.assertIn(path, dependency_security)
+
+        workflow = _workflow_text()
+        trivy = _job_block(workflow, "trivy") or ""
+        self.assertIn("needs.changes.outputs.dependency_security == 'true'", trivy)
 
 
 # ---------------------------------------------------------------------------

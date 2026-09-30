@@ -1,11 +1,11 @@
-# Map basemap licensing (admin)
+# Map basemap licensing (admin + mobile)
 
 
 | | |
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-30 |
 | **Audience** | See canonical document |
 | **lang** | en |
 | **translation** | [Polski](../pl/compliance/MAP_BASEMAP_LICENSING.md) |
@@ -17,7 +17,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Product / Legal |
-| **Last reviewed** | 2026-06-03 |
+| **Last reviewed** | 2026-09-30 |
 | **Audience** | Product, Legal |
 | **Index** | [COMPLIANCE_INDEX.md](./COMPLIANCE_INDEX.md) |
 
@@ -25,8 +25,9 @@
 
 | Surface | Default style | Style URL |
 |--------|----------------|-----------|
-| Live map (`LiveMap.tsx`) | Positron (light) | `https://tiles.openfreemap.org/styles/positron` |
-| Global heatmap (`GlobalHeatmap.tsx`) | Dark | `https://tiles.openfreemap.org/styles/dark` |
+| Admin live map (`LiveMap.tsx`) | Positron (light) | `https://tiles.openfreemap.org/styles/positron` |
+| Admin global heatmap (`GlobalHeatmap.tsx`) | Dark | `https://tiles.openfreemap.org/styles/dark` |
+| Mobile Ride / Explore | **4VELO Ride v1** (repo-owned Liberty fork) | `mobile/assets/map/4velo-ride-v1.json` → OpenFreeMap sources |
 
 **Host:** [OpenFreeMap](https://openfreemap.org/) public tile instance (`tiles.openfreemap.org`).
 
@@ -42,7 +43,7 @@ No API key or paid plan is required for typical admin dashboard traffic on the p
 
 ## Attribution (required)
 
-MapLibre `AttributionControl` is enabled on admin maps with:
+MapLibre attribution is enabled on admin and mobile maps with:
 
 - OpenFreeMap (recommended credit)
 - © OpenStreetMap (link to https://www.openstreetmap.org/copyright)
@@ -51,13 +52,14 @@ Style JSON from OpenFreeMap may add further credits (OpenMapTiles, etc.) automat
 
 ## Configuration overrides
 
-Set at **admin build time** (Vite):
+Configuration overrides:
 
-| Variable | Purpose |
-|----------|---------|
-| `VITE_MAP_STYLE_URL` | Override all admin basemaps |
-| `VITE_MAP_STYLE_URL_LIGHT` | Override live map only |
-| `VITE_MAP_STYLE_URL_DARK` | Override heatmap only |
+| Variable | Surface | Purpose |
+|----------|---------|---------|
+| `VITE_MAP_STYLE_URL` | Admin | Override all admin basemaps |
+| `VITE_MAP_STYLE_URL_LIGHT` | Admin | Override live map only |
+| `VITE_MAP_STYLE_URL_DARK` | Admin | Override heatmap only |
+| `EXPO_PUBLIC_MAP_STYLE_URL` | Mobile | Override the repo-owned mobile style with another compliant MapLibre Style URL |
 
 Example (self-hosted or alternate compliant style):
 
@@ -79,8 +81,8 @@ Implementation: `admin/src/core/map/mapBasemap.ts`.
 
 ## Review checklist (release)
 
-- [ ] Admin maps load with attribution visible
-- [ ] No `cartocdn.com` URLs in `admin/src`
+- [ ] Admin and mobile maps load with attribution visible
+- [ ] No `cartocdn.com`, `demotiles.maplibre.org`, or direct `tile.openstreetmap.org` production basemap URLs in active map code
 - [ ] `VITE_MAP_STYLE_*` documented in `.env.example` if overrides used in staging/prod
 - [ ] DPA / subprocessors list mentions OpenFreeMap if personal data could appear on map UI (usually none beyond public basemap)
 

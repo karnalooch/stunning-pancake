@@ -3,7 +3,7 @@
 > **Status:** NORMATIVE for the mobile rebuild lane  
 > **Decision date:** 2026-09-24  
 > **Trackers:** #149, #151, #152, #153, #154  
-> **Visual authority:** `MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md` and `MOBILE_UI_DESIGN_CONTRACT_V1.md`  
+> **Visual authority:** `PRODUCT_UX_V2.md` → `MOBILE_VISUAL_COMPOSITION_ARCHITECTURE_V1.md` → `MOBILE_UI_DESIGN_CONTRACT_V1.md`  
 > **Runtime authority:** existing proven mobile services plus #156/#157 acceptance gates
 
 ## 1. Purpose
@@ -145,16 +145,28 @@ Special case: Active Ride may own a dedicated full-screen layout, but it must ex
 
 ## 7. Visual architecture rule
 
-Frozen UI is the **product design system**. Pixel art is a **brand/emotion layer**.
+[Product UX v2](./PRODUCT_UX_V2.md) is the product/IA authority. [Mobile Visual Composition Architecture v1](./MOBILE_VISUAL_COMPOSITION_ARCHITECTURE_V1.md) is the screen-composition authority. Frozen UI v1.2 remains a subordinate palette/typography/readability baseline through [Mobile UI Design Contract v1.2](./MOBILE_UI_DESIGN_CONTRACT_V1.md).
 
-Therefore:
+Presentation is composed from four explicit planes:
 
-- routine controls, cards, forms, navigation, metrics and status use modern product primitives;
-- pixel art may appear in hero art, selected identity moments, achievements and truthful celebration states;
-- Active Ride remains performance-first and almost free of decorative pixel art;
-- no legacy generated art becomes production authority without asset-governance approval.
+```text
+feature/domain state
+  -> controller / experience coordinator
+  -> map plane
+  -> data plane
+  -> control plane
+  -> optional brand / emotion plane
+```
 
-The existing visual authority documents remain normative; this document does not duplicate their token/color/typography rules.
+Rules:
+
+- map/data/control remain complete without decorative artwork;
+- pixel art and brand imagery are optional identity/reward layers;
+- Active Ride is map/data/control-first and does not expose layout editing in normal moving mode;
+- Pause is presented as a Ride state/overlay, not a visually unrelated destination;
+- Summary is terminal-truth-first and celebration-second;
+- every major composition should pass the asset-off test defined by the composition architecture;
+- no legacy/generated art becomes production authority without asset-governance approval.
 
 ## 8. Feature migration order
 

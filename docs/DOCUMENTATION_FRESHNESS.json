@@ -69,6 +69,10 @@
     {
       "path": "docs/adr/README.md",
       "max_age_days": 180
+    },
+    {
+      "path": "docs/design/MOBILE_VISUAL_COMPOSITION_ARCHITECTURE_V1.md",
+      "max_age_days": 90
     }
   ]
 }

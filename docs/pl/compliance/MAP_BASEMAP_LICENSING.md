@@ -4,7 +4,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-30 |
 | **Audience** | Zobacz dokument kanoniczny |
 | **lang** | pl |
 | **translation** | [English](../../compliance/MAP_BASEMAP_LICENSING.md) |
@@ -15,7 +15,7 @@
 |--|--|
 | **Stan** | ✅Aktywny |
 | **Rola właściciela** | Produkt / Informacje prawne |
-| **Ostatnia recenzja** | 2026-06-03 |
+| **Ostatnia recenzja** | 2026-09-30 |
 | **Publiczność** | Produkt, Legalny |
 | **Indeks** | [COMPLIANCE_INDEX.md](../../compliance/COMPLIANCE_INDEX.md) |
 
@@ -23,8 +23,9 @@
 
 | Powierzchnia | Domyślny styl | Adres URL stylu |
 |------------|----------------|---------------|
-| Mapa na żywo (`LiveMap.tsx`) | Pozyton (światło) | `https://tiles.openfreemap.org/styles/positron` |
-| Globalna mapa cieplna (`GlobalHeatmap.tsx`) | Ciemny | `https://tiles.openfreemap.org/styles/dark` |
+| Admin live map (`LiveMap.tsx`) | Positron | `https://tiles.openfreemap.org/styles/positron` |
+| Admin heatmap (`GlobalHeatmap.tsx`) | Dark | `https://tiles.openfreemap.org/styles/dark` |
+| Mobile Ride / Explore | **4VELO Ride v1** — fork Liberty w repo | `mobile/assets/map/4velo-ride-v1.json` → źródła OpenFreeMap |
 
 **Host:** [OpenFreeMap](https://openfreemap.org/) publiczna instancja kafelka (`tiles.openfreemap.org`).
 
@@ -84,3 +85,12 @@ VITE_MAP_STYLE_URL=https://tiles.example.com/styles/positron
 - https://github.com/hyperknot/openfreemap
 - https://www.openstreetmap.org/copyright
 - https://wiki.openstreetmap.org/wiki/Tile_usage_policy
+
+
+## Mobile — 2026-09-30
+
+Mobile nie używa już MapLibre demo ani bezpośredniego publicznego rastra `tile.openstreetmap.org` jako aktywnego fallbacku.
+
+Kanoniczny styl to wersjonowany `mobile/assets/map/4velo-ride-v1.json`, edytowalny w Maputniku i oparty o źródła OpenFreeMap. Deployment może jawnie ustawić `EXPO_PUBLIC_MAP_STYLE_URL`, ale attribution OpenMapTiles/OSM pozostaje obowiązkowe.
+
+OpenFreeMap public instance nie ma SLA; przy większej skali pozostaje możliwość self-hostingu albo zgodnego dostawcy.

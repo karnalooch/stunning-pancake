@@ -1,6 +1,6 @@
 # 4VELO Mobile UI Design Contract v1.2 — Reference Baseline
 
-> **CURRENT PRODUCT UX AUTHORITY:** [Product UX v2](./PRODUCT_UX_V2.md) (2026-09-28). This file remains a visual/reference baseline where it does not conflict with UX v2. Its previous IA freeze is superseded.
+> **CURRENT PRODUCT UX AUTHORITY:** [Product UX v2](./PRODUCT_UX_V2.md) (2026-09-28). **CURRENT MOBILE COMPOSITION AUTHORITY:** [Mobile Visual Composition Architecture v1](./MOBILE_VISUAL_COMPOSITION_ARCHITECTURE_V1.md) (2026-09-30). This file remains a subordinate visual/reference baseline.
 
 | | |
 |---|---|
@@ -10,12 +10,12 @@
 | **Applies to** | 4VELO mobile application |
 | **Implementation order** | Auth/Onboarding → Home → Active Ride → Ride Summary → Profile/Compete/Explore |
 | **Runtime changes in this document** | None |
-| **Visual authority** | [Product UX v2](./PRODUCT_UX_V2.md) → this reference baseline → historical [UI Visual Protection Architecture v1](./MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md) |
+| **Visual authority** | [Product UX v2](./PRODUCT_UX_V2.md) → [Mobile Visual Composition Architecture v1](./MOBILE_VISUAL_COMPOSITION_ARCHITECTURE_V1.md) → this reference baseline → historical [UI Visual Protection Architecture v1](./MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md) |
 | **Repo implementation** | **COMPLETE across production mobile screens as of 2026-09-27 / PR #298; physical T84 validation still pending** |
 
 ## 0. Visual authority
 
-This contract is subordinate to [Product UX v2](./PRODUCT_UX_V2.md). Frozen UI v1.2 remains useful as a visual baseline for palette, readability, safe ride presentation and restrained pixel-art usage, but it no longer protects the old shell, tab names, screen composition or information architecture.
+This contract is subordinate to [Product UX v2](./PRODUCT_UX_V2.md) and the current [Mobile Visual Composition Architecture v1](./MOBILE_VISUAL_COMPOSITION_ARCHITECTURE_V1.md). Frozen UI v1.2 remains useful for palette, typography, readability, safe ride presentation and restrained pixel-art usage, but it does not own shell, information architecture or screen composition.
 
 ## 0.1 Implementation checkpoint — 2026-09-27
 

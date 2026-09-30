@@ -39,7 +39,7 @@ Ten plik jest **głównym punktem wejścia i mapą SSOT** dla 4VELO. Dokumentacj
 | Security | [SECURITY.md](../SECURITY.md), [security/](security/) | historyczne audyty bezpieczeństwa |
 | Compliance | [compliance/README.md](compliance/README.md) | template kampanii / snapshoty |
 | Jakość | [quality/README.md](quality/README.md), [reports/QUALITY_COMMAND_MATRIX.md](reports/QUALITY_COMMAND_MATRIX.md) | deklaracje „green” bez wskazanego runu |
-| Design / UI | [Product UX v2](design/PRODUCT_UX_V2.md) · [design/](design/) | screenshot bez daty/authority contract |
+| Design / UI | [Product UX v2](design/PRODUCT_UX_V2.md) · [Mobile Visual Composition Architecture](design/MOBILE_VISUAL_COMPOSITION_ARCHITECTURE_V1.md) · [design/](design/) | screenshot, stary Frozen UI albo asset bez current authority contract |
 | i18n docs | [locales/README.md](locales/README.md) | legacy redirect stub jako miejsce edycji |
 
 ## Typy dokumentów
