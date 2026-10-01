@@ -5,6 +5,18 @@ from __future__ import annotations
 import os
 import warnings
 
+_DEFAULT_UNSAFE_SECRET_KEY = "default-unsafe-key-for-dev"
+
+
+def resolve_secret_key(raw: str | None, *, debug: bool) -> str:
+    """Require persistent explicit signing authority outside local DEBUG mode."""
+    if not debug and (not raw or not raw.strip() or raw.strip() == _DEFAULT_UNSAFE_SECRET_KEY):
+        raise RuntimeError(
+            "SECRET_KEY must be set in production. Set the SECRET_KEY environment variable."
+        )
+    # Keep explicit keys byte-for-byte, and preserve the existing local default.
+    return _DEFAULT_UNSAFE_SECRET_KEY if raw is None else raw
+
 
 def parse_allowed_hosts(raw: str | None) -> list[str]:
     if not raw or not raw.strip():

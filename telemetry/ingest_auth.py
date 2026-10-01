@@ -1,10 +1,10 @@
-"""Optional JWT gate for telemetry ingest (ADR 011 / Q-P2-1).
+"""JWT gate for telemetry ingest (ADR 011 / Q-P2-1).
 
-When ``TELEMETRY_INGEST_JWT_REQUIRED=1`` ingest POSTs must carry a Bearer JWT
-signed with ``TELEMETRY_INGEST_JWT_SECRET`` (or shared ``SECRET_KEY``). When
-``TELEMETRY_INGEST_AUDIENCE_REQUIRED=1`` (default OFF — opt-in) the token
-must also carry ``aud == "telemetry"`` so a Django access token cannot be
-replayed against the telemetry service.
+Production/PaaS startup requires JWT and audience enforcement; only explicit
+local/development use retains the optional flags. Ingest POSTs carry a Bearer
+JWT signed with ``TELEMETRY_INGEST_JWT_SECRET`` (or shared ``SECRET_KEY``).
+With ``TELEMETRY_INGEST_AUDIENCE_REQUIRED=1``, the token must also carry
+``aud == "telemetry"`` so a Django access token cannot be replayed here.
 
 Per-activity tokens additionally carry ``activity_id`` and ``sub``. Whenever
 those claims are present they are enforced against the ingest payload; when
@@ -41,9 +41,8 @@ def jwt_enforced() -> bool:
 
 
 def audience_required() -> bool:
-    # Default False so existing deployments do not silently reject telemetry
-    # batches the day the backend ships — mobile must opt in by sending a
-    # JWT with aud='telemetry'. Operators flip this after mobile rollout.
+    # Local/dev remains opt-in. Production/PaaS startup refuses disabled scope
+    # enforcement; clients must obtain activity-scoped telemetry tokens first.
     return _truthy("TELEMETRY_INGEST_AUDIENCE_REQUIRED")
 
 

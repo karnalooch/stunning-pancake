@@ -15,6 +15,7 @@ from db import close_pool, flush_insert_buffer, get_pool
 from ingest_queue import queue_enabled, start_drain_worker, stop_drain_worker
 from ingest_service import get_ingest_redis
 from privacy import load_zones_from_rows, privacy_zones_sync, zones
+from production_security import assert_production_security
 from schema import assert_schema_ready
 
 logger = logging.getLogger("telemetry")
@@ -22,6 +23,7 @@ logger = logging.getLogger("telemetry")
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    assert_production_security()
     pool = await get_pool()
     async with pool.acquire() as conn:
         await assert_schema_ready(conn)
@@ -53,24 +55,6 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             SKIP_BROADCAST,
             SKIP_DB,
         )
-    from ingest_auth import jwt_enforced
-
-    if not jwt_enforced():
-        import os
-
-        env = (
-            (os.getenv("SENTRY_ENVIRONMENT") or os.getenv("RAILWAY_ENVIRONMENT") or "")
-            .strip()
-            .lower()
-        )
-        on_paas = bool(
-            os.getenv("RAILWAY_SERVICE_NAME") or os.getenv("DYNO") or os.getenv("RENDER")
-        )
-        if env in ("production", "prod") or on_paas:
-            logger.warning(
-                "TELEMETRY_INGEST_JWT_REQUIRED is off — ingest POSTs are unauthenticated. "
-                "Set TELEMETRY_INGEST_JWT_REQUIRED=1 in production."
-            )
 
     logger.info("telemetry engine fully operational")
 
