@@ -6,6 +6,7 @@ const read = (relative: string) => fs.readFileSync(path.join(SRC, relative), 'ut
 
 const migratedScreens = [
   'screens/SettingsScreen.tsx',
+  'screens/SettingsSections.tsx',
   'screens/GpsDiagnosticsScreen.tsx',
   'screens/SegmentsScreen.tsx',
   'screens/MarketplaceScreen.tsx',
@@ -24,7 +25,7 @@ const forbiddenRoutineChrome = [
   "fontFamily: 'VT323'",
 ];
 
-describe('T83-D Frozen UI secondary-surface contract', () => {
+describe('Secondary-surface safety and semantic presentation contract', () => {
   test.each(migratedScreens)('%s does not use routine legacy game chrome', (screen) => {
     const source = read(screen);
 
@@ -33,8 +34,9 @@ describe('T83-D Frozen UI secondary-surface contract', () => {
     }
   });
 
-  test('Settings uses semantic product UI and modern input typography', () => {
-    const source = read('screens/SettingsScreen.tsx');
+  test('preserved settings sections retain semantic product UI and modern input typography', () => {
+    // Capabilities moved intact; their old file name is not a visual requirement.
+    const source = read('screens/SettingsSections.tsx');
 
     expect(source).toContain('<ProductCard');
     expect(source).toContain('<PrimaryButton');
@@ -43,7 +45,16 @@ describe('T83-D Frozen UI secondary-surface contract', () => {
     expect(source).not.toContain("from '../theme/fonts'");
   });
 
-  test('shared edge-state feedback also uses Frozen UI product semantics', () => {
+  test('Roadbook settings exposes appearance without dropping existing settings sections', () => {
+    const source = read('screens/SettingsScreen.tsx');
+    expect(source).toContain('<SettingsSections embedded');
+    expect(source).toContain('<AppearanceSettingsPanel');
+    expect(source).toContain('settings-appearance');
+    expect(source).toContain('useAppearance');
+    expect(source).toContain('PRODUCT_TYPOGRAPHY');
+  });
+
+  test('shared edge-state feedback also uses semantic product roles', () => {
     const source = read('components/ui/EdgeStateBanner.tsx');
 
     expect(source).toContain('PRODUCT_TYPOGRAPHY');
@@ -83,7 +94,7 @@ describe('T83-D Frozen UI secondary-surface contract', () => {
     expect(source).not.toContain('setPoints(0);\n        setPools([]);');
   });
 
-  test('Performance Trends uses Frozen UI metrics and preserves truthful cache/error states', () => {
+  test('Performance Trends preserves truthful cache/error states and readable metrics', () => {
     const source = read('screens/PerformanceTrendsScreen.tsx');
 
     expect(source).toContain('<ProductCard');
@@ -93,7 +104,7 @@ describe('T83-D Frozen UI secondary-surface contract', () => {
     expect(source).toContain('OfflineCacheService.getHistory()');
   });
 
-  test('Global Leaderboard uses Frozen UI rows and distinguishes cache/error/empty', () => {
+  test('Global Leaderboard distinguishes cache/error/empty', () => {
     const source = read('screens/GlobalLeaderboardScreen.tsx');
 
     expect(source).toContain('<ProductCard');

@@ -43,6 +43,7 @@ import * as Sharing from 'expo-sharing';
 import { trackEngagement } from '../services/EngagementAnalytics';
 import type { RideEdgeMessage } from '../services/apiRetry';
 import { EdgeStateBanner } from '../components/ui/EdgeStateBanner';
+import { createRideStartCommand } from './rideStartCommand';
 import { mobileLinking } from '../navigation/linking';
 import type { RideFinishState } from '../features/ride/model/RideFinishState';
 
@@ -122,13 +123,16 @@ function MainTabs({
     onGpsRecoveryPress,
   };
 
-  const handleStartRide = async (
-    activityType: ActivitySportType = 'BIKE',
-    eventId?: number,
-  ) => {
-    const ok = await onStartRide(activityType, eventId);
-    if (ok) navRef.current?.navigate('MainTabs', { screen: 'Tracking' });
-  };
+  const startInputs = useRef({ onStartRide, navRef });
+  startInputs.current = { onStartRide, navRef };
+  const startCommand = useRef<ReturnType<typeof createRideStartCommand> | null>(null);
+  if (!startCommand.current) {
+    startCommand.current = createRideStartCommand(
+      (sport, eventId) => startInputs.current.onStartRide(sport, eventId),
+      () => startInputs.current.navRef.current?.navigate('MainTabs', { screen: 'Tracking' }),
+    );
+  }
+  const handleStartRide = startCommand.current;
 
   const handleStopRide = async () => {
     const result = await onStopRide();
@@ -177,7 +181,7 @@ function MainTabs({
         {() => (
           <StartRideScreen
             isRecording={isRecording}
-            onStartRide={(sport) => void handleStartRide(sport)}
+            onStartRide={(sport) => handleStartRide(sport)}
             onGoToRide={() => navRef.current?.navigate('MainTabs', { screen: 'Tracking' })}
             onOpenGpsWizard={() => navRef.current?.navigate('GpsDiagnostics')}
             startRideError={startRideError}
