@@ -39,3 +39,4 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({ finishStat
     {durableSuccess && onShare ? <RoadbookSection><PrimaryButton label={c.share} variant="secondary"
       onPress={onShare} testID="ride-summary-share" /></RoadbookSection> : null}
   </RoadbookPage>;
+};
