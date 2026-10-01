@@ -42,10 +42,15 @@ describe('Governed assets and Roadbook asset independence', () => {
     expect(cyclist).not.toContain('.svg');
     expect(share).not.toContain('.svg');
   });
-  test('Active Ride uses PNG marker and native action shapes without scenic art', () => {
+  test('Active Ride uses a geographic marker and native action shapes without scenic art', () => {
     const map = read('components/RideMapView.tsx');
     const actions = read('components/ride/RideActionBar.tsx');
-    expect(map).toContain('APPROVED_ASSETS.rideMarkerRider');
+    // Coordinate updates and invalid/missing fixes are covered by mounted
+    // rideMapPosition tests; this contract protects asset independence only.
+    expect(map).toContain('<GeoJSONSource id="ride-position"');
+    expect(map).toContain('source="ride-position" type="circle"');
+    expect(map).not.toContain('APPROVED_ASSETS.rideMarkerRider');
+    expect(map).not.toContain('CyclistSprite');
     for (const action of ['pause', 'resume', 'stop']) expect(actions).toContain(`ride-action-icon-${action}-v1`);
     expect(actions).not.toContain('.svg');
     expect(read('screens/ActiveRideHUDScreen.tsx')).not.toContain('SceneBackground');
