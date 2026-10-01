@@ -1,7 +1,6 @@
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { observable } from '@legendapp/state';
-import { Pressable, TextInput } from 'react-native';
 import { AuthScreen } from '../../src/bootstrap/AuthScreen';
 import { stringsPl } from '../../src/i18n/strings.pl';
 
@@ -20,8 +19,18 @@ jest.mock('../../src/i18n/useI18n', () => ({ useI18n: () => ({ locale: 'pl', t: 
 
 let tree: TestRenderer.ReactTestRenderer | undefined;
 afterEach(() => { act(() => tree?.unmount()); tree = undefined; });
-const button = (testID: string) => tree!.root.find((node) => node.type === Pressable && node.props.testID === testID);
-const input = (testID: string) => tree!.root.find((node) => node.type === TextInput && node.props.testID === testID);
+// Query real control semantics, not the identity of a memo/forwardRef export.
+// Stop at the first matching boundary so its native descendants are not duplicates.
+const control = (testID: string, predicate: (node: TestRenderer.ReactTestInstance) => boolean) => {
+  const matches = tree!.root.findAll((node) => node.props.testID === testID && predicate(node), { deep: false });
+  const node = matches[0];
+  if (matches.length !== 1 || !node) throw new Error(`expected one control ${testID}, found ${matches.length}`);
+  return node;
+};
+const button = (testID: string) => control(testID, (node) =>
+  node.props.accessibilityRole === 'button' && typeof node.props.onPress === 'function');
+const input = (testID: string) => control(testID, (node) =>
+  typeof node.props.accessibilityLabel === 'string' && typeof node.props.onChangeText === 'function');
 const render = async (mode: 'welcome' | 'login' | 'register' = 'login') => {
   const auth = observable({ mode, email: '', username: '', password: '', confirmPassword: '', isSubmitting: false });
   const onSubmit = jest.fn(); const onModeChange = jest.fn(); const onSocialLogin = jest.fn();
@@ -49,7 +58,10 @@ describe('Roadbook AuthScreen with real observable updates', () => {
     await act(async () => { auth.isSubmitting.set(true); });
     expect(input('auth-email').props.editable).toBe(false);
     expect(input('auth-password').props.editable).toBe(false);
-    for (const id of ['auth-submit', 'auth-google', 'auth-facebook']) expect(button(id).props.disabled).toBe(true);
+    for (const id of ['auth-submit', 'auth-google', 'auth-facebook']) {
+      expect(button(id).props.disabled).toBe(true);
+      expect(button(id).props.accessibilityState.disabled).toBe(true);
+    }
     act(() => submit());
     expect(onSubmit).not.toHaveBeenCalled();
   });
