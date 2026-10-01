@@ -1,3 +1,5 @@
+// TEST_FIXTURE: Service replies in this suite are controlled local fixtures for mounted-screen loading unit tests.
+// TEST_RUNTIME_NOTE: Scoped service mocks test screen initialization only; this suite does not provide runtime-service or integration coverage.
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { AthleteProfileScreen } from '../../src/screens/AthleteProfileScreen';
