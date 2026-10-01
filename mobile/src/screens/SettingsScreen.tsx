@@ -38,9 +38,8 @@ export function SettingsScreen({ embedded = false }: { embedded?: boolean }) {
   const alive = useRef(false);
   const request = useRef(0);
   const operation = useRef(false);
-  const refresh = useCallback(async () => {
+  const readStatus = useCallback(async () => {
     const id = ++request.current;
-    setLoading(true);
     const [wearableResult, privacyResult] = await Promise.allSettled([WearableService.getStatus(), PrivacyService.getZones()]);
     if (!alive.current || id !== request.current) return;
     setWearableError(wearableResult.status === 'rejected');
@@ -50,7 +49,8 @@ export function SettingsScreen({ embedded = false }: { embedded?: boolean }) {
     if (privacyResult.status === 'fulfilled' && Array.isArray(privacyResult.value)) setPrivacyZoneCount(privacyResult.value.length);
     setLoading(false);
   }, []);
-  useEffect(() => { alive.current = true; void refresh(); return () => { alive.current = false; request.current++; }; }, [refresh]);
+  useEffect(() => { alive.current = true; void readStatus(); return () => { alive.current = false; }; }, [readStatus]);
+  const refresh = () => { setLoading(true); return readStatus(); };
   const run = async (action: () => Promise<unknown>) => {
     if (operation.current) return;
     operation.current = true; setBusy(true); setError(null); setSaved(false);
@@ -62,7 +62,7 @@ export function SettingsScreen({ embedded = false }: { embedded?: boolean }) {
     const payload = provider === 'strava' ? await WearableService.getStravaAuthUrl() : await WearableService.getGarminAuthUrl();
     if (!payload?.auth_url) throw new Error('Missing authorization URL');
     await Linking.openURL(payload.auth_url);
-    // Opening OAuth is not evidence of a connection; refresh remains explicit after returning.
+    // Opening OAuth is not evidence of a connection. Refresh explicitly after returning.
   });
   const saveNumber = (kind: 'weight' | 'hr') => {
     const value = kind === 'weight' ? parsePreferenceNumber(weightText, 30, 200) : parsePreferenceNumber(hrText, 100, 230, true);

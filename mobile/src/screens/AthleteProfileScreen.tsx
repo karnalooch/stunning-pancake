@@ -25,17 +25,22 @@ export const AthleteProfileScreen: React.FC<Props> = ({ user, onLogout, onTraini
   const [profileError, setProfileError] = useState(false);
   const alive = useRef(false);
   const requestId = useRef(0);
-  const retryProfile = useCallback(async () => {
+  // Initial loading belongs to initial state; effects only publish asynchronous responses.
+  const readProfile = useCallback(async () => {
     if (fixturesEnabled) return;
     const id = ++requestId.current;
-    setProfileLoading(true); setProfileError(false);
     try {
       const next = await AuthService.getProfile();
-      if (alive.current && id === requestId.current) setProfile(next);
+      if (alive.current && id === requestId.current) { setProfile(next); setProfileError(false); }
     } catch { if (alive.current && id === requestId.current) setProfileError(true); }
     finally { if (alive.current && id === requestId.current) setProfileLoading(false); }
   }, [fixturesEnabled]);
-  useEffect(() => { alive.current = true; void retryProfile(); return () => { alive.current = false; requestId.current++; }; }, [retryProfile]);
+  useEffect(() => {
+    alive.current = true;
+    void readProfile();
+    return () => { alive.current = false; };
+  }, [readProfile]);
+  const retryProfile = () => { setProfileLoading(true); setProfileError(false); void readProfile(); };
   const displayName = formatRiderDisplayName(profileFixture?.username ?? profile?.username ?? user?.username, t.profile.athlete);
   const displayEmail = fixturesEnabled ? null : profile?.email?.trim() || null;
   const displayCommunity = fixturesEnabled ? null : profile?.tenant_name?.trim() || null;
@@ -62,8 +67,8 @@ export const AthleteProfileScreen: React.FC<Props> = ({ user, onLogout, onTraini
         onPress={onSettings} testID="profile-settings-button" />
     </RoadbookSection>
     {profileError ? <RoadbookNotice error title={t.profile.profileLoadErrorTitle} message={t.profile.profileLoadErrorBody}
-      testID="profile-load-error" action={<RoadbookRow label={t.common.retry} onPress={() => void retryProfile()} testID="profile-retry" />} /> : null}
-    <RoadbookSection title={t.profile.statistics}>
+      testID="profile-load-error" action={<RoadbookRow label={t.common.retry} onPress={retryProfile} testID="profile-retry" />} /> : null}
+    <RoadbookSection title={copy.progress}>
       {displayStatsOffline ? <RoadbookNotice title={t.errors.network} message={t.errors.offlineCache} testID="profile-stats-offline" /> : null}
       {displayStatsLoading ? <SkeletonBlock height={150} /> : displayStatsError ? <RoadbookNotice error
         title={t.profile.statsLoadErrorTitle} message={t.profile.statsLoadErrorBody} testID="profile-stats-error"

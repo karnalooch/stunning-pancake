@@ -41,19 +41,19 @@ export const ExploreMapScreen: React.FC<{ onOpenMarketplace?: () => void }> = ({
   const alive = useRef(false);
   const request = useRef(0);
   const mapStyle = useMemo(() => resolveRideMapStyle() as string | StyleSpecification, []);
-  const loadPois = useCallback(async () => {
+  const readPois = useCallback(async () => {
     const id = ++request.current;
-    setLoading(true); setLoadError(false);
     try {
       const rows = normalizePois(await POIService.getPOIs());
-      if (alive.current && id === request.current) { setPois(rows); setSelected(null); }
+      if (alive.current && id === request.current) { setPois(rows); setSelected(null); setLoadError(false); }
     } catch {
       if (alive.current && id === request.current) setLoadError(true);
     } finally {
       if (alive.current && id === request.current) setLoading(false);
     }
   }, []);
-  useEffect(() => { alive.current = true; void loadPois(); return () => { alive.current = false; request.current++; }; }, [loadPois]);
+  useEffect(() => { alive.current = true; void readPois(); return () => { alive.current = false; }; }, [readPois]);
+  const loadPois = () => { setLoading(true); setLoadError(false); void readPois(); };
   const filtered = useMemo(() => {
     const text = query.trim().toLocaleLowerCase();
     return text ? pois.filter((poi) => `${poi.name} ${poi.category ?? ''}`.toLocaleLowerCase().includes(text)) : pois;
@@ -90,7 +90,7 @@ export const ExploreMapScreen: React.FC<{ onOpenMarketplace?: () => void }> = ({
       {loading ? <Text style={styles.body} testID="explore-poi-loading">{t.common.loading}</Text> : null}
       {loadError ? <RoadbookNotice error title={t.explore.poiLoadError} message={t.explore.poiLoadErrorHint}
         testID="explore-poi-error" action={<PrimaryButton label={t.common.retry} variant="secondary"
-          onPress={() => void loadPois()} testID="explore-poi-retry" />} /> : null}
+          onPress={loadPois} testID="explore-poi-retry" />} /> : null}
       {!loading && !loadError && pois.length === 0 ? <Text style={styles.body} testID="explore-poi-empty">{t.explore.poiEmpty}</Text> : null}
       {!loading && !loadError && pois.length > 0 && filtered.length === 0 ? <Text style={styles.body}>{c.noMatches}</Text> : null}
       {selected ? <RoadbookNotice testID="discover-selected-place" title={selected.name}

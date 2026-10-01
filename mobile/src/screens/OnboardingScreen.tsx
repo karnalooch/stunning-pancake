@@ -34,28 +34,31 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
   const [submitError, setSubmitError] = useState(false);
   const alive = useRef(false);
   const locked = useRef(false);
-  const permissionsInFlight = useRef(false);
+  const tenantRequest = useRef(0);
   const flatDepartments = useMemo(() => flattenDepartments(departments), [departments]);
   const visibleTenants = useMemo(() => filterTenants(tenants, tenantQuery), [tenants, tenantQuery]);
   const selectedTenant = tenants.find((tenant) => tenant.id === selectedTenantId);
   const selectedDepartment = flatDepartments.find((department) => department.id === selectedDepartmentId);
   const stepNames = [t.onboarding.city.step, t.onboarding.department.step, t.onboarding.finish.step];
-  const loadTenants = useCallback(async () => {
-    setTenantState('loading');
+  const readTenants = useCallback(async () => {
+    const request = ++tenantRequest.current;
     try {
       const rows = await AuthService.getPublicTenants();
-      if (!alive.current) return;
+      if (!alive.current || request !== tenantRequest.current) return;
       setTenants(rows); setTenantState(rows.length > 0 ? 'ready' : 'empty');
       if (rows.length === 1 && rows[0]) setSelectedTenantId(rows[0].id);
-    } catch { if (alive.current) { setTenants([]); setTenantState('error'); } }
+    } catch {
+      if (alive.current && request === tenantRequest.current) { setTenants([]); setTenantState('error'); }
+    }
   }, []);
-  useEffect(() => { alive.current = true; void loadTenants(); return () => { alive.current = false; }; }, [loadTenants]);
+  useEffect(() => { alive.current = true; void readTenants(); return () => { alive.current = false; }; }, [readTenants]);
+  const loadTenants = () => { setTenantState('loading'); void readTenants(); };
   const loadDepartmentsForTenant = async (tenantId: string): Promise<boolean> => {
     setDepartmentState('loading'); setDepartments([]); setSelectedDepartmentId(null);
     try {
-      // Never load/join a department for a stale tenant after a failed selection update.
       await AuthService.updateProfile({ tenant_id: tenantId });
     } catch { if (alive.current) { setDepartmentState('error'); setSubmitError(true); } return false; }
+    if (!alive.current) return false;
     try {
       const rows = await DepartmentService.getTree();
       if (alive.current) { setDepartments(rows); setDepartmentState(rows.length > 0 ? 'ready' : 'empty'); }
@@ -68,36 +71,36 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
     try { if (await loadDepartmentsForTenant(selectedTenantId) && alive.current) setStep(1); }
     finally { locked.current = false; if (alive.current) setIsSubmitting(false); }
   };
+  const confirmWithoutGps = () => new Promise<boolean>((resolve) => {
+    Alert.alert(t.onboarding.finish.gpsPermissionTitle, t.onboarding.finish.gpsPermissionBody, [
+      { text: t.onboarding.finish.continueWithoutGps, onPress: () => resolve(true) },
+      { text: t.common.close, style: 'cancel', onPress: () => resolve(false) },
+    ], { cancelable: true, onDismiss: () => resolve(false) });
+  });
   const finishOnboarding = async () => {
     if (locked.current) return;
+    // The same lock covers permission prompts, confirmation and membership writes.
     locked.current = true; setIsSubmitting(true); setSubmitError(false);
     try {
+      let gpsGranted = false;
+      try {
+        const existing = await Location.getForegroundPermissionsAsync();
+        const result = existing.status === 'granted' ? existing : await Location.requestForegroundPermissionsAsync();
+        gpsGranted = result.status === 'granted';
+        if (gpsGranted) await Location.requestBackgroundPermissionsAsync().catch(() => null);
+      } catch { gpsGranted = false; }
+      if (!alive.current || (!gpsGranted && !(await confirmWithoutGps()))) return;
+      if (!alive.current) return;
       if (selectedTenantId) await AuthService.updateProfile({ tenant_id: selectedTenantId });
+      if (!alive.current) return;
       if (isJoinableDepartmentId(selectedDepartmentId)) await DepartmentService.selfJoin(selectedDepartmentId as number);
-      // Preserve the existing optional active-event enrollment; do not fabricate an event when none exists.
+      if (!alive.current) return;
+      // Preserve optional active-event enrollment, without inventing an active event.
       try { const events = await EventService.list(); const active = events.find((event) => event.status === 'ACTIVE');
-        if (active) await EventService.join(active.id); } catch { /* Optional event enrollment is not required for entry. */ }
-      await onFinish({ refreshProfile: true });
+        if (active && alive.current) await EventService.join(active.id); } catch { /* Event enrollment is optional. */ }
+      if (alive.current) await onFinish({ refreshProfile: true });
     } catch { if (alive.current) setSubmitError(true); }
     finally { locked.current = false; if (alive.current) setIsSubmitting(false); }
-  };
-  const requestPermissionsAndFinish = async () => {
-    if (permissionsInFlight.current || locked.current) return;
-    permissionsInFlight.current = true;
-    try {
-      const existing = await Location.getForegroundPermissionsAsync();
-      const result = existing.status === 'granted' ? existing : await Location.requestForegroundPermissionsAsync();
-      if (result.status === 'granted') {
-        await Location.requestBackgroundPermissionsAsync().catch(() => null);
-        await finishOnboarding();
-      } else {
-        Alert.alert(t.onboarding.finish.gpsPermissionTitle, t.onboarding.finish.gpsPermissionBody, [
-          { text: t.onboarding.finish.continueWithoutGps, onPress: () => void finishOnboarding() },
-          { text: t.common.close, style: 'cancel' },
-        ]);
-      }
-    } catch { await finishOnboarding(); }
-    finally { permissionsInFlight.current = false; }
   };
   return <RoadbookPage title={APP_BRAND_NAME} testID="roadbook-onboarding">
     <View style={styles.progress} accessibilityRole="progressbar" accessibilityValue={{ min: 1, max: 3, now: step + 1 }}>
@@ -111,7 +114,7 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
         placeholderTextColor={c.text.secondary} value={tenantQuery} onChangeText={setTenantQuery} style={styles.input} autoCorrect={false} />
       {tenantState === 'loading' ? <Text style={styles.body}>{t.common.loading}</Text>
         : tenantState === 'error' ? <RoadbookNotice error title={t.onboarding.city.error} action={<PrimaryButton
-          label={t.common.retry} variant="secondary" onPress={() => void loadTenants()} />} />
+          label={t.common.retry} variant="secondary" onPress={loadTenants} />} />
           : tenantState === 'empty' ? <Text style={styles.body}>{t.onboarding.city.empty}</Text> : <>
             {visibleTenants.map((tenant) => <Choice key={tenant.id} label={tenant.name} selected={selectedTenantId === tenant.id}
               onPress={() => setSelectedTenantId(tenant.id)} disabled={isSubmitting} />)}
@@ -141,7 +144,7 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
       <RoadbookRow label={t.onboarding.finish.city} detail={selectedTenant?.name ?? '—'} />
       <RoadbookRow label={t.onboarding.finish.department} detail={selectedDepartment?.name ?? t.onboarding.finish.teamSkipped} />
       <PrimaryButton label={isSubmitting ? t.onboarding.finish.joining : t.onboarding.finish.joinCompetition}
-        onPress={() => void requestPermissionsAndFinish()} disabled={isSubmitting} testID="onboarding-finish-join" />
+        onPress={() => void finishOnboarding()} disabled={isSubmitting} testID="onboarding-finish-join" />
       <RoadbookRow label={t.onboarding.department.step} onPress={() => setStep(1)} disabled={isSubmitting} />
     </RoadbookSection> : null}
   </RoadbookPage>;

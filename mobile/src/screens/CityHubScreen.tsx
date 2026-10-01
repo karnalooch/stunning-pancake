@@ -7,7 +7,7 @@ import { SkeletonBlock } from '../components/ui/SkeletonBlock';
 import { getVisionCityHubFixture, isVisionFixtures } from '../bootstrap/visionFixtures';
 import { useI18n } from '../i18n/useI18n';
 import { ActivityService, type CityHubSummary } from '../services/api';
-import { withRetry } from '../services/apiRetry';
+import { withRetry, isOfflineTransportError } from '../services/apiRetry';
 import { OfflineCacheService } from '../services/OfflineCacheService';
 
 export const CityHubScreen: React.FC<{
@@ -33,23 +33,28 @@ export const CityHubScreen: React.FC<{
       description: `${quest.distanceKm.toFixed(2)} km`, latitude: null, longitude: null })),
   }), [fixture]);
   const [cityHubLive, setCityHubLive] = useState<CityHubSummary | null>(() => fixturesEnabled ? null : OfflineCacheService.getCityHub());
-  const [loading, setLoading] = useState(!fixturesEnabled && cityHubLive === null);
+  const [loading, setLoading] = useState(!fixturesEnabled);
   const [loadError, setLoadError] = useState(false);
   const [usingCached, setUsingCached] = useState(!fixturesEnabled && cityHubLive !== null);
   const alive = useRef(false);
   const flight = useRef(0);
-  const retryCityHub = useCallback(async () => {
+  const readCityHub = useCallback(async () => {
     if (fixturesEnabled) return;
     const request = ++flight.current;
-    setLoading(true); setLoadError(false);
     try {
       const summary = await withRetry(() => ActivityService.getCityHubSummary());
       if (!alive.current || request !== flight.current) return;
-      OfflineCacheService.setCityHub(summary); setCityHubLive(summary); setUsingCached(false);
-    } catch { if (alive.current && request === flight.current) setLoadError(true); }
-    finally { if (alive.current && request === flight.current) setLoading(false); }
+      OfflineCacheService.setCityHub(summary);
+      setCityHubLive(summary); setUsingCached(false); setLoadError(false);
+    } catch (error) {
+      if (alive.current && request === flight.current) {
+        setLoadError(true);
+        if (!isOfflineTransportError(error)) { setCityHubLive(null); setUsingCached(false); }
+      }
+    } finally { if (alive.current && request === flight.current) setLoading(false); }
   }, [fixturesEnabled]);
-  useEffect(() => { alive.current = true; void retryCityHub(); return () => { alive.current = false; flight.current++; }; }, [retryCityHub]);
+  useEffect(() => { alive.current = true; void readCityHub(); return () => { alive.current = false; }; }, [readCityHub]);
+  const retryCityHub = () => { setLoading(true); setLoadError(false); void readCityHub(); };
   const effectiveCityHub = fixturesEnabled ? fixtureSummary : cityHubLive;
   const event = effectiveCityHub?.active_event;
   const cityOfWeek = effectiveCityHub?.city_of_week;
@@ -61,13 +66,13 @@ export const CityHubScreen: React.FC<{
     <RoadbookSection>
       <RoadbookRow label={t.compete.clubs} onPress={onOpenClubs} testID="club-open-clubs" />
       <RoadbookRow label={t.compete.segments} onPress={onOpenSegments} testID="club-open-segments" />
-      <RoadbookRow label={t.settings.globalLb} onPress={onOpenLeaderboard} testID="club-open-global-leaderboard" />
+      <RoadbookRow label={t.compete.leaderboard} onPress={onOpenLeaderboard} testID="club-open-global-leaderboard" />
     </RoadbookSection>
     {!fixturesEnabled && usingCached ? <RoadbookNotice testID="club-cached-state"
       title={loadError ? t.compete.cachedOfflineTitle : t.compete.refreshingCached}
       message={loadError ? t.compete.cachedOfflineBody : t.compete.refreshingCachedBody} /> : null}
     {loadError ? <RoadbookNotice error testID="club-load-error" title={t.compete.loadError} message={t.compete.loadErrorHint}
-      action={<PrimaryButton label={t.common.retry} variant="secondary" onPress={() => void retryCityHub()} testID="club-retry" />} /> : null}
+      action={<PrimaryButton label={t.common.retry} variant="secondary" onPress={retryCityHub} testID="club-retry" />} /> : null}
     {loading && !effectiveCityHub ? <SkeletonBlock height={220} /> : effectiveCityHub ? <>
       <RoadbookSection title={copy.event}>
         {event ? <RoadbookNotice testID="club-current-event" title={event.title}
