@@ -82,8 +82,11 @@ describe('Product UX v2 Today context contract', () => {
     expect(startRide).toContain('GpsRecoveryBanner');
     expect(startRide).toContain('startRideError');
     expect(startRide).toContain('start-ride-gps-diagnostics');
-    expect(startRide).toContain('const [isStarting, setIsStarting] = useState(false)');
-    expect(startRide).toContain('if (isStarting) return;');
+    // The async contract is structural; double-press/busy/retry behavior is exercised
+    // in startRideRoadbook.test.tsx and bootstrap/rideStartCommand.test.ts.
+    // Do not require the old state-only guard, which cannot lock before a render.
+    expect(startRide).toContain('onStartRide: (sport: ActivitySportType) => Promise<void>');
+    expect(startRide).toContain('await onStartRide(selectedSport)');
     expect(startRide).toContain('disabled={isStarting}');
     expect(startRide).toContain('t.dashboard.startingRide');
   });
