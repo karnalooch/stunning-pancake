@@ -1,5 +1,6 @@
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
+import * as Haptics from 'expo-haptics';
 import { ActiveRideHUDScreen } from '../../src/screens/ActiveRideHUDScreen';
 import { RideSummaryScreen } from '../../src/screens/RideSummaryScreen';
 import type { RideFinishState } from '../../src/features/ride/model/RideFinishState';
@@ -25,6 +26,7 @@ jest.mock('expo-haptics', () => ({ notificationAsync: jest.fn(async () => {}), N
 jest.mock('../../src/i18n/useI18n', () => ({ useI18n: () => ({ locale: 'pl', t: { gps: { recovery: 'GPS' }, ride: { paused: { title: 'Pauza' } } } }) }));
 
 let tree: TestRenderer.ReactTestRenderer | undefined;
+beforeEach(() => jest.clearAllMocks());
 afterEach(() => { act(() => tree?.unmount()); tree = undefined; });
 const host = (id: string) => tree!.root.find((node) => typeof node.type === 'string' && node.props.testID === id);
 const hosts = (id: string) => tree!.root.findAll((node) => typeof node.type === 'string' && node.props.testID === id);
@@ -57,14 +59,16 @@ describe('Roadbook rendered session and summary behavior', () => {
     act(() => tree!.update(<ActiveRideHUDScreen isPaused={false} onResume={onResume} />));
     expect(hosts('ride-paused-screen')).toHaveLength(0);
   });
-  test.each(['pending-finalization', 'recovery-required'] as const)('%s never exposes sharing', (kind) => {
+  test.each(['pending-finalization', 'recovery-required'] as const)('%s never exposes sharing or success feedback', (kind) => {
     const state: RideFinishState = kind === 'pending-finalization' ? { kind, summary, pendingUpload: 2 }
       : { kind, summary, reason: 'write-failed' };
     const onShare = jest.fn(); const onBackToHub = jest.fn();
     act(() => { tree = TestRenderer.create(<RideSummaryScreen finishState={state} onShare={onShare} onBackToHub={onBackToHub} />); });
     expect(hosts('ride-summary-share')).toHaveLength(0);
     expect(buildSummaryShare(state, 'pl')).toBeNull();
-    act(() => host('ride-summary-back').props.onPress());
+    expect(Haptics.notificationAsync).not.toHaveBeenCalled();
+    expect(hosts(`ride-summary-${kind}`)).toHaveLength(1);
+    act(() => host('ride-summary-back-home').props.onPress());
     expect(onBackToHub).toHaveBeenCalledTimes(1); expect(onShare).not.toHaveBeenCalled();
   });
   test('durable result shares exactly its own payload, independent of history', () => {
@@ -73,9 +77,21 @@ describe('Roadbook rendered session and summary behavior', () => {
     act(() => { tree = TestRenderer.create(<RideSummaryScreen finishState={state} onShare={onShare} />); });
     act(() => host('ride-summary-share').props.onPress());
     expect(onShare).toHaveBeenCalledTimes(1);
+    expect(Haptics.notificationAsync).toHaveBeenCalledTimes(1);
+    expect(Haptics.notificationAsync).toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Success);
     expect(buildSummaryShare(state, 'pl')?.message).toContain('12.5 km');
     expect(buildSummaryShare(state, 'pl')?.message).toContain('1:00:00');
     expect(buildSummaryShare(state, 'en')?.message).toContain('Elevation gain: 123 m');
+  });
+  test('pending to durable transition enables feedback once; ordinary rerenders do not repeat it', () => {
+    const onShare = jest.fn();
+    act(() => { tree = TestRenderer.create(<RideSummaryScreen finishState={{ kind: 'pending-finalization', summary, pendingUpload: 1 }} onShare={onShare} />); });
+    expect(Haptics.notificationAsync).not.toHaveBeenCalled();
+    act(() => tree!.update(<RideSummaryScreen finishState={{ kind: 'durable-success', summary }} onShare={onShare} />));
+    expect(hosts('ride-summary-share')).toHaveLength(1);
+    expect(Haptics.notificationAsync).toHaveBeenCalledTimes(1);
+    act(() => tree!.update(<RideSummaryScreen finishState={{ kind: 'durable-success', summary: { ...summary } }} onShare={onShare} />));
+    expect(Haptics.notificationAsync).toHaveBeenCalledTimes(1);
   });
   test('recovery with no summary renders unknown rather than zero', () => {
     act(() => { tree = TestRenderer.create(<RideSummaryScreen finishState={{ kind: 'recovery-required', reason: 'relaunch' }} />); });
@@ -83,13 +99,12 @@ describe('Roadbook rendered session and summary behavior', () => {
     expect(host('ride-summary-time').props.value).toBe('—');
     expect(metricNumber(undefined)).toBe('—'); expect(metricNumber(NaN)).toBe('—');
     expect(elapsedLabel(Infinity)).toBe('—'); expect(metricNumber(0)).toBe('0.0');
+    expect(Haptics.notificationAsync).not.toHaveBeenCalled();
   });
 });
 
 describe('Geographic position and route truth', () => {
-  test.each([[181, 0], [0, 91], [NaN, 20], [20, Infinity], null, [20]])('rejects invalid coordinate %p', (value) => {
-    expect(isMapCoordinate(value)).toBe(false);
-  });
+  test.each([[181, 0], [0, 91], [NaN, 20], [20, Infinity], null, [20]])('rejects invalid coordinate %p', (value) => { expect(isMapCoordinate(value)).toBe(false); });
   test('accepts zero and valid boundary positions', () => {
     expect(isMapCoordinate([0, 0])).toBe(true); expect(isMapCoordinate([-180, 90])).toBe(true);
   });
@@ -99,11 +114,8 @@ describe('Geographic position and route truth', () => {
       .toEqual({ type: 'MultiLineString', coordinates: [[[21, 52], [22, 52]], [[24, 52], [25, 52]]] });
   });
 });
-
 describe('Editable rider preferences', () => {
-  test.each(['', ' ', '1e2', 'abc', '-60', '60kg', '201'])('rejects invalid weight %s without coercion', (text) => {
-    expect(parsePreferenceNumber(text, 30, 200)).toBeNull();
-  });
+  test.each(['', ' ', '1e2', 'abc', '-60', '60kg', '201'])('rejects invalid weight %s without coercion', (text) => { expect(parsePreferenceNumber(text, 30, 200)).toBeNull(); });
   test('accepts decimal commas for weight and requires integer maximum heart rate', () => {
     expect(parsePreferenceNumber(' 72,5 ', 30, 200)).toBe(72.5);
     expect(parsePreferenceNumber('180.5', 100, 230, true)).toBeNull();

@@ -24,7 +24,7 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({ finishStat
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
   }, [durableSuccess]);
   return <RoadbookPage title={c.result} testID="ride-summary-screen" sampleLabel={isVisionFixtures() ? c.sample : undefined}
-    footer={<PrimaryButton label={c.back} onPress={() => onBackToHub?.()} testID="ride-summary-back" />}>
+    footer={<PrimaryButton label={c.back} onPress={() => onBackToHub?.()} testID="ride-summary-back-home" />}>
     <RoadbookNotice title={title} message={message} testID={`ride-summary-${finishState.kind}`}
       error={finishState.kind === 'recovery-required'} />
     <View style={s.hero} testID="ride-summary-metrics">
@@ -39,4 +39,3 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({ finishStat
     {durableSuccess && onShare ? <RoadbookSection><PrimaryButton label={c.share} variant="secondary"
       onPress={onShare} testID="ride-summary-share" /></RoadbookSection> : null}
   </RoadbookPage>;
-};

@@ -32,14 +32,14 @@ CONTROL remains a separate operational surface. Its existing navy/ink and orange
 
 ## 3. Mobile information architecture
 
-Target user destinations:
+User destinations:
 
 1. **Jazda / Ride** — prepare or return to the current session, with one dominant action.
 2. **Odkrywaj / Discover** — map-first routes, places and relevant available discovery data.
 3. **Klub / Club** — the next shared ride/event, people and community activity.
 4. **Ty / You** — activity history, progress, equipment, appearance and account settings.
 
-Start Ride is an action/preparation step, not a fifth destination in the target design. The current runtime **Today / Discover / Start Ride / Club / You** route contract remains a migration boundary until its replacement and deep-link tests are delivered. A new theme picker alone does not complete this navigation migration.
+The implementation registers four content tabs: `Today`, `Discover`, `Club`, and `You`. `Today` is retained as the compatibility identifier for Ride. `StartRide` is preparation in the root stack, not a fifth tab; `Tracking` is the root-stack live ride flow, not a hidden tab. Public URL paths map to these locations through `mobileLinking`. Parser tests and native/back-navigation acceptance are separate evidence requirements.
 
 ### 3.1 Live ride flow
 
@@ -47,7 +47,15 @@ Start Ride is an action/preparation step, not a fifth destination in the target 
 
 Live ride is a focused operational flow outside ordinary content navigation. Provide a map composition and a readable instrument composition using the same underlying session. Do not implement separate recording state for the two views.
 
-Keep pause/resume controls predictable. Finishing requires an explicit, protected action. GPS quality, recording, sync backlog and map availability are distinct states. A summary must identify the completed activity and accurately distinguish local durability, pending finalization and server confirmation. Existing recovery states are not replaced with an unconditional success screen.
+Keep pause/resume controls predictable. Finishing requires an explicit, protected action. GPS quality, recording, sync backlog and map availability are distinct states. A summary must identify the completed activity and accurately distinguish local durability, pending finalization and server confirmation. Existing recovery states are not replaced with an unconditional success screen. Retain the `ride-summary-back-home` automation identifier.
+
+### 3.2 Loading, failures and response ownership
+
+Initial loading belongs to initial screen state. API response callbacks publish success, failure and completion; an explicit retry action starts loading again. Profile, Club, Discover, onboarding tenant choices and settings reads use request generations and mounted-state checks. Cleanup invalidates the current request; a superseded response must not overwrite newer state or write the Club cache.
+
+Club may retain a cached summary as an explicitly identified fallback for a transport failure. HTTP authorization and other non-transport failures must not be presented as ordinary offline success. Wearable status and privacy-zone reads fail independently: unknown is not disconnected or zero.
+
+Onboarding profile/tenant persistence errors block the corresponding transition or completion callback and permit an explicit retry. The finish lock covers permission prompts and membership writes. These screen-level requirements do not alter API authorization or grant permissions.
 
 ## 4. Legacy disposition and transition
 
@@ -63,7 +71,7 @@ Keep pause/resume controls predictable. Finishing requires an explicit, protecte
 | `RidePausedScreen` | REMOVE standalone destination | Overlay parity verified; preserve resume/finish behavior |
 | `RideSummaryScreen` | REPLACE presentation | Keep durable-success, pending-finalization and recovery-required semantics |
 | `SettingsScreen` | REPLACE presentation | Preserve privacy, sensors, account, equipment and diagnostic capabilities |
-| `SettingsSections` | TEMPORARY migration host | Remove after its settings capabilities are rebuilt; not visual authority |
+| `SettingsSections` | REMOVED from the PR implementation | Settings live in Roadbook `SettingsScreen`; full capability parity still needs acceptance audit |
 | `grandPrix` / `grandPrixNight` runtime names | TEMPORARY aliases | Remove after all legacy consumers migrate; these are not user theme IDs |
 | `runtimeTheme.ts` legacy-key adapter | TEMPORARY compatibility | Remove with the last legacy raw-key consumer |
 | Vision/workbench surfaces | KEEP tooling, not product navigation | Device/test fixtures only; no false product data |
@@ -89,7 +97,7 @@ Functionality is not removed because old navigation grouping is removed. Enforce
 
 A file can be deleted only after required behavior has migrated, repository search confirms no remaining runtime consumer, replacement deep links/routes are defined, relevant unit/integration/E2E tests pass, applicable route/RBAC audits pass and docs/dead imports/assets are updated.
 
-Do not preserve conflicting visual baselines to defend rejected UI. Replace them with reviewed baselines while retaining independent safety and behavioral assertions.
+Do not preserve conflicting visual baselines to defend rejected UI. Replace them with reviewed baselines while retaining independent safety and behavioral assertions. Home, Welcome and Summary no longer require legacy hero/finish artwork. Retained assets still need governed provenance and immutable digests. Summary success haptics and sharing remain gated by durable truth, with rendered behavioral tests independent of artwork.
 
 ## 7. Delivery sequence and actual status
 
@@ -102,6 +110,8 @@ The active sprint is #418 / PR #419:
 - replace the complete ride vertical slice with the approved visual direction and real domain commands;
 - migrate secondary surfaces and navigation, then remove the replaced legacy presentation;
 - obtain exact-SHA native/visual evidence and owner acceptance.
+
+The PR includes Roadbook Ride entry, preparation, map/instrument HUD, pause overlay, summary, Discover, Club, You, settings, authentication and onboarding. Secondary drill-down surfaces, capability parity and legacy retirement still require an audit. Implemented primary screens are not complete app acceptance.
 
 Theme-pack code, unit tests or a successful Metro bundle are not a completed native or visual acceptance. PR/issue evidence records which stages have actually run. Do not mark the full app MVP complete based on the theme foundation.
 
@@ -120,3 +130,5 @@ A third compliant theme must be installable without editing any screen. CONTROL 
 ## 10. Evidence
 
 Dated audits, Frozen UI v1.x documents and generated concept boards are historical/design evidence, not proof of runtime behavior. A valid safety/runtime requirement from an older document remains protected when supported by current code or a current non-visual contract.
+
+The Jest harness resolves hooks and JSX to the app's React installation and narrowly extends the Expo transform preset for the real URL parser's ESM dependencies. The parser is not mocked. This is test-runtime alignment, not proof of native navigation or a production dependency upgrade. Existing lint rules, test selection, coverage floors and native gates remain in force.

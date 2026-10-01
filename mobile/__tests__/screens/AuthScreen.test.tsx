@@ -1,119 +1,71 @@
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { observable } from '@legendapp/state';
-
-jest.mock('../../src/components/Column', () => {
-  const { View } = require('react-native');
-  return {
-    Column: ({ children }: { children: React.ReactNode }) => <View>{children}</View>,
-  };
-});
-jest.mock('../../src/components/PixelText', () => {
-  const { Text } = require('react-native');
-  return {
-    PixelText: ({ children }: { children: React.ReactNode }) => <Text>{children}</Text>,
-  };
-});
-jest.mock('../../src/components/ArcadeButton', () => {
-  const { Text } = require('react-native');
-  return {
-    ArcadeButton: ({ label }: { label: string }) => <Text>{label}</Text>,
-  };
-});
-jest.mock('../../src/components/RetroInput', () => {
-  const { Text } = require('react-native');
-  return {
-    RetroInput: ({ placeholder }: { placeholder: string }) => <Text>{placeholder}</Text>,
-  };
-});
-jest.mock('react-native-unistyles', () => ({
-  StyleSheet: {
-    create: (styles: unknown) =>
-      typeof styles === 'function'
-        ? styles({
-            colors: {
-              background: '#fff',
-              primary: '#0a0',
-              secondary: '#666',
-              onBackground: '#111',
-              primaryContainer: '#ddd',
-              onPrimaryContainer: '#111',
-              error: '#b00',
-              onError: '#fff',
-            },
-          })
-        : styles,
-  },
-  useUnistyles: () => ({
-    theme: {
-      colors: {
-        background: '#fff',
-        primary: '#0a0',
-        secondary: '#666',
-        onBackground: '#111',
-        primaryContainer: '#ddd',
-        onPrimaryContainer: '#111',
-        error: '#b00',
-        onError: '#fff',
-      },
-    },
-  }),
-}));
-jest.mock('../../src/components/scene/SceneBackground', () => {
-  const { View } = require('react-native');
-  return { SceneBackground: () => <View /> };
-});
-jest.mock('../../src/components/sprites/CyclistSprite', () => {
-  const { View } = require('react-native');
-  return { CyclistSprite: () => <View /> };
-});
-jest.mock('react-native-reanimated', () => {
-  const React = require('react');
-  const { View } = require('react-native');
-  const AnimatedView = ({ children }: { children: React.ReactNode }) => <View>{children}</View>;
-  return {
-    __esModule: true,
-    default: { View: AnimatedView },
-    useSharedValue: (v: number) => ({ value: v }),
-    useAnimatedStyle: (updater: () => object) => updater(),
-    withTiming: (v: number) => v,
-    Easing: {
-      linear: jest.fn(),
-      inOut: jest.fn(),
-      ease: jest.fn(),
-    },
-  };
-});
-
+import { Pressable, TextInput } from 'react-native';
 import { AuthScreen } from '../../src/bootstrap/AuthScreen';
+import { stringsPl } from '../../src/i18n/strings.pl';
 
-describe('AuthScreen', () => {
-  test('renders login affordances', () => {
-    const auth = observable({
-      mode: 'login' as const,
-      email: '',
-      username: '',
-      password: '',
-      confirmPassword: '',
-      isSubmitting: false,
-    });
+// Keep the real Legend observer and shared controls: only native boundaries and
+// locale persistence are substituted. The Jest resolver owns React identity.
+jest.mock('react-native-unistyles', () => {
+  const { grandPrixTheme } = jest.requireActual('../../src/theme/grandPrix');
+  return { useUnistyles: () => ({ theme: grandPrixTheme }),
+    StyleSheet: { create: (factory: unknown) => typeof factory === 'function' ? factory(grandPrixTheme) : factory } };
+});
+jest.mock('react-native-safe-area-context', () => {
+  const { View } = jest.requireActual('react-native');
+  return { SafeAreaView: ({ children }: { children: React.ReactNode }) => <View>{children}</View> };
+});
+jest.mock('../../src/i18n/useI18n', () => ({ useI18n: () => ({ locale: 'pl', t: require('../../src/i18n/strings.pl').stringsPl }) }));
 
-    let tree!: TestRenderer.ReactTestRenderer;
-    act(() => {
-      tree = TestRenderer.create(
-        <AuthScreen
-          auth={auth}
-          colors={{ background: '#fff', primary: '#0a0', secondary: '#666' }}
-          onSubmit={jest.fn()}
-          onModeChange={jest.fn()}
-          onSocialLogin={jest.fn()}
-        />,
-      );
-    });
+let tree: TestRenderer.ReactTestRenderer | undefined;
+afterEach(() => { act(() => tree?.unmount()); tree = undefined; });
+const button = (testID: string) => tree!.root.find((node) => node.type === Pressable && node.props.testID === testID);
+const input = (testID: string) => tree!.root.find((node) => node.type === TextInput && node.props.testID === testID);
+const render = async (mode: 'welcome' | 'login' | 'register' = 'login') => {
+  const auth = observable({ mode, email: '', username: '', password: '', confirmPassword: '', isSubmitting: false });
+  const onSubmit = jest.fn(); const onModeChange = jest.fn(); const onSocialLogin = jest.fn();
+  await act(async () => { tree = TestRenderer.create(<AuthScreen auth={auth} colors={{}}
+    onSubmit={onSubmit} onModeChange={onModeChange} onSocialLogin={onSocialLogin} />); });
+  return { auth, onSubmit, onModeChange, onSocialLogin };
+};
 
-    const json = JSON.stringify(tree.toJSON());
+describe('Roadbook AuthScreen with real observable updates', () => {
+  test('renders localized login affordances and binds edits to the actual observable', async () => {
+    const { auth, onSubmit } = await render();
+    const json = JSON.stringify(tree!.toJSON());
     expect(json).toContain('4VELO');
-    expect(json).toContain('ZALOGUJ SIĘ');
-    expect(json).toContain('ZALOGUJ');
+    expect(json).toContain(stringsPl.auth.loginTitle);
+    expect(button('auth-submit').props.accessibilityLabel).toBe(stringsPl.auth.submitLogin);
+    await act(async () => { input('auth-email').props.onChangeText('rider@example.test'); });
+    expect(auth.email.get()).toBe('rider@example.test');
+    expect(input('auth-email').props.value).toBe('rider@example.test');
+    act(() => button('auth-submit').props.onPress());
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+  test('busy state disables editing, submission and social actions without bypassing the submit guard', async () => {
+    const { auth, onSubmit } = await render();
+    const submit = button('auth-submit').props.onPress;
+    await act(async () => { auth.isSubmitting.set(true); });
+    expect(input('auth-email').props.editable).toBe(false);
+    expect(input('auth-password').props.editable).toBe(false);
+    for (const id of ['auth-submit', 'auth-google', 'auth-facebook']) expect(button(id).props.disabled).toBe(true);
+    act(() => submit());
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+  test('password visibility is explicit and registration exposes confirmation', async () => {
+    const { auth } = await render('register');
+    expect(input('auth-password').props.secureTextEntry).toBe(true);
+    expect(input('auth-confirm-password').props.secureTextEntry).toBe(true);
+    act(() => button('auth-password-visibility').props.onPress());
+    expect(input('auth-password').props.secureTextEntry).toBe(false);
+    await act(async () => { input('auth-confirm-password').props.onChangeText('confirmation'); });
+    expect(auth.confirmPassword.get()).toBe('confirmation');
+  });
+  test('Welcome keeps registration and login actions usable without artwork', async () => {
+    const { onModeChange } = await render('welcome');
+    act(() => button('auth-welcome-register').props.onPress());
+    act(() => button('auth-welcome-login').props.onPress());
+    expect(onModeChange.mock.calls).toEqual([['register'], ['login']]);
   });
 });
