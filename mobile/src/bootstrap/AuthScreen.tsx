@@ -1,443 +1,117 @@
 import React, { useState } from 'react';
 import type { Observable } from '@legendapp/state';
-import {
-  ImageBackground,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { observer } from '@legendapp/state/react';
+import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { SceneBackground } from '../components/scene/SceneBackground';
-import { APPROVED_ASSETS } from '../assets/approvedAssets';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { PrimaryButton } from '../components/product';
+import { RoadbookRow } from '../components/roadbook/Surface';
 import { EdgeStateBanner } from '../components/ui/EdgeStateBanner';
 import type { RideEdgeMessage } from '../services/apiRetry';
 import { useI18n } from '../i18n/useI18n';
 import { APP_BRAND_NAME } from '../theme/brand';
+import { getSemanticColors } from '../theme/semantic';
+import { PRODUCT_TYPOGRAPHY } from '../theme/typography';
 import type { AuthMode } from './useAuthSession';
 
-type AuthState = {
-  mode: AuthMode;
-  email: string;
-  username: string;
-  password: string;
-  confirmPassword: string;
-  isSubmitting: boolean;
-};
-
+type AuthState = { mode: AuthMode; email: string; username: string; password: string; confirmPassword: string; isSubmitting: boolean };
 type Props = {
   auth: Observable<AuthState>;
+  /** Kept for the bootstrap boundary; presentation uses the active semantic theme. */
   colors: Record<string, string>;
-  banner?: RideEdgeMessage | null;
-  onDismissBanner?: () => void;
-  onSubmit: () => void;
-  onModeChange: (mode: AuthMode) => void;
+  banner?: RideEdgeMessage | null; onDismissBanner?: () => void;
+  onSubmit: () => void; onModeChange: (mode: AuthMode) => void;
   onSocialLogin: (provider: 'google' | 'facebook') => void;
 };
-
-type ActionButtonProps = {
-  label: string;
-  onPress: () => void;
-  colors: Record<string, string>;
-  variant?: 'primary' | 'secondary' | 'quiet';
-  disabled?: boolean;
-  testID?: string;
-};
-
-function ActionButton({
-  label,
-  onPress,
-  colors: C,
-  variant = 'primary',
-  disabled = false,
-  testID,
-}: ActionButtonProps) {
-  const primary = variant === 'primary';
-  const quiet = variant === 'quiet';
-  return (
-    <Pressable
-      testID={testID}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      disabled={disabled}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.button,
-        quiet && styles.quietButton,
-        {
-          backgroundColor: primary ? C.goldAmber : quiet ? 'transparent' : C.surfaceContainerLowest,
-          borderColor: quiet ? C.gpGoldLight : C.outlineVariant,
-          opacity: disabled ? 0.55 : pressed ? 0.82 : 1,
-        },
-      ]}
-    >
-      <Text
-        style={[
-          styles.buttonText,
-          { color: primary ? C.onBackground : quiet ? C.gpGoldLight : C.onBackground },
-        ]}
-      >
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
-export function AuthScreen({
-  auth,
-  colors: C,
-  banner,
-  onDismissBanner,
-  onSubmit,
-  onModeChange,
-  onSocialLogin,
-}: Props) {
+export const AuthScreen = observer(({ auth, banner, onDismissBanner, onSubmit, onModeChange, onSocialLogin }: Props) => {
   const { t } = useI18n();
+  const { theme } = useUnistyles();
+  const c = getSemanticColors(theme.colors);
   const mode = auth.mode.get();
   const submitting = auth.isSubmitting.get();
   const [passwordVisible, setPasswordVisible] = useState(false);
-
-  if (mode === 'welcome') {
-    return (
-      <SafeAreaView style={[styles.root, { backgroundColor: C.hudBackground }]}>
-        <SceneBackground sceneId="onboarding" scrim="strong" />
-        <View style={styles.welcomeLayout}>
-          <View style={styles.brandBlock}>
-            <Text style={[styles.brand, { color: C.gpGoldLight }]}>{APP_BRAND_NAME}</Text>
-            <Text style={[styles.brandTag, { color: C.hudText }]}>{t.auth.brandTagline}</Text>
-          </View>
-
-          <ImageBackground
-            source={APPROVED_ASSETS.homeHeroDay}
-            resizeMode="cover"
-            style={[styles.welcomeHero, { borderColor: C.gpGoldLight }]}
-            imageStyle={styles.welcomeHeroImage}
-            testID="auth-welcome-hero-approved"
-          >
-            <View style={[styles.welcomeHeroShade, { backgroundColor: C.scrimSoft }]} />
-          </ImageBackground>
-
-          <View style={[styles.welcomePanel, { backgroundColor: C.parchment, borderColor: C.goldAmber }]}>
-            <Text style={[styles.eyebrow, { color: C.secondary }]}>{t.auth.welcomeEyebrow}</Text>
-            <Text style={[styles.heroTitle, { color: C.onBackground }]}>{t.auth.welcomeTitle}</Text>
-            <Text style={[styles.heroBody, { color: C.secondary }]}>{t.auth.welcomeBody}</Text>
-            <View style={styles.actionStack}>
-              <ActionButton
-                label={t.auth.welcomePrimary}
-                onPress={() => onModeChange('register')}
-                colors={C}
-                testID="auth-welcome-register"
-              />
-              <ActionButton
-                label={t.auth.welcomeSecondary}
-                onPress={() => onModeChange('login')}
-                colors={C}
-                variant="secondary"
-                testID="auth-welcome-login"
-              />
-            </View>
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   const isRegister = mode === 'register';
-  const title = isRegister ? t.auth.registerTitle : t.auth.loginTitle;
-  const subtitle = isRegister ? t.auth.registerSubtitle : t.auth.loginSubtitle;
-
-  return (
-    <SafeAreaView style={[styles.root, { backgroundColor: C.hudBackground }]}>
-      <SceneBackground sceneId="onboarding" scrim="strong" />
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={styles.formScroll}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.formBrandRow}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t.auth.backToWelcome}
-              onPress={() => onModeChange('welcome')}
-              hitSlop={12}
-            >
-              <Text style={[styles.backText, { color: C.gpGoldLight }]}>‹ {t.auth.backToWelcome}</Text>
-            </Pressable>
-            <Text style={[styles.formBrand, { color: C.gpGoldLight }]}>{APP_BRAND_NAME}</Text>
+  const changeMode = (next: AuthMode) => { if (!submitting) { setPasswordVisible(false); onModeChange(next); } };
+  const submit = () => { if (!auth.isSubmitting.get()) onSubmit(); };
+  return <SafeAreaView style={styles.root} edges={['top', 'bottom']} testID="roadbook-auth">
+    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView style={styles.flex} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <Text style={styles.brand}>{APP_BRAND_NAME}</Text>
+        <Text style={styles.caption}>{t.auth.brandTagline}</Text>
+        {banner ? <EdgeStateBanner title={banner.title} message={banner.message} variant={banner.variant} onDismiss={onDismissBanner} /> : null}
+        {mode === 'welcome' ? <View style={styles.welcome}>
+          <Text accessibilityRole="header" style={styles.welcomeTitle}>{t.auth.welcomeTitle}</Text>
+          <Text style={styles.body}>{t.auth.welcomeBody}</Text>
+          <View style={styles.actions}>
+            <PrimaryButton label={t.auth.welcomePrimary} onPress={() => changeMode('register')} testID="auth-welcome-register" />
+            <PrimaryButton label={t.auth.welcomeSecondary} onPress={() => changeMode('login')} variant="secondary" testID="auth-welcome-login" />
           </View>
-
-          {banner ? (
-            <EdgeStateBanner
-              title={banner.title}
-              message={banner.message}
-              variant={banner.variant}
-              onDismiss={onDismissBanner}
-            />
-          ) : null}
-
-          <View style={[styles.formPanel, { backgroundColor: C.parchment, borderColor: C.goldAmber }]}>
-            <Text style={[styles.eyebrow, { color: C.secondary }]}>{t.auth.brandTagline}</Text>
-            <Text style={[styles.formTitle, { color: C.onBackground }]}>{title}</Text>
-            <Text style={[styles.formSubtitle, { color: C.secondary }]}>{subtitle}</Text>
-
-            <View style={styles.fields}>
-              {isRegister ? (
-                <View>
-                  <Text style={[styles.label, { color: C.secondary }]}>{t.auth.username}</Text>
-                  <TextInput
-                    testID="auth-username"
-                    accessibilityLabel={t.auth.username}
-                    style={[
-                      styles.input,
-                      {
-                        color: C.onBackground,
-                        borderColor: C.outlineVariant,
-                        backgroundColor: C.surfaceContainerLowest,
-                      },
-                    ]}
-                    placeholder={t.auth.username}
-                    placeholderTextColor={C.secondary}
-                    value={auth.username.get()}
-                    onChangeText={(value) => auth.username.set(value)}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    returnKeyType="next"
-                  />
-                </View>
-              ) : null}
-
-              <View>
-                <Text style={[styles.label, { color: C.secondary }]}>
-                  {isRegister ? t.auth.email : t.auth.identifier}
-                </Text>
-                <TextInput
-                  testID="auth-email"
-                  accessibilityLabel={isRegister ? t.auth.email : t.auth.identifier}
-                  style={[
-                    styles.input,
-                    {
-                      color: C.onBackground,
-                      borderColor: C.outlineVariant,
-                      backgroundColor: C.surfaceContainerLowest,
-                    },
-                  ]}
-                  placeholder={isRegister ? t.auth.email : t.auth.identifier}
-                  placeholderTextColor={C.secondary}
-                  value={auth.email.get()}
-                  onChangeText={(value) => auth.email.set(value)}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  keyboardType={isRegister ? 'email-address' : 'default'}
-                  returnKeyType="next"
-                />
-              </View>
-
-              <View>
-                <Text style={[styles.label, { color: C.secondary }]}>{t.auth.password}</Text>
-                <View
-                  style={[
-                    styles.passwordRow,
-                    {
-                      borderColor: C.outlineVariant,
-                      backgroundColor: C.surfaceContainerLowest,
-                    },
-                  ]}
-                >
-                  <TextInput
-                    testID="auth-password"
-                    accessibilityLabel={t.auth.password}
-                    style={[styles.passwordInput, { color: C.onBackground }]}
-                    placeholder={t.auth.password}
-                    placeholderTextColor={C.secondary}
-                    value={auth.password.get()}
-                    onChangeText={(value) => auth.password.set(value)}
-                    secureTextEntry={!passwordVisible}
-                    autoCapitalize="none"
-                    returnKeyType={isRegister ? 'next' : 'done'}
-                    onSubmitEditing={() => {
-                      if (!isRegister && !submitting) onSubmit();
-                    }}
-                  />
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={passwordVisible ? t.auth.hidePassword : t.auth.showPassword}
-                    onPress={() => setPasswordVisible((visible) => !visible)}
-                    hitSlop={10}
-                  >
-                    <Text style={[styles.passwordToggle, { color: C.primary }]}>
-                      {passwordVisible ? t.auth.hidePassword : t.auth.showPassword}
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-
-              {isRegister ? (
-                <View>
-                  <Text style={[styles.label, { color: C.secondary }]}>{t.auth.confirmPassword}</Text>
-                  <TextInput
-                    testID="auth-confirm-password"
-                    accessibilityLabel={t.auth.confirmPassword}
-                    style={[
-                      styles.input,
-                      {
-                        color: C.onBackground,
-                        borderColor: C.outlineVariant,
-                        backgroundColor: C.surfaceContainerLowest,
-                      },
-                    ]}
-                    placeholder={t.auth.confirmPassword}
-                    placeholderTextColor={C.secondary}
-                    value={auth.confirmPassword.get()}
-                    onChangeText={(value) => auth.confirmPassword.set(value)}
-                    secureTextEntry={!passwordVisible}
-                    autoCapitalize="none"
-                    returnKeyType="done"
-                    onSubmitEditing={() => {
-                      if (!submitting) onSubmit();
-                    }}
-                  />
-                </View>
-              ) : null}
-            </View>
-
-            <ActionButton
-              label={submitting ? t.auth.connecting : isRegister ? t.auth.submitRegister : t.auth.submitLogin}
-              onPress={onSubmit}
-              colors={C}
-              disabled={submitting}
-              testID="auth-submit"
-            />
-
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => onModeChange(isRegister ? 'login' : 'register')}
-              disabled={submitting}
-            >
-              <Text style={[styles.switchMode, { color: C.primary }]}>
-                {isRegister ? t.auth.toggleLogin : t.auth.toggleRegister}
-              </Text>
-            </Pressable>
-
-            <View style={styles.socialBlock}>
-              <Text style={[styles.socialLabel, { color: C.secondary }]}>{t.auth.orSocial}</Text>
-              <View style={styles.socialRow}>
-                <View style={styles.socialButtonWrap}>
-                  <ActionButton
-                    label={t.auth.google}
-                    onPress={() => onSocialLogin('google')}
-                    colors={C}
-                    variant="secondary"
-                    disabled={submitting}
-                  />
-                </View>
-                <View style={styles.socialButtonWrap}>
-                  <ActionButton
-                    label={t.auth.facebook}
-                    onPress={() => onSocialLogin('facebook')}
-                    colors={C}
-                    variant="secondary"
-                    disabled={submitting}
-                  />
-                </View>
-              </View>
-            </View>
+        </View> : <>
+          <RoadbookRow label={t.auth.backToWelcome} onPress={() => changeMode('welcome')} disabled={submitting} />
+          <Text accessibilityRole="header" style={styles.title}>{isRegister ? t.auth.registerTitle : t.auth.loginTitle}</Text>
+          <Text style={styles.body}>{isRegister ? t.auth.registerSubtitle : t.auth.loginSubtitle}</Text>
+          {isRegister ? <View style={styles.field}>
+            <Text style={styles.label}>{t.auth.username}</Text>
+            <TextInput testID="auth-username" accessibilityLabel={t.auth.username} style={styles.input}
+              placeholder={t.auth.username} placeholderTextColor={c.text.secondary} value={auth.username.get()}
+              onChangeText={(value) => auth.username.set(value)} editable={!submitting}
+              autoCapitalize="none" autoCorrect={false} autoComplete="username-new" returnKeyType="next" />
+          </View> : null}
+          <View style={styles.field}>
+            <Text style={styles.label}>{isRegister ? t.auth.email : t.auth.identifier}</Text>
+            <TextInput testID="auth-email" accessibilityLabel={isRegister ? t.auth.email : t.auth.identifier}
+              style={styles.input} placeholder={isRegister ? t.auth.email : t.auth.identifier} placeholderTextColor={c.text.secondary}
+              value={auth.email.get()} onChangeText={(value) => auth.email.set(value)} editable={!submitting}
+              autoCapitalize="none" autoCorrect={false} keyboardType={isRegister ? 'email-address' : 'default'}
+              autoComplete={isRegister ? 'email' : 'username'} returnKeyType="next" />
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  );
-}
-
-const styles = StyleSheet.create({
-  root: { flex: 1 },
-  flex: { flex: 1 },
-  welcomeLayout: {
-    flex: 1,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 22,
-  },
-  brandBlock: { alignItems: 'center', gap: 4 },
-  brand: { fontSize: 38, fontWeight: '900', letterSpacing: 1.5 },
-  brandTag: { fontSize: 12, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase' },
-  welcomeHero: {
-    width: '100%',
-    height: 176,
-    borderWidth: 1,
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  welcomeHeroImage: {
-    borderRadius: 20,
-  },
-  welcomeHeroShade: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  welcomePanel: {
-    width: '100%',
-    borderWidth: 1,
-    borderRadius: 22,
-    padding: 22,
-    gap: 10,
-  },
-  eyebrow: { fontSize: 12, fontWeight: '700', letterSpacing: 1.6, textTransform: 'uppercase' },
-  heroTitle: { fontSize: 34, lineHeight: 39, fontWeight: '800' },
-  heroBody: { fontSize: 16, lineHeight: 23 },
-  actionStack: { gap: 10, marginTop: 10 },
-  button: {
-    minHeight: 52,
-    borderRadius: 14,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-  },
-  quietButton: { backgroundColor: 'transparent' },
-  buttonText: { fontSize: 15, fontWeight: '800', letterSpacing: 0.4 },
-  formScroll: { flexGrow: 1, justifyContent: 'center', padding: 20, gap: 14 },
-  formBrandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  backText: { fontSize: 15, fontWeight: '700' },
-  formBrand: { fontSize: 24, fontWeight: '900', letterSpacing: 1 },
-  formPanel: { borderWidth: 1, borderRadius: 22, padding: 20, gap: 12 },
-  formTitle: { fontSize: 30, lineHeight: 36, fontWeight: '800' },
-  formSubtitle: { fontSize: 15, lineHeight: 21, marginBottom: 4 },
-  fields: { gap: 14 },
-  label: { fontSize: 13, fontWeight: '700', marginBottom: 6 },
-  input: {
-    minHeight: 50,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    fontSize: 16,
-  },
-  passwordRow: {
-    minHeight: 50,
-    borderWidth: 1,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingLeft: 14,
-    paddingRight: 10,
-  },
-  passwordInput: { flex: 1, minHeight: 48, fontSize: 16, paddingVertical: 0 },
-  passwordToggle: { fontSize: 12, fontWeight: '800', paddingVertical: 10, paddingLeft: 10 },
-  switchMode: { textAlign: 'center', fontSize: 14, fontWeight: '700', paddingVertical: 5 },
-  socialBlock: { gap: 10, marginTop: 2 },
-  socialLabel: { textAlign: 'center', fontSize: 13 },
-  socialRow: { flexDirection: 'row', gap: 10 },
-  socialButtonWrap: { flex: 1 },
+          <View style={styles.field}>
+            <Text style={styles.label}>{t.auth.password}</Text>
+            <TextInput testID="auth-password" accessibilityLabel={t.auth.password} style={styles.input}
+              placeholder={t.auth.password} placeholderTextColor={c.text.secondary} value={auth.password.get()}
+              onChangeText={(value) => auth.password.set(value)} secureTextEntry={!passwordVisible}
+              editable={!submitting} autoCapitalize="none" autoCorrect={false}
+              autoComplete={isRegister ? 'new-password' : 'current-password'} returnKeyType={isRegister ? 'next' : 'done'}
+              onSubmitEditing={() => { if (!isRegister) submit(); }} />
+            <RoadbookRow label={passwordVisible ? t.auth.hidePassword : t.auth.showPassword}
+              onPress={() => setPasswordVisible((value) => !value)} testID="auth-password-visibility" />
+          </View>
+          {isRegister ? <View style={styles.field}>
+            <Text style={styles.label}>{t.auth.confirmPassword}</Text>
+            <TextInput testID="auth-confirm-password" accessibilityLabel={t.auth.confirmPassword} style={styles.input}
+              placeholder={t.auth.confirmPassword} placeholderTextColor={c.text.secondary} value={auth.confirmPassword.get()}
+              onChangeText={(value) => auth.confirmPassword.set(value)} secureTextEntry={!passwordVisible}
+              editable={!submitting} autoCapitalize="none" autoCorrect={false} autoComplete="new-password"
+              returnKeyType="done" onSubmitEditing={submit} />
+          </View> : null}
+          <PrimaryButton label={submitting ? t.auth.connecting : isRegister ? t.auth.submitRegister : t.auth.submitLogin}
+            onPress={submit} disabled={submitting} testID="auth-submit" />
+          <RoadbookRow label={isRegister ? t.auth.toggleLogin : t.auth.toggleRegister}
+            onPress={() => changeMode(isRegister ? 'login' : 'register')} disabled={submitting} />
+          <Text style={styles.caption}>{t.auth.orSocial}</Text>
+          <View style={styles.actions}>
+            <PrimaryButton label={t.auth.google} variant="secondary" disabled={submitting} onPress={() => onSocialLogin('google')} testID="auth-google" />
+            <PrimaryButton label={t.auth.facebook} variant="secondary" disabled={submitting} onPress={() => onSocialLogin('facebook')} testID="auth-facebook" />
+          </View>
+        </>}
+      </ScrollView>
+    </KeyboardAvoidingView>
+  </SafeAreaView>;
+});
+const styles = StyleSheet.create((theme) => {
+  const c = getSemanticColors(theme.colors);
+  return {
+    root: { flex: 1, backgroundColor: c.canvas.background }, flex: { flex: 1 },
+    content: { padding: 24, gap: 18, flexGrow: 1, maxWidth: 640, width: '100%', alignSelf: 'center' },
+    brand: { ...PRODUCT_TYPOGRAPHY.title, color: c.action.primary, marginTop: 16 },
+    caption: { ...PRODUCT_TYPOGRAPHY.metricLabel, color: c.text.secondary },
+    title: { ...PRODUCT_TYPOGRAPHY.displayEditorial, color: c.text.primary },
+    welcome: { flexGrow: 1, justifyContent: 'center', gap: 28, paddingVertical: 40 },
+    welcomeTitle: { ...PRODUCT_TYPOGRAPHY.displayEditorial, fontSize: 48, lineHeight: 56, color: c.text.primary },
+    body: { ...PRODUCT_TYPOGRAPHY.body, lineHeight: 25, color: c.text.secondary },
+    field: { gap: 8 }, label: { ...PRODUCT_TYPOGRAPHY.bodyMedium, color: c.text.primary },
+    input: { minHeight: 54, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1, borderColor: c.border.strong,
+      borderRadius: 8, backgroundColor: c.surface.default, ...PRODUCT_TYPOGRAPHY.body, color: c.text.primary },
+    actions: { gap: 12 },
+  };
 });

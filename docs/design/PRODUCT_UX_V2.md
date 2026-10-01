@@ -2,218 +2,133 @@
 
 | | |
 |---|---|
-| **Status** | **APPROVED / NORMATIVE / CURRENT** |
-| **Decision date** | 2026-09-28 |
+| **Status** | **APPROVED DIRECTION / NORMATIVE / CURRENT — implementation in progress** |
+| **Decision dates** | 2026-09-28; mobile Roadbook amendment 2026-10-01 |
 | **Owner role** | Product / Mobile / Admin Frontend |
-| **Tracks** | GitHub Issue #346 (authority) · #348 / PR #349 (mobile UI-1) |
+| **Tracks** | GitHub Issue #346 (authority); #418 / PR #419 (Roadbook and theme packs) |
 | **Machine mobile authority** | `MOBILE_UI_VISUAL_AUTHORITY_V1.json` (legacy path retained for validator compatibility; `currentAuthority` points here first) |
 | **Mobile composition authority** | [Mobile Visual Composition Architecture v1](./MOBILE_VISUAL_COMPOSITION_ARCHITECTURE_V1.md) |
-| **Applies to** | 4VELO mobile UI and 4VELO CONTROL (admin/web) information architecture, shell, visual language and legacy retirement |
-| **Supersedes for UI direction** | `MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md` hard-freeze direction, Frozen UI v1.2 intent, dated mobile UI audits and the current admin shell/IA descriptions where they conflict |
+| **Theme contract** | [Theme packs v1](./THEME_PACKS_V1.md) |
+| **Applies to** | Mobile presentation and CONTROL information architecture; the October amendment changes mobile only |
+| **Supersedes for UI direction** | The current mobile look, mandatory Grand Prix colours/pixel-art, frozen UI approvals and dated mobile visual snapshots where they conflict |
 
 ## 1. Decision
 
-4VELO is keeping its product capabilities and cycling character, but the current UI is no longer a protected structure.
+The owner has rejected the existing mobile presentation as a whole. This is a **controlled teardown and replacement of the presentation layer**, not a palette-only facelift. The Roadbook concept and extensible theme direction are approved design inputs, not proof that implemented screens have passed device acceptance.
 
-The migration is a **controlled teardown and replacement of the presentation layer**:
+Preserve useful capabilities and proven backend/API/auth/GPS/telemetry/ride-domain contracts. Extract domain logic from screens where needed. Replace screen layouts, visual components, information hierarchy, typography and user navigation. Do not preserve a screen or illustration merely because it exists or used to be labelled approved.
 
-- preserve backend/API/auth/GPS/telemetry/ride-domain contracts unless a separate task explicitly changes them;
-- preserve useful product capabilities;
-- replace shell, navigation, routine visual primitives and screen composition where the current UI blocks the new product direction;
-- delete legacy UI only after its consumers have been migrated and verified;
-- do not preserve a screen, route or component merely because it exists today.
+Delete a replaced legacy surface after its behaviour and consumers have migrated and been verified. Temporary wrappers require an explicit removal condition. Green CI does not constitute owner approval of appearance.
 
-This explicitly replaces the previous default of **preserving the current mobile IA**.
+## 2. Visual direction
 
-## 2. Shared brand DNA
+Mobile Roadbook combines an outdoor route journal outside a ride with a clear instrument during recording. The default palette is off-white, graphite and cobalt. Forest is a second data-only theme; neither is mandatory for all users. Light/dark/system is independent of theme identity, and high contrast is an independent override.
 
-Mobile and CONTROL should feel related without looking identical.
+Use semantic colour and typography roles. A theme changes appearance, never routes, session state, consent, destructive-action semantics or minimum touch-target sizes. No pixel fonts in routine labels, metrics or controls. Pixel art, the old orange accent, deep navy and existing illustrations have no protected status in mobile. Optional imagery must support a real place, route or community and must not be necessary for the screen to work.
 
-Keep:
+Prefer sections, map surfaces, readable lists and intentional spacing to stacks of decorative cards. Keep the main action obvious, errors actionable and touch targets at least 48 dp. Respect text scaling, screen readers and reduced motion. Preview metrics must be explicitly identified as sample data; production screens must not invent GPS readiness, sensor connections, routes or saved status.
 
-- deep navy / ink as structural colour;
-- orange as the primary action / energetic accent;
-- warm cream/parchment where it strengthens identity;
-- cycling, route, city and rider imagery;
-- restrained pixel-art accents for identity, achievements, celebration and selected branded moments.
+CONTROL remains a separate operational surface. Its existing navy/ink and orange/cream direction is not being reimplemented by the mobile theme-pack sprint. Related identity does not require identical density or palettes.
 
-Retire as default UI grammar:
+## 3. Mobile information architecture
 
-- arcade/game-shell framing;
-- pixel fonts for routine labels, navigation, metrics, forms or settings;
-- thick black outlines and hard offset shadows on ordinary controls/cards;
-- decorative cards used where a simple list, map, table or data row is clearer;
-- visual effects whose only purpose is to make a utility screen look “premium”.
+User destinations:
 
-The product should read first as a **serious cycling/outdoor platform**, with recognisable 4VELO character layered on top.
+1. **Jazda / Ride** — prepare or return to the current session, with one dominant action.
+2. **Odkrywaj / Discover** — map-first routes, places and relevant available discovery data.
+3. **Klub / Club** — the next shared ride/event, people and community activity.
+4. **Ty / You** — activity history, progress, equipment, appearance and account settings.
 
-## 3. Mobile information architecture v2
-
-The primary mobile shell is:
-
-1. **Today** — current context, ride readiness, recent/ongoing activity, training/recovery context and one clear path into riding.
-2. **Discover** — map-first discovery: routes, segments, places, events and nearby/community context. Do not require an intermediate “hub” screen merely to reach the map.
-3. **Start Ride** — dominant ride entry. Sport/profile selection and ride readiness belong here; the live ride itself leaves the normal tab-shell mental model.
-4. **Club** — clubs, city/community identity, challenges, leaderboards and social competition.
-5. **You** — profile, progress, history, trends, equipment, preferences and account actions.
+The implementation registers four content tabs: `Today`, `Discover`, `Club`, and `You`. `Today` is retained as the compatibility identifier for Ride. `StartRide` is preparation in the root stack, not a fifth tab; `Tracking` is the root-stack live ride flow, not a hidden tab. Public URL paths map to these locations through `mobileLinking`. Parser tests and native/back-navigation acceptance are separate evidence requirements.
 
 ### 3.1 Live ride flow
 
-Live ride is a focused operational flow, not a normal content tab:
+`Ride preparation -> Active Ride -> Pause/Resume -> Summary`
 
-`Start Ride -> Active Ride -> Summary`
+Live ride is a focused operational flow outside ordinary content navigation. Provide a map composition and a readable instrument composition using the same underlying session. Do not implement separate recording state for the two views.
 
-Pause/recovery should be expressed as ride-state overlays/sheets where safe instead of separate product destinations.
+Keep pause/resume controls predictable. Finishing requires an explicit, protected action. GPS quality, recording, sync backlog and map availability are distinct states. A summary must identify the completed activity and accurately distinguish local durability, pending finalization and server confirmation. Existing recovery states are not replaced with an unconditional success screen. Retain the `ride-summary-back-home` automation identifier.
 
-The live ride must remain:
+### 3.2 Loading, failures and response ownership
 
-- map/data first;
-- sunlight readable;
-- one-hand operable;
-- explicit about GPS/sync/recovery state;
-- conservative about motion and decoration.
+Initial loading belongs to initial screen state. API response callbacks publish success, failure and completion; an explicit retry action starts loading again. Profile, Club, Discover, onboarding tenant choices and settings reads use request generations and mounted-state checks. Cleanup invalidates the current request; a superseded response must not overwrite newer state or write the Club cache.
 
-## 4. Mobile legacy disposition
+Club may retain a cached summary as an explicitly identified fallback for a transport failure. HTTP authorization and other non-transport failures must not be presented as ordinary offline success. Wearable status and privacy-zone reads fail independently: unknown is not disconnected or zero.
 
-This is a migration contract, not permission to delete files blindly.
+Onboarding profile/tenant persistence errors block the corresponding transition or completion callback and permit an explicit retry. The finish lock covers permission prompts and membership writes. These screen-level requirements do not alter API authorization or grant permissions.
 
-| Current surface | v2 decision | v2 home |
+## 4. Legacy disposition and transition
+
+| Surface | Decision | Removal/migration condition |
 |---|---|---|
-| `RideDashboardScreen` | **REPLACE / harvest useful modules** | Today + Start Ride |
-| `GameTabBar` | **REPLACE** | Product bottom navigation v2 |
-| `CityHubScreen` / Compete | **MERGE / RECOMPOSE** | Club |
-| `ExploreHubScreen` | **DELETE after migration** | Discover opens useful discovery/map content directly |
-| `ExploreMapScreen` | **KEEP / REDESIGN** | Discover |
-| `AthleteProfileScreen` | **REPLACE / RECOMPOSE** | You |
-| `TrainingLogScreen` | **MERGE** | You -> Progress/History |
-| `PerformanceTrendsScreen` | **MERGE** | You -> Progress |
-| `GlobalLeaderboardScreen` | **MOVE** | Club |
-| `ClubsDirectoryScreen` | **MERGE** | Club |
-| `SegmentsScreen` | **MOVE / MERGE** | Discover and/or Club depending on context |
-| `GpsDiagnosticsScreen` | **DEMOTE** | Start Ride / Settings -> Advanced diagnostics |
-| `ActiveRideHUDScreen` | **KEEP domain / REDESIGN chrome** | Live ride flow |
-| `RidePausedScreen` | **DELETE when overlay parity exists** | Active Ride pause sheet/overlay |
-| `RideSummaryScreen` | **KEEP domain / REDESIGN** | End of live ride flow |
-| `SettingsScreen` | **KEEP capability / REDESIGN** | You -> Settings |
-| `MarketplaceScreen` | **MERGE / REHOME** | Discover/Club/You based on actual product purpose |
-| `VisionGalleryScreen` and fixture-only visual surfaces | **REMOVE from product navigation** | test/dev tooling only if still required |
+| `RideDashboardScreen` | REPLACE | New Ride entry preserves truthful activity context and live-session return |
+| `StartRideScreen` | REPLACE presentation | Preserve sport/start/error/diagnostic contracts and stable automation IDs |
+| `ProductTabBar` / older game shell | REPLACE | Four-destination navigation and deep-link migration verified |
+| `ExploreMapScreen` | KEEP map capability / REDESIGN | Real map and route interactions in the new layout |
+| `CityHubScreen`, clubs and rankings | MERGE / RECOMPOSE | Useful capabilities have a home in Club |
+| `AthleteProfileScreen`, history and trends | RECOMPOSE | Useful capabilities have a home in You |
+| `ActiveRideHUDScreen` | KEEP domain / REPLACE presentation | New map/instrument views and real pause/recovery tests |
+| `RidePausedScreen` | REMOVE standalone destination | Overlay parity verified; preserve resume/finish behavior |
+| `RideSummaryScreen` | REPLACE presentation | Keep durable-success, pending-finalization and recovery-required semantics |
+| `SettingsScreen` | REPLACE presentation | Preserve privacy, sensors, account, equipment and diagnostic capabilities |
+| `SettingsSections` | REMOVED from the PR implementation | Settings live in Roadbook `SettingsScreen`; full capability parity still needs acceptance audit |
+| `grandPrix` / `grandPrixNight` runtime names | TEMPORARY aliases | Remove after all legacy consumers migrate; these are not user theme IDs |
+| `runtimeTheme.ts` legacy-key adapter | TEMPORARY compatibility | Remove with the last legacy raw-key consumer |
+| Vision/workbench surfaces | KEEP tooling, not product navigation | Device/test fixtures only; no false product data |
 
 ## 5. 4VELO CONTROL information architecture v2
 
-The desktop/admin product is renamed in UI language to **4VELO CONTROL**.
+The desktop/admin product is **4VELO CONTROL**. Target top-level IA remains:
 
-Target top-level IA:
-
-1. **Overview** — operational summary and exceptions that need attention.
-2. **Riders** — people, identity, account status, tenant membership and support actions.
-3. **Rides** — activities, moderation context, ride details and operational review.
-4. **Map** — live/operational geospatial view and simulator-related map workflows.
-5. **Community** — clubs, cities, challenges, leaderboards and community moderation.
+1. **Overview** — operational summary and exceptions needing attention.
+2. **Riders** — identity, account status, tenant membership and support.
+3. **Rides** — activities, moderation context and operational review.
+4. **Map** — live/operational geospatial and simulator workflows.
+5. **Community** — clubs, cities, challenges and moderation.
 6. **Events** — event lifecycle and participation operations.
-7. **Content** — product content and configurable presentation/content surfaces.
-8. **Trust** — anti-cheat, moderation, audit and safety/security operator workflows.
-9. **Business** — tenants, branding, sponsors, vouchers/rewards and commercial configuration.
-10. **System** — platform configuration, integrations, diagnostics and privileged system tools.
+7. **Content** — product content and configurable presentation surfaces.
+8. **Trust** — anti-cheat, audit and safety/security operator workflows.
+9. **Business** — tenants, branding, sponsors, vouchers and commercial configuration.
+10. **System** — platform configuration, integrations, diagnostics and privileged tools.
 
-### 5.1 CONTROL principles
-
-- functionality is not removed merely because the old navigation grouping is removed;
-- RBAC remains authoritative and must be enforced at route/action level, not just hidden in navigation;
-- dashboards exist to support operator decisions, not to showcase decorative KPI cards;
-- tables, search, filters, bulk actions, maps and clear status are preferred over animated “premium” chrome;
-- destructive and privileged actions must remain explicit and auditable;
-- desktop density may be higher than mobile density, but hierarchy must remain obvious.
+Functionality is not removed because old navigation grouping is removed. Enforce RBAC at route/action level, not merely through hidden menu entries. Prefer tables, filters, search, bulk actions and maps over decorative KPI cards. Destructive/privileged actions remain explicit and auditable. Desktop density may be higher than mobile density.
 
 ## 6. Legacy retirement rules
 
-Every legacy surface must be classified as **KEEP, MERGE, REPLACE or DELETE** before removal.
+A file can be deleted only after required behavior has migrated, repository search confirms no remaining runtime consumer, replacement deep links/routes are defined, relevant unit/integration/E2E tests pass, applicable route/RBAC audits pass and docs/dead imports/assets are updated.
 
-A legacy file/component may be deleted only when all applicable checks are true:
+Do not preserve conflicting visual baselines to defend rejected UI. Replace them with reviewed baselines while retaining independent safety and behavioral assertions. Home, Welcome and Summary no longer require legacy hero/finish artwork. Retained assets still need governed provenance and immutable digests. Summary success haptics and sharing remain gated by durable truth, with rendered behavioral tests independent of artwork.
 
-1. repository search confirms **0 runtime consumers** outside tests/fixtures intentionally being removed;
-2. routes/deep links have a defined replacement or are deliberately retired;
-3. required behaviour has migrated;
-4. relevant unit/integration/E2E tests pass;
-5. mobile route/screen audits or admin route/RBAC audits still pass as applicable;
-6. docs no longer instruct users/operators to use the removed surface;
-7. final diff is checked for dead imports and stale assets.
+## 7. Delivery sequence and actual status
 
-Do not keep compatibility wrappers indefinitely. If a wrapper exists only to bridge a migration, give it an explicit removal condition.
+Historical UI-1/UI-2 work (#348/#349, #354/#356, #358/#359, #360/#361 and #362) describes the existing runtime, not acceptance of its appearance under Roadbook.
 
-## 7. Migration sequence
+The active sprint is #418 / PR #419:
 
-### UI-0 — authority and inventory
+- implement the versioned data-only theme contract, validation, transactional persistence and migration;
+- wire one runtime, real appearance settings, isolated preview, apply/cancel and import/export;
+- replace the complete ride vertical slice with the approved visual direction and real domain commands;
+- migrate secondary surfaces and navigation, then remove the replaced legacy presentation;
+- obtain exact-SHA native/visual evidence and owner acceptance.
 
-- establish this document as the current UI authority;
-- mark conflicting frozen/snapshot documents as superseded or historical;
-- maintain a real legacy disposition from current code.
+The PR includes Roadbook Ride entry, preparation, map/instrument HUD, pause overlay, summary, Discover, Club, You, settings, authentication and onboarding. Secondary drill-down surfaces, capability parity and legacy retirement still require an audit. Implemented primary screens are not complete app acceptance.
 
-### UI-1 — shells
+Theme-pack code, unit tests or a successful Metro bundle are not a completed native or visual acceptance. PR/issue evidence records which stages have actually run. Do not mark the full app MVP complete based on the theme foundation.
 
-Mobile implementation is tracked in **#348 / PR #349**:
-- replace `GameTabBar`;
-- establish Today / Discover / Start Ride / Club / You route contract;
-- make Discover map-first and retire the intermediate Explore hub;
-- keep live ride behaviour intact while changing entry/navigation.
+## 8. Preserved contracts
 
-CONTROL:
-- replace old sidebar grouping with the v2 CONTROL IA;
-- preserve all current RBAC and route capabilities.
+The design does not itself authorize changes to authentication/session semantics, API schemas, GPS capture/buffering/recovery, telemetry retry/durability, ride data integrity, RBAC/tenant isolation, audit logging or release/native provenance gates. Behavioral fixes need explicit scope and evidence. Accessibility obligations remain mandatory for every theme.
 
-### UI-2 — primary flows
-
-**Implementation tracking:** Today / Start Ride separation is delivered by GitHub Issue #354 / PR #356. Club recomposition is delivered by Issue #358 / PR #359. You recomposition is delivered by Issue #360 / PR #361. Discover map-first recomposition is tracked by Issue #362.
-
-- Today and Start Ride;
-- Discover map-first flow; Marketplace remains a secondary utility during UI-2, while placeholder-only Segments are not promoted into primary discovery until they have real product data;
-- Club;
-- You;
-- CONTROL Overview, Riders, Rides and Map.
-
-### UI-3 — secondary flows
-
-- progress/history/trends;
-- settings and diagnostics;
-- events/content/trust/business/system;
-- remaining utility screens.
-
-### UI-4 — retirement
-
-- delete zero-consumer legacy screens/components/assets;
-- remove compatibility aliases;
-- update visual baselines and E2E navigation expectations.
-
-## 8. Non-negotiable preserved contracts
-
-This UX decision does not itself authorise changes to:
-
-- authentication/session semantics;
-- backend/API schemas;
-- GPS capture, buffering or recovery;
-- telemetry ingest and retry guarantees;
-- ride start/stop data integrity;
-- RBAC/tenant isolation;
-- audit logging;
-- release/native provenance gates;
-- accessibility and reduced-motion obligations.
-
-Any such change requires its own scoped issue and evidence.
+No routine APK rebuild per palette change. Use the Gumball cost governor and exact-SHA native proof path when required. Keep unrelated proof/harness work independent.
 
 ## 9. Acceptance criteria
 
-The migration is complete when:
+The mobile migration is complete only after the new navigation and entire ride flow are implemented with real data and commands; invalid theme packs cannot replace a working theme; selection persists and works offline; preview/cancel has no side effect; changing appearance does not remount the recording subtree; error/recovery/empty states, text scaling and contrasts are reviewed; native behavior and visual parity are evidenced; and owner approval applies to the actual implementation.
 
-- mobile primary navigation exposes **Today / Discover / Start Ride / Club / You**;
-- the live ride is a focused flow outside ordinary content navigation;
-- no intermediate legacy hub exists only to forward the user to the real task;
-- routine typography and controls are modern and legible;
-- pixel art remains recognisable but specialist;
-- CONTROL navigation matches the v2 operator IA while preserving capabilities and RBAC;
-- deleted legacy components have 0 consumers and corresponding tests/docs are updated;
-- new visual and route baselines replace legacy frozen-UI assumptions.
+A third compliant theme must be installable without editing any screen. CONTROL acceptance remains independently scoped to its operator IA, capabilities and RBAC. Old UI approvals cannot overrule the October mobile replacement decision.
 
-## 10. Evidence and historical documents
+## 10. Evidence
 
-Dated audits and Frozen UI v1.x documents remain useful evidence of the previous implementation. They are **not** current product-direction authority after this decision.
+Dated audits, Frozen UI v1.x documents and generated concept boards are historical/design evidence, not proof of runtime behavior. A valid safety/runtime requirement from an older document remains protected when supported by current code or a current non-visual contract.
 
-When an older document contains an independently valid safety/runtime fact, that fact remains valid only if it is also supported by current code or a current non-visual contract.
+The Jest harness resolves hooks and JSX to the app's React installation and narrowly extends the Expo transform preset for the real URL parser's ESM dependencies. The parser is not mocked. This is test-runtime alignment, not proof of native navigation or a production dependency upgrade. Existing lint rules, test selection, coverage floors and native gates remain in force.

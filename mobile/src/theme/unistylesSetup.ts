@@ -1,26 +1,22 @@
-/**
- * unistylesSetup.ts — Unistyles Bootstrap (Side-effect only module)
- *
- * THIS FILE MUST BE THE VERY FIRST IMPORT in index.ts (or any entry point).
- *
- * Problem: ES module `import` statements are ALL hoisted before any code runs.
- * This means if `StyleSheet.configure()` lives in index.ts alongside other
- * imports, the other modules (App → RetroInput, PixelText, etc.) get resolved
- * first and their module-level `StyleSheet.create()` calls fire BEFORE configure().
- *
- * Solution: Isolate `configure()` in its own file. When index.ts does:
- *   import './src/theme/unistylesSetup';   ← first import
- *   import App from './App';               ← second import
- *
- * Metro guarantees that unistylesSetup is fully executed (including configure)
- * before App's dependency graph is resolved.
- */
-
+/** Must remain the first entrypoint import: configure before any StyleSheet.create(). */
+import { Appearance } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { grandPrixTheme } from './grandPrix';
 import { grandPrixNightTheme } from './grandPrixNight';
+import { getAppearanceStore } from './appearanceStore';
+import { resolveColorMode, resolvePalette } from './packs/themePack';
+import { toRuntimeTheme } from './runtimeTheme';
 
+const store = getAppearanceStore();
+const { preferences } = store.getSnapshot();
+const pack = store.getPack(preferences.themeId);
+const mode = resolveColorMode(preferences.mode, Appearance.getColorScheme());
+
+// Runtime names are compatibility aliases only; pack identity is independent of them.
 StyleSheet.configure({
-    settings: { initialTheme: 'grandPrix' },
-    themes: { grandPrix: grandPrixTheme, grandPrixNight: grandPrixNightTheme } as any,
+  settings: { initialTheme: mode === 'dark' ? 'grandPrixNight' : 'grandPrix' },
+  themes: {
+    grandPrix: toRuntimeTheme(grandPrixTheme, resolvePalette(pack, 'light', preferences.highContrast)),
+    grandPrixNight: toRuntimeTheme(grandPrixNightTheme, resolvePalette(pack, 'dark', preferences.highContrast)),
+  },
 });
