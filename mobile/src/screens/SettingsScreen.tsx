@@ -38,18 +38,23 @@ export function SettingsScreen({ embedded = false }: { embedded?: boolean }) {
   const alive = useRef(false);
   const request = useRef(0);
   const operation = useRef(false);
-  const readStatus = useCallback(async () => {
+  const readStatus = useCallback(() => {
     const id = ++request.current;
-    const [wearableResult, privacyResult] = await Promise.allSettled([WearableService.getStatus(), PrivacyService.getZones()]);
-    if (!alive.current || id !== request.current) return;
-    setWearableError(wearableResult.status === 'rejected');
-    if (wearableResult.status === 'fulfilled') setWearables(wearableResult.value);
-    const validPrivacy = privacyResult.status === 'fulfilled' && Array.isArray(privacyResult.value);
-    setPrivacyError(!validPrivacy);
-    if (privacyResult.status === 'fulfilled' && Array.isArray(privacyResult.value)) setPrivacyZoneCount(privacyResult.value.length);
-    setLoading(false);
+    return Promise.allSettled([WearableService.getStatus(), PrivacyService.getZones()]).then(([wearableResult, privacyResult]) => {
+      if (!alive.current || id !== request.current) return;
+      setWearableError(wearableResult.status === 'rejected');
+      if (wearableResult.status === 'fulfilled') setWearables(wearableResult.value);
+      const validPrivacy = privacyResult.status === 'fulfilled' && Array.isArray(privacyResult.value);
+      setPrivacyError(!validPrivacy);
+      if (privacyResult.status === 'fulfilled' && Array.isArray(privacyResult.value)) setPrivacyZoneCount(privacyResult.value.length);
+      setLoading(false);
+    });
   }, []);
-  useEffect(() => { alive.current = true; void readStatus(); return () => { alive.current = false; }; }, [readStatus]);
+  useEffect(() => {
+    alive.current = true;
+    void readStatus();
+    return () => { alive.current = false; request.current += 1; };
+  }, [readStatus]);
   const refresh = () => { setLoading(true); return readStatus(); };
   const run = async (action: () => Promise<unknown>) => {
     if (operation.current) return;

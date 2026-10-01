@@ -40,18 +40,21 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
   const selectedTenant = tenants.find((tenant) => tenant.id === selectedTenantId);
   const selectedDepartment = flatDepartments.find((department) => department.id === selectedDepartmentId);
   const stepNames = [t.onboarding.city.step, t.onboarding.department.step, t.onboarding.finish.step];
-  const readTenants = useCallback(async () => {
+  const readTenants = useCallback(() => {
     const request = ++tenantRequest.current;
-    try {
-      const rows = await AuthService.getPublicTenants();
+    return AuthService.getPublicTenants().then((rows) => {
       if (!alive.current || request !== tenantRequest.current) return;
       setTenants(rows); setTenantState(rows.length > 0 ? 'ready' : 'empty');
       if (rows.length === 1 && rows[0]) setSelectedTenantId(rows[0].id);
-    } catch {
+    }).catch(() => {
       if (alive.current && request === tenantRequest.current) { setTenants([]); setTenantState('error'); }
-    }
+    });
   }, []);
-  useEffect(() => { alive.current = true; void readTenants(); return () => { alive.current = false; }; }, [readTenants]);
+  useEffect(() => {
+    alive.current = true;
+    void readTenants();
+    return () => { alive.current = false; tenantRequest.current += 1; };
+  }, [readTenants]);
   const loadTenants = () => { setTenantState('loading'); void readTenants(); };
   const loadDepartmentsForTenant = async (tenantId: string): Promise<boolean> => {
     setDepartmentState('loading'); setDepartments([]); setSelectedDepartmentId(null);

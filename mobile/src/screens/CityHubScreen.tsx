@@ -38,22 +38,27 @@ export const CityHubScreen: React.FC<{
   const [usingCached, setUsingCached] = useState(!fixturesEnabled && cityHubLive !== null);
   const alive = useRef(false);
   const flight = useRef(0);
-  const readCityHub = useCallback(async () => {
+  const readCityHub = useCallback(() => {
     if (fixturesEnabled) return;
     const request = ++flight.current;
-    try {
-      const summary = await withRetry(() => ActivityService.getCityHubSummary());
+    return withRetry(() => ActivityService.getCityHubSummary()).then((summary) => {
       if (!alive.current || request !== flight.current) return;
       OfflineCacheService.setCityHub(summary);
       setCityHubLive(summary); setUsingCached(false); setLoadError(false);
-    } catch (error) {
+    }).catch((error: unknown) => {
       if (alive.current && request === flight.current) {
         setLoadError(true);
         if (!isOfflineTransportError(error)) { setCityHubLive(null); setUsingCached(false); }
       }
-    } finally { if (alive.current && request === flight.current) setLoading(false); }
+    }).finally(() => {
+      if (alive.current && request === flight.current) setLoading(false);
+    });
   }, [fixturesEnabled]);
-  useEffect(() => { alive.current = true; void readCityHub(); return () => { alive.current = false; }; }, [readCityHub]);
+  useEffect(() => {
+    alive.current = true;
+    void readCityHub();
+    return () => { alive.current = false; flight.current += 1; };
+  }, [readCityHub]);
   const retryCityHub = () => { setLoading(true); setLoadError(false); void readCityHub(); };
   const effectiveCityHub = fixturesEnabled ? fixtureSummary : cityHubLive;
   const event = effectiveCityHub?.active_event;

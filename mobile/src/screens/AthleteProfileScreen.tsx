@@ -25,20 +25,22 @@ export const AthleteProfileScreen: React.FC<Props> = ({ user, onLogout, onTraini
   const [profileError, setProfileError] = useState(false);
   const alive = useRef(false);
   const requestId = useRef(0);
-  // Initial loading belongs to initial state; effects only publish asynchronous responses.
-  const readProfile = useCallback(async () => {
+  // Initial loading belongs to initial state; only API response callbacks publish updates.
+  const readProfile = useCallback(() => {
     if (fixturesEnabled) return;
     const id = ++requestId.current;
-    try {
-      const next = await AuthService.getProfile();
+    return AuthService.getProfile().then((next) => {
       if (alive.current && id === requestId.current) { setProfile(next); setProfileError(false); }
-    } catch { if (alive.current && id === requestId.current) setProfileError(true); }
-    finally { if (alive.current && id === requestId.current) setProfileLoading(false); }
+    }).catch(() => {
+      if (alive.current && id === requestId.current) setProfileError(true);
+    }).finally(() => {
+      if (alive.current && id === requestId.current) setProfileLoading(false);
+    });
   }, [fixturesEnabled]);
   useEffect(() => {
     alive.current = true;
     void readProfile();
-    return () => { alive.current = false; };
+    return () => { alive.current = false; requestId.current += 1; };
   }, [readProfile]);
   const retryProfile = () => { setProfileLoading(true); setProfileError(false); void readProfile(); };
   const displayName = formatRiderDisplayName(profileFixture?.username ?? profile?.username ?? user?.username, t.profile.athlete);

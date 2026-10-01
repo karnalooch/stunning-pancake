@@ -41,18 +41,22 @@ export const ExploreMapScreen: React.FC<{ onOpenMarketplace?: () => void }> = ({
   const alive = useRef(false);
   const request = useRef(0);
   const mapStyle = useMemo(() => resolveRideMapStyle() as string | StyleSpecification, []);
-  const readPois = useCallback(async () => {
+  const readPois = useCallback(() => {
     const id = ++request.current;
-    try {
-      const rows = normalizePois(await POIService.getPOIs());
+    return POIService.getPOIs().then((data) => {
+      const rows = normalizePois(data);
       if (alive.current && id === request.current) { setPois(rows); setSelected(null); setLoadError(false); }
-    } catch {
+    }).catch(() => {
       if (alive.current && id === request.current) setLoadError(true);
-    } finally {
+    }).finally(() => {
       if (alive.current && id === request.current) setLoading(false);
-    }
+    });
   }, []);
-  useEffect(() => { alive.current = true; void readPois(); return () => { alive.current = false; }; }, [readPois]);
+  useEffect(() => {
+    alive.current = true;
+    void readPois();
+    return () => { alive.current = false; request.current += 1; };
+  }, [readPois]);
   const loadPois = () => { setLoading(true); setLoadError(false); void readPois(); };
   const filtered = useMemo(() => {
     const text = query.trim().toLocaleLowerCase();
