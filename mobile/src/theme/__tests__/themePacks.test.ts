@@ -79,7 +79,7 @@ describe('appearance persistence and transactions', () => {
     assert.equal(storage.writes, 0);
     assert.equal(store.getSnapshot(), store.getSnapshot());
   });
-  for (const [legacy, mode] of [['grandPrix', 'light'], ['grandPrixNight', 'dark']]) {
+  for (const [legacy, mode] of [['grandPrix', 'light'], ['grandPrixNight', 'dark']] as const) {
     it(`migrates ${legacy} without overwriting old storage`, () => {
       const storage = memory({ theme_mode: legacy });
       assert.equal(new AppearanceStore(storage).getSnapshot().preferences.mode, mode);
