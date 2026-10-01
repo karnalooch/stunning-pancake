@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { Share, View } from 'react-native';
 import type { NavigationContainerRef } from '@react-navigation/native';
 import { NavigationContainer } from '@react-navigation/native';
@@ -124,15 +124,20 @@ function MainTabs({
   };
 
   const startInputs = useRef({ onStartRide, navRef });
-  startInputs.current = { onStartRide, navRef };
+  useLayoutEffect(() => {
+    startInputs.current = { onStartRide, navRef };
+  }, [onStartRide, navRef]);
   const startCommand = useRef<ReturnType<typeof createRideStartCommand> | null>(null);
-  if (!startCommand.current) {
-    startCommand.current = createRideStartCommand(
-      (sport, eventId) => startInputs.current.onStartRide(sport, eventId),
-      () => startInputs.current.navRef.current?.navigate('MainTabs', { screen: 'Tracking' }),
-    );
-  }
-  const handleStartRide = startCommand.current;
+  const handleStartRide = useCallback((sport: ActivitySportType = 'BIKE', eventId?: number) => {
+    // Create and access the command only in the event handler, never during render.
+    if (startCommand.current === null) {
+      startCommand.current = createRideStartCommand(
+        (nextSport, nextEventId) => startInputs.current.onStartRide(nextSport, nextEventId),
+        () => startInputs.current.navRef.current?.navigate('MainTabs', { screen: 'Tracking' }),
+      );
+    }
+    return startCommand.current(sport, eventId);
+  }, []);
 
   const handleStopRide = async () => {
     const result = await onStopRide();
