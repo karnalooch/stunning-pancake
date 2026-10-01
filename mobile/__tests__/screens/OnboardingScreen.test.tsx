@@ -1,5 +1,4 @@
 import React from 'react';
-import { Pressable } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 import { stringsEn } from '../../src/i18n/strings.en';
 import { OnboardingScreen } from '../../src/screens/OnboardingScreen';
@@ -37,10 +36,15 @@ const waitForResult = async <T,>(probe: () => T, label: string, maxAttempts = 40
 };
 const waitForEnabledControl = async (testID: string) => waitForResult(() => {
   if (!tree) throw new Error('onboarding renderer is not mounted');
-  const controls = tree.root.findAll((node) => node.type === Pressable && node.props.testID === testID);
-  if (controls.length !== 1) throw new Error(`expected one pressable ${testID}, found ${controls.length}`);
+  // Match the real accessible control, not its memo/forwardRef export identity.
+  // Do not double-count native descendants carrying the same automation ID.
+  const controls = tree.root.findAll((node) => node.props.testID === testID
+    && node.props.accessibilityRole === 'button' && typeof node.props.onPress === 'function', { deep: false });
+  if (controls.length !== 1) throw new Error(`expected one accessible button ${testID}, found ${controls.length}`);
   const node = controls[0];
-  if (!node || node.props.disabled === true) throw new Error(`control ${testID} is not enabled`);
+  if (!node || node.props.disabled !== false || node.props.accessibilityState?.disabled !== false) {
+    throw new Error(`control ${testID} is not enabled`);
+  }
   return node;
 }, `enabled control ${testID}`);
 const pressControl = async (testID: string) => {
