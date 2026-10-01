@@ -2,125 +2,46 @@ import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useUnistyles } from 'react-native-unistyles';
-
 import { useI18n } from '../i18n/useI18n';
 import { HapticService } from '../services/HapticService';
-import { SoundService } from '../services/SoundService';
 import { getSemanticColors } from '../theme/semantic';
-import { ProductTabIcon, type ProductTabName } from './ProductTabIcon';
+import { PRODUCT_TYPOGRAPHY } from '../theme/typography';
+import { getAppCopy } from '../components/roadbook/appCopy';
+import { ProductTabIcon } from './ProductTabIcon';
 
-const VISIBLE_TAB_NAMES: readonly ProductTabName[] = [
-  'Today',
-  'Discover',
-  'StartRide',
-  'Club',
-  'You',
-];
+export const VISIBLE_TAB_NAMES = ['Today', 'Discover', 'Club', 'You'] as const;
+type Destination = typeof VISIBLE_TAB_NAMES[number];
 
-export const ProductTabBar: React.FC<BottomTabBarProps> = ({
-  state,
-  navigation,
-}) => {
+export const ProductTabBar: React.FC<BottomTabBarProps> = ({ state, navigation, insets }) => {
   const { theme } = useUnistyles();
-  const { t } = useI18n();
-  const semantic = getSemanticColors(theme.colors);
-  const labels: Record<ProductTabName, string> = {
-    Today: t.tabs.today,
-    Discover: t.tabs.discover,
-    StartRide: t.tabs.startRide,
-    Club: t.tabs.club,
-    You: t.tabs.you,
-  };
-
-  const visibleRoutes = state.routes.filter((route) =>
-    VISIBLE_TAB_NAMES.includes(route.name as ProductTabName),
-  );
-
-  return (
-    <View
-      style={{
-        minHeight: 84,
-        paddingHorizontal: 8,
-        paddingTop: 8,
-        paddingBottom: 18,
-        flexDirection: 'row',
-        alignItems: 'flex-end',
-        backgroundColor: semantic.navigation.shell,
-        borderTopWidth: 1,
-        borderTopColor: semantic.border.strong,
-      }}
-    >
-      {visibleRoutes.map((route) => {
-        const routeName = route.name as ProductTabName;
-        const routeIndex = state.routes.findIndex((item) => item.key === route.key);
-        const isFocused = state.index === routeIndex;
-        const isStartRide = routeName === 'StartRide';
-        const iconColor = isStartRide
-          ? semantic.text.onAction
-          : isFocused
-            ? semantic.navigation.active
-            : semantic.navigation.inactive;
-
-        const onPress = () => {
-          const event = navigation.emit({
-            type: 'tabPress',
-            target: route.key,
-            canPreventDefault: true,
-          });
-          if (!isFocused && !event.defaultPrevented) {
+  const { locale } = useI18n();
+  const c = getSemanticColors(theme.colors);
+  const copy = getAppCopy(locale);
+  const labels: Record<Destination, string> = { Today: copy.ride, Discover: copy.discover, Club: copy.club, You: copy.you };
+  return <View testID="roadbook-tab-bar" style={{ paddingHorizontal: 8, paddingTop: 8,
+    paddingBottom: Math.max(8, insets.bottom), flexDirection: 'row', alignItems: 'stretch',
+    backgroundColor: c.navigation.shell, borderTopWidth: 1, borderColor: c.border.subtle }}>
+    {state.routes.filter((route) => VISIBLE_TAB_NAMES.includes(route.name as Destination)).map((route) => {
+      const name = route.name as Destination;
+      const selected = state.routes[state.index]?.key === route.key;
+      const color = selected ? c.navigation.active : c.navigation.inactive;
+      return <Pressable key={route.key} testID={`tab-${name.toLowerCase()}`} accessibilityRole="tab"
+        accessibilityLabel={labels[name]} accessibilityState={{ selected }}
+        onPress={() => {
+          const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+          if (!selected && !event.defaultPrevented) {
             HapticService.trigger('tab_switch');
-            void SoundService.play('ui_click');
-            navigation.navigate(route.name);
+            navigation.navigate(route.name, route.params);
           }
-        };
-
-        return (
-          <Pressable
-            key={route.key}
-            accessibilityRole="button"
-            accessibilityLabel={labels[routeName]}
-            accessibilityState={isFocused ? { selected: true } : {}}
-            testID={`tab-${routeName.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()}`}
-            onPress={onPress}
-            style={({ pressed }) => ({
-              flex: 1,
-              minHeight: 52,
-              marginHorizontal: 2,
-              paddingHorizontal: 2,
-              paddingVertical: isStartRide ? 8 : 5,
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 3,
-              borderRadius: isStartRide ? 18 : 12,
-              backgroundColor: isStartRide
-                ? pressed
-                  ? semantic.action.primaryPressed
-                  : semantic.action.primary
-                : 'transparent',
-              borderTopWidth: !isStartRide && isFocused ? 2 : 0,
-              borderTopColor: semantic.navigation.active,
-              transform: isStartRide ? [{ translateY: -7 }] : undefined,
-              opacity: pressed && !isStartRide ? 0.72 : 1,
-            })}
-          >
-            <ProductTabIcon routeName={routeName} color={iconColor} size={isStartRide ? 24 : 22} />
-            <Text
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.72}
-              style={{
-                fontSize: 11,
-                lineHeight: 14,
-                fontWeight: isFocused || isStartRide ? '700' : '500',
-                color: iconColor,
-                textAlign: 'center',
-              }}
-            >
-              {labels[routeName]}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
+        }}
+        onLongPress={() => navigation.emit({ type: 'tabLongPress', target: route.key })}
+        style={({ pressed }) => ({ flex: 1, minHeight: 56, paddingVertical: 8, paddingHorizontal: 4,
+          alignItems: 'center', justifyContent: 'center', gap: 5,
+          backgroundColor: pressed ? c.surface.raised : c.navigation.shell,
+          borderTopWidth: 2, borderTopColor: selected ? color : c.navigation.shell })}>
+        <ProductTabIcon routeName={name} color={color} size={22} />
+        <Text style={{ ...PRODUCT_TYPOGRAPHY.metricLabel, color, textAlign: 'center' }}>{labels[name]}</Text>
+      </Pressable>;
+    })}
+  </View>;
 };

@@ -1,166 +1,107 @@
-// Active Ride HUD — bike-computer grid over map (ADR 014 / DESIGN_SYSTEM_MOBILE §3)
-import React, { useEffect, useMemo, useRef } from 'react';
-import { View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
-import { GpsRecoveryBanner } from '../components/GpsRecoveryBanner';
 import { RideMapView } from '../components/RideMapView';
-import { DataFieldGrid } from '../components/ride/DataFieldGrid';
-import { RideStatusBar } from '../components/ride/RideStatusBar';
-import { RideActionBar } from '../components/ride/RideActionBar';
+import { GpsRecoveryBanner } from '../components/GpsRecoveryBanner';
 import { RideNavigationHint } from '../components/ride/RideNavigationHint';
-import type { RideMetricsSnapshot } from '../ride/types';
+import { RideActionBar, type RideAction } from '../components/ride/RideActionBar';
+import { RideStatusBar } from '../components/ride/RideStatusBar';
+import { RidePausedScreen } from './RidePausedScreen';
 import { useBatteryPct } from '../hooks/useBatteryPct';
 import { useI18n } from '../i18n/useI18n';
 import { VoiceCueService } from '../services/VoiceCueService';
 import { RiderPreferencesService } from '../services/RiderPreferencesService';
-import { RidePausedScreen } from './RidePausedScreen';
+import { getSemanticColors } from '../theme/semantic';
+import { PRODUCT_TYPOGRAPHY } from '../theme/typography';
+import { getAppCopy } from '../components/roadbook/appCopy';
+import { elapsedLabel, metricNumber } from '../components/roadbook/summaryPresentation';
+import { isMapCoordinate } from '../map/routeGeometry';
 
-const stylesheet = StyleSheet.create((theme) => {
-  const c = theme.colors as Record<string, string>;
-  return {
-    container: { flex: 1, backgroundColor: c.hudBackground },
-    mapLayer: { ...StyleSheet.absoluteFillObject },
-    overlay: {
-      flex: 1,
-      paddingHorizontal: 12,
-      paddingBottom: 12,
-      justifyContent: 'space-between',
-    },
-    top: { paddingTop: 4, gap: 8 },
-    bottom: { gap: 10 },
-  };
-});
-
-interface Props {
-  user?: unknown;
-  onPause?: () => void;
-  onResume?: () => void;
-  onStop?: () => void;
-  isPaused?: boolean;
-  liveSpeed?: number;
-  liveDistanceKm?: number;
-  liveElevationGainM?: number;
-  liveElapsedS?: number;
-  liveCoord?: [number, number] | null;
-  routeCoordinates?: [number, number][];
-  navigationCueText?: string | null;
-  navigationCueDistanceM?: number | null;
-  gpsRecoveryVisible?: boolean;
-  gpsRecoveryBusy?: boolean;
-  onGpsRecoveryPress?: () => void;
+export interface ActiveRideHUDProps {
+  user?: unknown; onPause?: RideAction; onResume?: RideAction; onStop?: RideAction; onOpenHub?: () => void;
+  isPaused?: boolean; liveSpeed?: number; liveDistanceKm?: number; liveElevationGainM?: number;
+  liveElapsedS?: number; liveCoord?: [number, number] | null; routeCoordinates?: [number, number][];
+  navigationCueText?: string | null; navigationCueDistanceM?: number | null;
+  gpsRecoveryVisible?: boolean; gpsRecoveryBusy?: boolean; onGpsRecoveryPress?: () => void;
 }
-
-export const ActiveRideHUDScreen: React.FC<Props> = ({
-  onPause,
-  onResume,
-  onStop,
-  isPaused = false,
-  liveSpeed = 0,
-  liveDistanceKm = 0,
-  liveElevationGainM = 0,
-  liveElapsedS = 0,
-  liveCoord = null,
-  routeCoordinates = [],
-  navigationCueText = null,
-  navigationCueDistanceM = null,
-  gpsRecoveryVisible = false,
-  gpsRecoveryBusy = false,
-  onGpsRecoveryPress,
+/** View mode belongs to presentation; all live values and transitions belong to the same caller-owned session. */
+export const ActiveRideHUDScreen: React.FC<ActiveRideHUDProps> = ({
+  onPause, onResume, onStop, onOpenHub, isPaused = false, liveSpeed = 0, liveDistanceKm = 0,
+  liveElevationGainM = 0, liveElapsedS = 0, liveCoord = null, routeCoordinates = [],
+  navigationCueText = null, navigationCueDistanceM = null, gpsRecoveryVisible = false,
+  gpsRecoveryBusy = false, onGpsRecoveryPress,
 }) => {
-  const s = stylesheet;
+  const [mode, setMode] = useState<'map' | 'instrument'>('map');
   const { t, locale } = useI18n();
+  const c = getAppCopy(locale);
   const batteryPct = useBatteryPct(true);
-  const speedKmh = liveSpeed * 3.6;
-  const cyclistState =
-    speedKmh >= 35 ? 'attack' : speedKmh >= 15 ? 'cruise' : 'idle';
-  const gpsLocked = liveCoord != null && !gpsRecoveryVisible;
   const didMountRef = useRef(false);
-
   useEffect(() => {
     VoiceCueService.setLanguage(locale === 'pl' ? 'pl-PL' : 'en-US');
     VoiceCueService.setEnabled(RiderPreferencesService.isVoiceCuesEnabled());
   }, [locale]);
-
   useEffect(() => {
-    if (!didMountRef.current) {
-      didMountRef.current = true;
-      return;
-    }
-    if (gpsRecoveryVisible) {
-      void VoiceCueService.speak(t.gps.recovery);
-    }
+    if (!didMountRef.current) { didMountRef.current = true; return; }
+    if (gpsRecoveryVisible) void VoiceCueService.speak(t.gps.recovery);
   }, [gpsRecoveryVisible, t.gps.recovery]);
-
-  useEffect(() => {
-    if (isPaused) {
-      void VoiceCueService.speak(t.ride.paused.title);
-    }
-  }, [isPaused, t.ride.paused.title]);
-
-  const metrics: RideMetricsSnapshot = useMemo(() => {
-    const avgSpeedKmh =
-      liveElapsedS > 0 ? (liveDistanceKm / liveElapsedS) * 3600 : null;
-    return {
-      speedMs: liveSpeed,
-      distanceKm: liveDistanceKm,
-      avgSpeedKmh,
-      elapsedSeconds: liveElapsedS,
-      heartRateBpm: null,
-      elevationGainM: liveElevationGainM,
-      headingDeg: null,
-      gpsPending: gpsRecoveryVisible,
-    };
-  }, [
-    liveSpeed,
-    liveDistanceKm,
-    liveElapsedS,
-    liveElevationGainM,
-    gpsRecoveryVisible,
-  ]);
-
-  return (
-    <View testID="active-ride-screen" style={s.container}>
-      <View testID="active-ride-map" style={s.mapLayer}>
-        <RideMapView
-          userCoordinate={liveCoord}
-          cyclistState={cyclistState}
-          routeCoordinates={routeCoordinates}
-        />
-      </View>
-      <SafeAreaView style={s.overlay} edges={['top', 'bottom']}>
-        <View style={s.top}>
-          <RideStatusBar gpsLocked={gpsLocked} batteryPct={batteryPct} />
-          <RideNavigationHint
-            text={navigationCueText}
-            distanceM={navigationCueDistanceM}
-          />
-          <GpsRecoveryBanner
-            visible={gpsRecoveryVisible}
-            busy={gpsRecoveryBusy}
-            onPress={() => onGpsRecoveryPress?.()}
-          />
-          <View testID="active-ride-metrics">
-            <DataFieldGrid metrics={metrics} hudMode />
+  useEffect(() => { if (isPaused) void VoiceCueService.speak(t.ride.paused.title); }, [isPaused, t.ride.paused.title]);
+  const average = liveElapsedS > 0 ? liveDistanceKm / liveElapsedS * 3600 : null;
+  const stop: RideAction = onStop ?? (() => false);
+  return <SafeAreaView testID="active-ride-screen" style={styles.page} edges={['top', 'bottom']}>
+    <View style={styles.body} accessibilityElementsHidden={isPaused} importantForAccessibility={isPaused ? 'no-hide-descendants' : 'auto'}>
+      <View style={styles.top}>
+        <View style={styles.toolbar}>
+          {onOpenHub ? <Pressable testID="ride-open-hub" accessibilityRole="button" accessibilityLabel={c.home}
+            onPress={onOpenHub} style={styles.back}><Text style={styles.caption}>‹ {c.ride}</Text></Pressable> : null}
+          <View style={styles.switcher}>
+            {(['map', 'instrument'] as const).map((value) => <Pressable key={value} testID={`ride-view-${value}`}
+              accessibilityRole="tab" accessibilityState={{ selected: mode === value }} onPress={() => setMode(value)}
+              style={[styles.mode, mode === value && styles.selected]}><Text style={styles.caption}>{c[value]}</Text></Pressable>)}
           </View>
         </View>
-        {!isPaused ? (
-          <View style={s.bottom}>
-            <RideActionBar
-              isPaused={false}
-              onPause={() => onPause?.()}
-              onStop={() => onStop?.()}
-            />
+        <RideStatusBar gpsLocked={isMapCoordinate(liveCoord) && !gpsRecoveryVisible} batteryPct={batteryPct} />
+        <RideNavigationHint text={navigationCueText} distanceM={navigationCueDistanceM} />
+        <GpsRecoveryBanner visible={gpsRecoveryVisible} busy={gpsRecoveryBusy} onPress={() => onGpsRecoveryPress?.()} />
+      </View>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+        {mode === 'map' ? <View testID="active-ride-map" style={styles.map}>
+          <RideMapView userCoordinate={liveCoord} routeCoordinates={routeCoordinates} />
+        </View> : null}
+        <View testID="active-ride-metrics" style={styles.metrics}>
+          <Text style={styles.caption}>{c.speed} · km/h</Text>
+          <Text testID="ride-live-speed" style={[styles.speed, mode === 'instrument' && styles.instrumentSpeed]}>{metricNumber(liveSpeed * 3.6)}</Text>
+          <View style={styles.secondary}>
+            <View style={styles.cell}><Text style={styles.caption}>{c.distance}</Text><Text testID="ride-live-distance" style={styles.value}>{metricNumber(liveDistanceKm)} km</Text></View>
+            <View style={styles.cell}><Text style={styles.caption}>{c.duration}</Text><Text testID="ride-live-time" style={styles.value}>{elapsedLabel(liveElapsedS)}</Text></View>
           </View>
-        ) : null}
-      </SafeAreaView>
-
-      {isPaused ? (
-        <RidePausedScreen
-          onResume={() => onResume?.()}
-          onStop={() => onStop?.()}
-        />
-      ) : null}
+          {mode === 'instrument' ? <View style={styles.secondary}>
+            <View style={styles.cell}><Text style={styles.caption}>{c.elevation}</Text><Text style={styles.value}>{metricNumber(liveElevationGainM, 0)} m</Text></View>
+            <View style={styles.cell}><Text style={styles.caption}>{c.average}</Text><Text style={styles.value}>{metricNumber(average)} km/h</Text></View>
+          </View> : null}
+        </View>
+      </ScrollView>
+      {!isPaused ? <View style={styles.controls}><RideActionBar isPaused={false} onPause={onPause} onStop={stop} /></View> : null}
     </View>
-  );
+    {isPaused ? <RidePausedScreen onResume={onResume ?? (() => false)} onStop={stop} /> : null}
+  </SafeAreaView>;
 };
+const styles = StyleSheet.create((theme) => {
+  const c = getSemanticColors(theme.colors);
+  return {
+    page: { flex: 1, backgroundColor: c.canvas.background }, body: { flex: 1 }, top: { paddingHorizontal: 16, gap: 8 },
+    toolbar: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+    back: { minHeight: 48, minWidth: 48, justifyContent: 'center', paddingHorizontal: 8 },
+    switcher: { flexDirection: 'row', flex: 1, justifyContent: 'flex-end' },
+    mode: { minHeight: 48, paddingHorizontal: 16, justifyContent: 'center', borderBottomWidth: 2, borderColor: c.border.subtle },
+    selected: { borderColor: c.action.primary, backgroundColor: c.surface.raised },
+    scroll: { flex: 1 }, content: { flexGrow: 1 }, map: { height: 260, minHeight: 180, marginTop: 12 },
+    metrics: { padding: 24, gap: 6 }, caption: { ...PRODUCT_TYPOGRAPHY.metricLabel, color: c.text.secondary },
+    speed: { ...PRODUCT_TYPOGRAPHY.displayEditorial, fontSize: 62, lineHeight: 72, color: c.text.primary, fontVariant: ['tabular-nums'] },
+    instrumentSpeed: { fontSize: 88, lineHeight: 102 },
+    secondary: { flexDirection: 'row', flexWrap: 'wrap', gap: 20, marginTop: 18 },
+    cell: { flexBasis: 120, flexGrow: 1, gap: 6 },
+    value: { ...PRODUCT_TYPOGRAPHY.title, fontSize: 25, lineHeight: 34, color: c.text.primary, fontVariant: ['tabular-nums'] },
+    controls: { padding: 16, borderTopWidth: 1, borderColor: c.border.subtle, backgroundColor: c.surface.default },
+  };
+});

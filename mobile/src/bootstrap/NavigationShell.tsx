@@ -1,13 +1,12 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { Share, View } from 'react-native';
-import type { NavigationContainerRef } from '@react-navigation/native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, type NavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { UserProfile } from '@4velo/api-client';
 import { ProductTabBar } from '../navigation/ProductTabBar';
 import type { MainTabParamList, RootStackParamList } from '../navigation/types';
+import { mobileLinking } from '../navigation/linking';
 import { RideDashboardScreen } from '../screens/RideDashboardScreen';
 import { StartRideScreen } from '../screens/StartRideScreen';
 import { CityHubScreen } from '../screens/CityHubScreen';
@@ -24,27 +23,19 @@ import { ActivityDetailScreen } from '../screens/ActivityDetailScreen';
 import { PerformanceTrendsScreen } from '../screens/PerformanceTrendsScreen';
 import { GlobalLeaderboardScreen } from '../screens/GlobalLeaderboardScreen';
 import { MarketplaceScreen } from '../screens/MarketplaceScreen';
-import { StackScreenHeader } from '../components/navigation/StackScreenHeader';
 import { VisionGalleryScreen } from '../screens/VisionGalleryScreen';
-import {
-  isVisionFixtures,
-  setVisionHomePreviewState,
-  setVisionRideFinishKind,
-  VISION_HOME_PREVIEW_STATES,
-  VISION_RIDE_FINISH_KINDS,
-} from './visionFixtures';
+import { StackScreenHeader } from '../components/navigation/StackScreenHeader';
+import { EdgeStateBanner } from '../components/ui/EdgeStateBanner';
+import { buildSummaryShare } from '../components/roadbook/summaryPresentation';
+import { isVisionFixtures, setVisionHomePreviewState, setVisionRideFinishKind,
+  VISION_HOME_PREVIEW_STATES, VISION_RIDE_FINISH_KINDS } from './visionFixtures';
 import { useI18n } from '../i18n/useI18n';
 import { useFrameBudgetMonitor } from '../hooks/useFrameBudgetMonitor';
 import { useMotionDegradeMonitor } from '../hooks/useMotionDegrade';
 import type { ActivitySportType } from '../services/api';
-import { ActivityService } from '../services/api';
-import { captureRef } from 'react-native-view-shot';
-import * as Sharing from 'expo-sharing';
-import { trackEngagement } from '../services/EngagementAnalytics';
 import type { RideEdgeMessage } from '../services/apiRetry';
-import { EdgeStateBanner } from '../components/ui/EdgeStateBanner';
+import { trackEngagement } from '../services/EngagementAnalytics';
 import { createRideStartCommand } from './rideStartCommand';
-import { mobileLinking } from '../navigation/linking';
 import type { RideFinishState } from '../features/ride/model/RideFinishState';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -75,482 +66,158 @@ export type NavigationShellProps = {
   onStopRide: () => Promise<{ navigated: boolean; target?: 'Today' } | void>;
   onLogout: () => void;
 };
-
-type MainTabsProps = Omit<
-  NavigationShellProps,
-  'rideFinishState' | 'setRideFinishState' | 'setRideEdgeMessage'
-> & {
+type MainTabsProps = {
+  data: NavigationShellProps;
   navRef: React.RefObject<NavigationContainerRef<RootStackParamList> | null>;
 };
+function MainTabs({ data: p, navRef }: MainTabsProps) {
+  const user = p.user as { username?: string; tenant_id?: string | null; tenant_name?: string | null };
+  return <Tab.Navigator initialRouteName="Today" tabBar={(props) => <ProductTabBar {...props} />}
+    screenOptions={{ headerShown: false }}>
+    <Tab.Screen name="Today">{() => <RideDashboardScreen
+      user={{ username: user.username ?? 'RIDER', tenant_id: user.tenant_id ?? undefined, tenant_name: user.tenant_name ?? undefined }}
+      isRecording={p.isRecording} liveSpeed={p.liveSpeed * 3.6} liveDistance={p.liveDistanceKm}
+      onOpenStartRide={() => navRef.current?.navigate('StartRide')}
+      onGoToRide={() => navRef.current?.navigate('Tracking')}
+      onOpenSettings={() => navRef.current?.navigate('Settings')}
+      onOpenActivity={(activityId) => navRef.current?.navigate('ActivityDetail', { activityId })}
+      rideEdgeMessage={p.rideEdgeMessage} onDismissRideEdgeMessage={p.clearRideEdgeMessage} />}</Tab.Screen>
+    <Tab.Screen name="Discover">{() => <ExploreMapScreen
+      onOpenMarketplace={() => navRef.current?.navigate('Marketplace')} />}</Tab.Screen>
+    <Tab.Screen name="Club">{() => <CityHubScreen user={{ username: user.username ?? 'RIDER' }}
+      onOpenStartRide={() => navRef.current?.navigate('StartRide')}
+      onOpenLeaderboard={() => navRef.current?.navigate('GlobalLeaderboard')}
+      onOpenClubs={() => navRef.current?.navigate('Clubs')}
+      onOpenSegments={() => navRef.current?.navigate('Segments')} />}</Tab.Screen>
+    <Tab.Screen name="You">{() => <AthleteProfileScreen user={{ username: user.username }}
+      onLogout={p.onLogout} onTraining={() => navRef.current?.navigate('TrainingLog')}
+      onSettings={() => navRef.current?.navigate('Settings')}
+      onTrends={() => navRef.current?.navigate('PerformanceTrends')} />}</Tab.Screen>
+  </Tab.Navigator>;
+}
 
-type RootScreenProps<T extends keyof RootStackParamList> = NativeStackScreenProps<
-  RootStackParamList,
-  T
->;
+/** The ride controller lives above navigation. A map/tab/theme switch does not own its lifecycle. */
+export function NavigationShell(props: NavigationShellProps) {
+  const navRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
+  const { t: mt, locale } = useI18n();
+  const { isRecording, ridePaused, onStartRide, onStopRide, rideFinishState, setRideFinishState } = props;
+  useFrameBudgetMonitor(isRecording && !ridePaused);
+  useMotionDegradeMonitor(isRecording && !ridePaused);
 
-function MainTabs({
-  user,
-  isRecording,
-  ridePaused,
-  onPauseRide,
-  onResumeRide,
-  liveSpeed,
-  liveDistanceKm,
-  liveElevationGainM,
-  liveElapsedS,
-  liveCoord,
-  gpsRecoveryVisible,
-  gpsRecoveryBusy,
-  onGpsRecoveryPress,
-  onStartRide,
-  onStopRide,
-  onLogout,
-  navRef,
-  startRideError,
-  clearStartRideError,
-  rideEdgeMessage,
-  clearRideEdgeMessage,
-}: MainTabsProps) {
-  const shellUser = user as {
-    username?: string;
-    tenant_id?: string | null;
-    tenant_name?: string | null;
-  } | null;
-
-  const gpsRecoveryProps = {
-    gpsRecoveryVisible,
-    gpsRecoveryBusy,
-    onGpsRecoveryPress,
-  };
-
-  const startInputs = useRef({ onStartRide, navRef });
-  useLayoutEffect(() => {
-    startInputs.current = { onStartRide, navRef };
-  }, [onStartRide, navRef]);
+  const startInputs = useRef({ onStartRide });
+  useLayoutEffect(() => { startInputs.current = { onStartRide }; }, [onStartRide]);
   const startCommand = useRef<ReturnType<typeof createRideStartCommand> | null>(null);
   const handleStartRide = useCallback((sport: ActivitySportType = 'BIKE', eventId?: number) => {
-    // Create and access the command only in the event handler, never during render.
     if (startCommand.current === null) {
       startCommand.current = createRideStartCommand(
         (nextSport, nextEventId) => startInputs.current.onStartRide(nextSport, nextEventId),
-        () => startInputs.current.navRef.current?.navigate('MainTabs', { screen: 'Tracking' }),
+        () => navRef.current?.navigate('Tracking'),
       );
     }
     return startCommand.current(sport, eventId);
   }, []);
-
+  const showFinish = useCallback(() => {
+    if (rideFinishState && navRef.current?.isReady()) navRef.current.navigate('RideSummary', rideFinishState);
+  }, [rideFinishState]);
+  useEffect(showFinish, [showFinish]);
+  const goHome = () => navRef.current?.navigate('MainTabs', { screen: 'Today' });
   const handleStopRide = async () => {
     const result = await onStopRide();
-    if (result && 'navigated' in result && result.navigated) {
-      navRef.current?.navigate('MainTabs', { screen: result.target ?? 'Today' });
-    }
+    if (result?.navigated) navRef.current?.navigate('MainTabs', { screen: result.target ?? 'Today' });
   };
-
-  return (
-    <Tab.Navigator
-      initialRouteName="Today"
-      tabBar={(props) => <ProductTabBar {...props} />}
-      screenOptions={{ headerShown: false }}
-    >
-      <Tab.Screen name="Today">
-        {() => (
-          <RideDashboardScreen
-            user={
-              shellUser
-                ? {
-                    username: shellUser.username ?? 'RIDER',
-                    tenant_id: shellUser.tenant_id ?? undefined,
-                    tenant_name: shellUser.tenant_name ?? undefined,
-                  }
-                : null
-            }
-            isRecording={isRecording}
-            liveSpeed={liveSpeed * 3.6}
-            liveDistance={liveDistanceKm}
-            onOpenStartRide={() => navRef.current?.navigate('MainTabs', { screen: 'StartRide' })}
-            onGoToRide={() => navRef.current?.navigate('MainTabs', { screen: 'Tracking' })}
-            onOpenSettings={() => navRef.current?.navigate('Settings')}
-            rideEdgeMessage={rideEdgeMessage}
-            onDismissRideEdgeMessage={clearRideEdgeMessage}
-          />
-        )}
-      </Tab.Screen>
-      <Tab.Screen name="Discover">
-        {() => (
-          <ExploreMapScreen
-            onOpenMarketplace={() => navRef.current?.navigate('Marketplace')}
-          />
-        )}
-      </Tab.Screen>
-      <Tab.Screen name="StartRide">
-        {() => (
-          <StartRideScreen
-            isRecording={isRecording}
-            onStartRide={(sport) => handleStartRide(sport)}
-            onGoToRide={() => navRef.current?.navigate('MainTabs', { screen: 'Tracking' })}
-            onOpenGpsWizard={() => navRef.current?.navigate('GpsDiagnostics')}
-            startRideError={startRideError}
-            onDismissStartRideError={clearStartRideError}
-            rideEdgeMessage={rideEdgeMessage}
-            onDismissRideEdgeMessage={clearRideEdgeMessage}
-            {...gpsRecoveryProps}
-          />
-        )}
-      </Tab.Screen>
-      <Tab.Screen name="Club">
-        {() => (
-          <CityHubScreen
-            user={shellUser ? { username: shellUser.username ?? 'RIDER' } : null}
-            onOpenStartRide={() => navRef.current?.navigate('MainTabs', { screen: 'StartRide' })}
-            onOpenLeaderboard={() => navRef.current?.navigate('GlobalLeaderboard')}
-            onOpenClubs={() => navRef.current?.navigate('Clubs')}
-            onOpenSegments={() => navRef.current?.navigate('Segments')}
-          />
-        )}
-      </Tab.Screen>
-      <Tab.Screen name="You">
-        {() => (
-          <AthleteProfileScreen
-            user={shellUser ? { username: shellUser.username } : undefined}
-            onLogout={onLogout}
-            onTraining={() => navRef.current?.navigate('TrainingLog')}
-            onSettings={() => navRef.current?.navigate('Settings')}
-            onTrends={() => navRef.current?.navigate('PerformanceTrends')}
-          />
-        )}
-      </Tab.Screen>
-      <Tab.Screen name="Tracking" options={{ tabBarButton: () => null }}>
-        {() => (
-          <ActiveRideHUDScreen
-            user={shellUser ?? undefined}
-            isPaused={ridePaused}
-            liveSpeed={liveSpeed}
-            liveDistanceKm={liveDistanceKm}
-            liveElevationGainM={liveElevationGainM}
-            liveElapsedS={liveElapsedS}
-            liveCoord={liveCoord}
-            onPause={() => {
-              void onPauseRide();
-            }}
-            onResume={() => {
-              void onResumeRide();
-            }}
-            onStop={() => void handleStopRide()}
-            {...gpsRecoveryProps}
-          />
-        )}
-      </Tab.Screen>
-    </Tab.Navigator>
-  );
-}
-
-export function NavigationShell(props: NavigationShellProps) {
-  const {
-    user,
-    isRecording,
-    ridePaused,
-    onPauseRide,
-    onResumeRide,
-    liveSpeed,
-    liveDistanceKm,
-    liveElevationGainM,
-    liveElapsedS,
-    liveCoord,
-    gpsRecoveryVisible,
-    gpsRecoveryBusy,
-    rideFinishState,
-    setRideFinishState,
-    startRideError,
-    clearStartRideError,
-    rideEdgeMessage,
-    clearRideEdgeMessage,
-    setRideEdgeMessage,
-    onGpsRecoveryPress,
-    onStartRide,
-    onStopRide,
-    onLogout,
-  } = props;
-
-  const shellUser = user as { username?: string; tenant_id?: string | null } | null;
-  const navRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
-  const shareCardRef = useRef<View>(null);
-  const { t: mt } = useI18n();
-  useFrameBudgetMonitor(isRecording && !ridePaused);
-  useMotionDegradeMonitor(isRecording && !ridePaused);
-
-  useEffect(() => {
-    if (!rideFinishState) return;
-    navRef.current?.navigate('RideSummary', rideFinishState);
-  }, [rideFinishState]);
-
-  const handleShareSummary = async () => {
+  const handleShareSummary = async (state: RideFinishState) => {
+    const payload = buildSummaryShare(state, locale);
+    if (!payload) return;
     try {
-      const history = await ActivityService.getHistory();
-      const latest = history[0];
-      if (!latest?.id) {
-        setRideEdgeMessage({
-          title: mt.errors.shareNoActivity,
-          message: mt.errors.shareNoActivity,
-          variant: 'warning',
-        });
-        return;
-      }
-      const shareData = await ActivityService.getShareData(latest.id);
-      const message = [
-        `Ride: ${shareData.type}`,
-        `Distance: ${shareData.distance_km} km`,
-        `Avg speed: ${shareData.avg_speed} km/h`,
-        `Date: ${shareData.date}`,
-      ].join('\n');
-      const targetView = shareCardRef.current;
-      if (targetView) {
-        const uri = await captureRef(targetView, {
-          format: 'png',
-          quality: 1,
-          result: 'tmpfile',
-        });
-        if (await Sharing.isAvailableAsync()) {
-          trackEngagement('ride_summary_share', { activity_id: latest.id });
-          await Sharing.shareAsync(uri, {
-            mimeType: 'image/png',
-            dialogTitle: 'Share ride result',
-          });
-          return;
-        }
-      }
-      await Share.share({ title: '4VELO Ride', message });
-      trackEngagement('ride_summary_share', { activity_id: latest.id, fallback: true });
+      const result = await Share.share(payload);
+      if (result.action === Share.sharedAction) trackEngagement('ride_summary_share', { source: 'displayed-summary' });
     } catch {
-      setRideEdgeMessage({
-        title: mt.errors.shareFailed,
-        message: mt.errors.shareFailed,
-        variant: 'error',
-      });
+      props.setRideEdgeMessage({ title: mt.errors.shareFailed, message: mt.errors.shareFailed, variant: 'error' });
     }
   };
-
-  return (
-    <>
-      <NavigationContainer ref={navRef} linking={mobileLinking}>
-        <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
-          <Stack.Screen name="MainTabs">
-            {() => (
-              <MainTabs
-                user={user}
-                isRecording={isRecording}
-                ridePaused={ridePaused}
-                onPauseRide={onPauseRide}
-                onResumeRide={onResumeRide}
-                liveSpeed={liveSpeed}
-                liveDistanceKm={liveDistanceKm}
-                liveElevationGainM={liveElevationGainM}
-                liveElapsedS={liveElapsedS}
-                liveCoord={liveCoord}
-                gpsRecoveryVisible={gpsRecoveryVisible}
-                gpsRecoveryBusy={gpsRecoveryBusy}
-                onGpsRecoveryPress={onGpsRecoveryPress}
-                onStartRide={onStartRide}
-                onStopRide={onStopRide}
-                onLogout={onLogout}
-                navRef={navRef}
-                startRideError={startRideError}
-                clearStartRideError={clearStartRideError}
-                rideEdgeMessage={rideEdgeMessage}
-                clearRideEdgeMessage={clearRideEdgeMessage}
-              />
-            )}
-          </Stack.Screen>
-          <Stack.Screen
-            name="Settings"
-            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-          >
-            {({ navigation }: RootScreenProps<'Settings'>) => (
-              <View style={{ flex: 1 }}>
-                <StackScreenHeader title={mt.settings.title} onBack={() => navigation.goBack()} />
-                <SettingsScreen embedded />
-              </View>
-            )}
-          </Stack.Screen>
-          <Stack.Screen name="TrainingLog">
-            {({ navigation }: RootScreenProps<'TrainingLog'>) => (
-              <View style={{ flex: 1 }}>
-                <TrainingLogScreen
-                  onBack={() => navigation.goBack()}
-                  onOpenActivity={(id) => navigation.navigate('ActivityDetail', { activityId: id })}
-                />
-              </View>
-            )}
-          </Stack.Screen>
-          <Stack.Screen
-            name="GpsDiagnostics"
-            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-          >
-            {({ navigation }: RootScreenProps<'GpsDiagnostics'>) => (
-              <GpsDiagnosticsScreen onClose={() => navigation.goBack()} />
-            )}
-          </Stack.Screen>
-          <Stack.Screen name="Clubs">
-            {({ navigation }: RootScreenProps<'Clubs'>) => (
-              <View style={{ flex: 1 }}>
-                <StackScreenHeader title={mt.clubs.title} onBack={() => navigation.goBack()} />
-                <ClubsDirectoryScreen />
-              </View>
-            )}
-          </Stack.Screen>
-          <Stack.Screen name="Segments">
-            {({ navigation }: RootScreenProps<'Segments'>) => (
-              <View style={{ flex: 1 }}>
-                <StackScreenHeader title={mt.segments.title} onBack={() => navigation.goBack()} />
-                <SegmentsScreen />
-              </View>
-            )}
-          </Stack.Screen>
-          <Stack.Screen name="ExploreMap">
-            {({ navigation }: RootScreenProps<'ExploreMap'>) => (
-              <View style={{ flex: 1 }}>
-                <StackScreenHeader title={mt.explore.map} onBack={() => navigation.goBack()} />
-                <ExploreMapScreen />
-              </View>
-            )}
-          </Stack.Screen>
-          <Stack.Screen name="Marketplace">
-            {({ navigation }: RootScreenProps<'Marketplace'>) => (
-              <View style={{ flex: 1 }}>
-                <StackScreenHeader title={mt.marketplace.title} onBack={() => navigation.goBack()} />
-                <MarketplaceScreen />
-              </View>
-            )}
-          </Stack.Screen>
-          <Stack.Screen name="ActivityDetail">
-            {({ navigation, route }: RootScreenProps<'ActivityDetail'>) => (
-              <View style={{ flex: 1 }}>
-                <ActivityDetailScreen
-                  activityId={route.params.activityId}
-                  onBack={() => navigation.goBack()}
-                />
-              </View>
-            )}
-          </Stack.Screen>
-          <Stack.Screen name="PerformanceTrends">
-            {({ navigation }: RootScreenProps<'PerformanceTrends'>) => (
-              <View style={{ flex: 1 }}>
-                <StackScreenHeader title={mt.settings.trends} onBack={() => navigation.goBack()} />
-                <PerformanceTrendsScreen />
-              </View>
-            )}
-          </Stack.Screen>
-          <Stack.Screen name="GlobalLeaderboard">
-            {({ navigation }: RootScreenProps<'GlobalLeaderboard'>) => (
-              <View style={{ flex: 1 }}>
-                <StackScreenHeader title={mt.settings.globalLb} onBack={() => navigation.goBack()} />
-                <GlobalLeaderboardScreen />
-              </View>
-            )}
-          </Stack.Screen>
-          <Stack.Screen
-            name="RideSummary"
-            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-          >
-            {({ navigation, route }: RootScreenProps<'RideSummary'>) => (
-              <View ref={shareCardRef} style={{ flex: 1 }}>
-                <RideSummaryScreen
-                  finishState={route.params}
-                  username={shellUser?.username ?? 'RIDER'}
-                  onShare={() => void handleShareSummary()}
-                  onBackToHub={() => {
-                    setRideFinishState(null);
-                    navigation.navigate('MainTabs', { screen: 'Today' });
-                  }}
-                />
-                {rideEdgeMessage ? (
-                  <View style={{ position: 'absolute', top: 56, left: 0, right: 0, zIndex: 20 }}>
-                    <EdgeStateBanner
-                      title={rideEdgeMessage.title}
-                      message={rideEdgeMessage.message}
-                      variant={rideEdgeMessage.variant}
-                      onDismiss={clearRideEdgeMessage}
-                    />
-                  </View>
-                ) : null}
-              </View>
-            )}
-          </Stack.Screen>
-          {(isVisionFixtures() || __DEV__) && (
-            <Stack.Screen name="VisionGallery">
-              {({ navigation }: RootScreenProps<'VisionGallery'>) => (
-                <View style={{ flex: 1 }}>
-                  <StackScreenHeader title="Vision Gallery" onBack={() => navigation.goBack()} />
-                  <VisionGalleryScreen
-                    entries={[
-                      {
-                        label: 'Today',
-                        onPress: () => {
-                          setVisionHomePreviewState('default');
-                          navigation.navigate('MainTabs', { screen: 'Today' });
-                        },
-                      },
-                      ...(isVisionFixtures()
-                        ? VISION_HOME_PREVIEW_STATES.map((state) => ({
-                            label: `Home — ${state}`,
-                            onPress: () => {
-                              setVisionHomePreviewState(state);
-                              navigation.navigate('MainTabs', { screen: 'Today' });
-                            },
-                          }))
-                        : []),
-                      { label: 'Club', onPress: () => navigation.navigate('MainTabs', { screen: 'Club' }) },
-                      { label: 'Discover', onPress: () => navigation.navigate('MainTabs', { screen: 'Discover' }) },
-                      { label: 'Start Ride', onPress: () => navigation.navigate('MainTabs', { screen: 'StartRide' }) },
-                      { label: 'You', onPress: () => navigation.navigate('MainTabs', { screen: 'You' }) },
-                      { label: 'Trends', onPress: () => navigation.navigate('PerformanceTrends') },
-                      { label: 'Leaderboard', onPress: () => navigation.navigate('GlobalLeaderboard') },
-                      { label: 'Training Log', onPress: () => navigation.navigate('TrainingLog') },
-                      { label: 'Marketplace', onPress: () => navigation.navigate('Marketplace') },
-                      { label: 'Segments', onPress: () => navigation.navigate('Segments') },
-                      { label: 'Clubs', onPress: () => navigation.navigate('Clubs') },
-                      { label: 'Explore Map', onPress: () => navigation.navigate('ExploreMap') },
-                      { label: 'GPS Diagnostics', onPress: () => navigation.navigate('GpsDiagnostics') },
-                      { label: 'Settings', onPress: () => navigation.navigate('Settings') },
-                      ...(isVisionFixtures()
-                        ? VISION_RIDE_FINISH_KINDS.flatMap((kind) => {
-                            const summary = {
-                              distanceKm: 12.4,
-                              elapsedS: 2730,
-                              elevationGainM: 145,
-                            };
-                            const finishState: RideFinishState =
-                              kind === 'durable-success'
-                                ? { kind, summary }
-                                : kind === 'pending-finalization'
-                                  ? { kind, summary, pendingUpload: 1 }
-                                  : {
-                                      kind,
-                                      summary,
-                                      reason: 'Vision recovery-required finish',
-                                    };
-                            return [
-                              {
-                                label: `Ride flow finish — ${kind}`,
-                                onPress: () => {
-                                  setVisionRideFinishKind(kind);
-                                  navigation.navigate('MainTabs', { screen: 'Today' });
-                                },
-                              },
-                              {
-                                label: `Summary — ${kind}`,
-                                onPress: () => navigation.navigate('RideSummary', finishState),
-                              },
-                            ];
-                          })
-                        : []),
-                    ]}
-                  />
-                </View>
-              )}
-            </Stack.Screen>
-          )}
-        </Stack.Navigator>
-      </NavigationContainer>
-    </>
-  );
+  const preparation = <StartRideScreen isRecording={isRecording} onStartRide={handleStartRide}
+    onGoToRide={() => navRef.current?.navigate('Tracking')}
+    onOpenGpsWizard={() => navRef.current?.navigate('GpsDiagnostics')}
+    gpsRecoveryVisible={props.gpsRecoveryVisible} gpsRecoveryBusy={props.gpsRecoveryBusy}
+    onGpsRecoveryPress={props.onGpsRecoveryPress} startRideError={props.startRideError}
+    onDismissStartRideError={props.clearStartRideError} rideEdgeMessage={props.rideEdgeMessage}
+    onDismissRideEdgeMessage={props.clearRideEdgeMessage} />;
+  return <NavigationContainer ref={navRef} linking={mobileLinking} onReady={showFinish}>
+    <Stack.Navigator initialRouteName="MainTabs" screenOptions={{ headerShown: false, animation: 'none' }}>
+      <Stack.Screen name="MainTabs">{() => <MainTabs data={props} navRef={navRef} />}</Stack.Screen>
+      <Stack.Screen name="StartRide">{({ navigation }) => <View style={{ flex: 1 }}>
+        <StackScreenHeader title={mt.dashboard.startRide} onBack={() => navigation.canGoBack() ? navigation.goBack() : goHome()} />
+        {preparation}</View>}</Stack.Screen>
+      <Stack.Screen name="Tracking" options={{ gestureEnabled: false }}>{() => isRecording ? <ActiveRideHUDScreen
+        user={props.user} isPaused={ridePaused} liveSpeed={props.liveSpeed} liveDistanceKm={props.liveDistanceKm}
+        liveElevationGainM={props.liveElevationGainM} liveElapsedS={props.liveElapsedS} liveCoord={props.liveCoord}
+        onPause={props.onPauseRide} onResume={props.onResumeRide} onStop={handleStopRide} onOpenHub={goHome}
+        gpsRecoveryVisible={props.gpsRecoveryVisible} gpsRecoveryBusy={props.gpsRecoveryBusy}
+        onGpsRecoveryPress={props.onGpsRecoveryPress} /> : <View style={{ flex: 1 }}>
+          <StackScreenHeader title={mt.dashboard.startRide} onBack={goHome} />{preparation}</View>}</Stack.Screen>
+      <Stack.Screen name="Settings">{({ navigation }) => <View style={{ flex: 1 }}>
+        <StackScreenHeader title={mt.settings.title} onBack={() => navigation.goBack()} /><SettingsScreen embedded />
+      </View>}</Stack.Screen>
+      <Stack.Screen name="TrainingLog">{({ navigation }) => <TrainingLogScreen onBack={() => navigation.goBack()}
+        onOpenActivity={(id) => navigation.navigate('ActivityDetail', { activityId: id })} />}</Stack.Screen>
+      <Stack.Screen name="GpsDiagnostics">{({ navigation }) => <GpsDiagnosticsScreen onClose={() => navigation.goBack()} />}</Stack.Screen>
+      <Stack.Screen name="Clubs">{({ navigation }) => <View style={{ flex: 1 }}>
+        <StackScreenHeader title={mt.clubs.title} onBack={() => navigation.goBack()} /><ClubsDirectoryScreen />
+      </View>}</Stack.Screen>
+      <Stack.Screen name="Segments">{({ navigation }) => <View style={{ flex: 1 }}>
+        <StackScreenHeader title={mt.segments.title} onBack={() => navigation.goBack()} /><SegmentsScreen />
+      </View>}</Stack.Screen>
+      <Stack.Screen name="ExploreMap">{({ navigation }) => <View style={{ flex: 1 }}>
+        <StackScreenHeader title={mt.explore.map} onBack={() => navigation.goBack()} /><ExploreMapScreen />
+      </View>}</Stack.Screen>
+      <Stack.Screen name="Marketplace">{({ navigation }) => <View style={{ flex: 1 }}>
+        <StackScreenHeader title={mt.marketplace.title} onBack={() => navigation.goBack()} /><MarketplaceScreen />
+      </View>}</Stack.Screen>
+      <Stack.Screen name="ActivityDetail">{({ navigation, route }) => <ActivityDetailScreen
+        activityId={route.params.activityId} onBack={() => navigation.goBack()} />}</Stack.Screen>
+      <Stack.Screen name="PerformanceTrends">{({ navigation }) => <View style={{ flex: 1 }}>
+        <StackScreenHeader title={mt.settings.trends} onBack={() => navigation.goBack()} /><PerformanceTrendsScreen />
+      </View>}</Stack.Screen>
+      <Stack.Screen name="GlobalLeaderboard">{({ navigation }) => <View style={{ flex: 1 }}>
+        <StackScreenHeader title={mt.settings.globalLb} onBack={() => navigation.goBack()} /><GlobalLeaderboardScreen />
+      </View>}</Stack.Screen>
+      <Stack.Screen name="RideSummary" options={{ gestureEnabled: false }}>{({ route }) => <View style={{ flex: 1 }}>
+        <RideSummaryScreen finishState={route.params} onShare={() => void handleShareSummary(route.params)}
+          onBackToHub={() => { setRideFinishState(null); goHome(); }} />
+        {props.rideEdgeMessage ? <EdgeStateBanner title={props.rideEdgeMessage.title} message={props.rideEdgeMessage.message}
+          variant={props.rideEdgeMessage.variant} onDismiss={props.clearRideEdgeMessage} /> : null}
+      </View>}</Stack.Screen>
+      {(isVisionFixtures() || __DEV__) && <Stack.Screen name="VisionGallery">{({ navigation }) => <View style={{ flex: 1 }}>
+        <StackScreenHeader title="Vision Gallery" onBack={() => navigation.goBack()} />
+        <VisionGalleryScreen entries={[
+          { label: 'Today', onPress: () => { setVisionHomePreviewState('default'); goHome(); } },
+          ...(isVisionFixtures() ? VISION_HOME_PREVIEW_STATES.map((state) => ({ label: `Home — ${state}`,
+            onPress: () => { setVisionHomePreviewState(state); goHome(); } })) : []),
+          { label: 'Club', onPress: () => navigation.navigate('MainTabs', { screen: 'Club' }) },
+          { label: 'Discover', onPress: () => navigation.navigate('MainTabs', { screen: 'Discover' }) },
+          { label: 'Start Ride', onPress: () => navigation.navigate('StartRide') },
+          { label: 'You', onPress: () => navigation.navigate('MainTabs', { screen: 'You' }) },
+          { label: 'Trends', onPress: () => navigation.navigate('PerformanceTrends') },
+          { label: 'Leaderboard', onPress: () => navigation.navigate('GlobalLeaderboard') },
+          { label: 'Training Log', onPress: () => navigation.navigate('TrainingLog') },
+          { label: 'Marketplace', onPress: () => navigation.navigate('Marketplace') },
+          { label: 'Segments', onPress: () => navigation.navigate('Segments') },
+          { label: 'Clubs', onPress: () => navigation.navigate('Clubs') },
+          { label: 'Explore Map', onPress: () => navigation.navigate('ExploreMap') },
+          { label: 'GPS Diagnostics', onPress: () => navigation.navigate('GpsDiagnostics') },
+          { label: 'Settings', onPress: () => navigation.navigate('Settings') },
+          ...(isVisionFixtures() ? VISION_RIDE_FINISH_KINDS.flatMap((kind) => {
+            const summary = { distanceKm: 12.4, elapsedS: 2730, elevationGainM: 145 };
+            const finishState: RideFinishState = kind === 'durable-success' ? { kind, summary }
+              : kind === 'pending-finalization' ? { kind, summary, pendingUpload: 1 }
+                : { kind, summary, reason: 'Vision recovery-required finish' };
+            return [
+              { label: `Ride flow finish — ${kind}`, onPress: () => { setVisionRideFinishKind(kind); goHome(); } },
+              { label: `Summary — ${kind}`, onPress: () => navigation.navigate('RideSummary', finishState) },
+            ];
+          }) : []),
+        ]} />
+      </View>}</Stack.Screen>}
+    </Stack.Navigator>
+  </NavigationContainer>;
 }

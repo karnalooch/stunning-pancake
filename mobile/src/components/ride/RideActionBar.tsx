@@ -1,237 +1,105 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Alert, AppState, Pressable, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useI18n } from '../../i18n/useI18n';
 import { HapticService } from '../../services/HapticService';
-import { SoundService } from '../../services/SoundService';
 import { getSemanticColors } from '../../theme/semantic';
 import { PRODUCT_TYPOGRAPHY } from '../../theme/typography';
+import { getAppCopy } from '../roadbook/appCopy';
 
+export type RideAction = () => void | boolean | Promise<void | boolean>;
 interface RideActionBarProps {
-  isPaused: boolean;
-  onPause?: () => void;
-  onResume?: () => void;
-  onStop: () => void;
-  pauseTestID?: string;
-  resumeTestID?: string;
-  stopTestID?: string;
+  isPaused: boolean; onPause?: RideAction; onResume?: RideAction; onStop: RideAction;
+  pauseTestID?: string; resumeTestID?: string; stopTestID?: string;
 }
-
 const STOP_HOLD_MS = 900;
-
-type ActionIcon = 'stop' | 'play' | 'pause';
-
-const RideActionIcon: React.FC<{ type: ActionIcon; color: string }> = ({ type, color }) => {
-  if (type === 'stop') {
-    return (
-      <View testID="ride-action-icon-stop-v1" style={styles.iconBox}>
-        <View style={[styles.stopSquare, { backgroundColor: color }]} />
-      </View>
-    );
-  }
-
-  if (type === 'pause') {
-    return (
-      <View testID="ride-action-icon-pause-v1" style={[styles.iconBox, styles.pauseRow]}>
-        <View style={[styles.pauseBar, { backgroundColor: color }]} />
-        <View style={[styles.pauseBar, { backgroundColor: color }]} />
-      </View>
-    );
-  }
-
-  return (
-    <View testID="ride-action-icon-resume-v1" style={styles.iconBox}>
-      <View
-        style={[
-          styles.playTriangle,
-          {
-            borderLeftColor: color,
-            borderTopColor: 'transparent',
-            borderBottomColor: 'transparent',
-          },
-        ]}
-      />
-    </View>
-  );
-};
-
-export const RideActionBar: React.FC<RideActionBarProps> = ({
-  isPaused,
-  onPause,
-  onResume,
-  onStop,
-  pauseTestID = 'ride-pause-button',
-  resumeTestID = 'ride-resume-button',
-  stopTestID = 'ride-stop-button',
+export const RideActionBar: React.FC<RideActionBarProps> = ({ isPaused, onPause, onResume, onStop,
+  pauseTestID = 'ride-pause-button', resumeTestID = 'ride-resume-button', stopTestID = 'ride-stop-button',
 }) => {
   const { theme } = useUnistyles();
-  const { t } = useI18n();
-  const semantic = getSemanticColors(theme.colors);
-  const onError = semantic.text.onDestructive;
-  const onAction = semantic.text.onAction;
-  const hudOutline = semantic.text.primary;
-  const stopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { t, locale } = useI18n();
+  const copy = getAppCopy(locale);
+  const c = getSemanticColors(theme.colors);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const locked = useRef(false);
+  const mounted = useRef(false);
+  const confirming = useRef(false);
   const [stopArmed, setStopArmed] = useState(false);
-
-  useEffect(
-    () => () => {
-      if (stopTimer.current) clearTimeout(stopTimer.current);
-    },
-    [],
-  );
-
-  const clearStopTimer = () => {
-    if (stopTimer.current) {
-      clearTimeout(stopTimer.current);
-      stopTimer.current = null;
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(false);
+  const cancelHold = () => {
+    if (timer.current !== null) clearTimeout(timer.current);
+    timer.current = null;
+    if (mounted.current) setStopArmed(false);
+  };
+  useEffect(() => {
+    mounted.current = true;
+    const subscription = AppState.addEventListener('change', (state) => { if (state !== 'active') cancelHold(); });
+    return () => { mounted.current = false; cancelHold(); subscription.remove(); };
+  }, []);
+  useEffect(() => { cancelHold(); }, [isPaused]);
+  const run = async (action?: RideAction) => {
+    if (locked.current || !action) return;
+    locked.current = true;
+    cancelHold(); setBusy(true); setError(false);
+    try {
+      HapticService.trigger('button_press');
+      const result = await action();
+      if (result === false && mounted.current) setError(true);
+    } catch {
+      if (mounted.current) setError(true);
+    } finally {
+      locked.current = false;
+      if (mounted.current) setBusy(false);
     }
-    setStopArmed(false);
   };
-
   const startStopHold = () => {
-    clearStopTimer();
-    setStopArmed(true);
-    HapticService.trigger('button_press');
-    stopTimer.current = setTimeout(() => {
-      stopTimer.current = null;
-      setStopArmed(false);
-      void SoundService.play('ui_confirm');
-      HapticService.trigger('error');
-      onStop();
-    }, STOP_HOLD_MS);
+    if (locked.current) return;
+    cancelHold(); setStopArmed(true);
+    timer.current = setTimeout(() => { timer.current = null; void run(onStop); }, STOP_HOLD_MS);
   };
-
-  return (
-    <View style={styles.row}>
-      {isPaused ? (
-        <Pressable
-          style={({ pressed }) => [
-            styles.btn,
-            styles.primaryAction,
-            {
-              backgroundColor: semantic.action.primary,
-              borderColor: semantic.action.primary,
-            },
-            pressed && { opacity: 0.9 },
-          ]}
-          onPress={() => {
-            HapticService.trigger('button_press');
-            void SoundService.play('ui_confirm');
-            onResume?.();
-          }}
-          testID={resumeTestID}
-          accessibilityRole="button"
-          accessibilityLabel={t.ride.actions.resume}
-        >
-          <RideActionIcon type="play" color={onAction} />
-          <Text style={[styles.label, { color: onAction }]}>
-            {t.ride.actions.resume}
-          </Text>
-        </Pressable>
-      ) : (
-        <Pressable
-          style={({ pressed }) => [
-            styles.btn,
-            styles.primaryAction,
-            {
-              backgroundColor: semantic.selection.background,
-              borderColor: semantic.selection.border,
-            },
-            pressed && { opacity: 0.9 },
-          ]}
-          onPress={() => {
-            HapticService.trigger('button_press');
-            void SoundService.play('ui_click');
-            onPause?.();
-          }}
-          testID={pauseTestID}
-          accessibilityRole="button"
-          accessibilityLabel={t.ride.actions.pause}
-        >
-          <RideActionIcon type="pause" color={hudOutline} />
-          <Text style={[styles.label, { color: hudOutline }]}>
-            {t.ride.actions.pause}
-          </Text>
-        </Pressable>
-      )}
-
-      <Pressable
-        style={({ pressed }) => [
-          styles.btn,
-          styles.stopAction,
-          {
-            backgroundColor: semantic.ride.stopAction,
-            borderColor: semantic.ride.stopAction,
-          },
-          stopArmed && { opacity: 0.72 },
-          pressed && { opacity: 0.9 },
-        ]}
-        onPressIn={startStopHold}
-        onPressOut={clearStopTimer}
-        testID={stopTestID}
-        accessibilityRole="button"
-        accessibilityLabel={t.ride.actions.stopConfirm}
-        accessibilityHint={t.ride.actions.stopConfirm}
-      >
-        <RideActionIcon type="stop" color={onError} />
-        <Text style={[styles.label, { color: onError }]} allowFontScaling>
-          {stopArmed ? '…' : t.ride.actions.stop}
-        </Text>
-      </Pressable>
-    </View>
-  );
+  const confirmAccessibleFinish = () => {
+    if (locked.current || confirming.current) return;
+    cancelHold(); confirming.current = true;
+    Alert.alert(copy.finishTitle, copy.finishBody, [
+      { text: copy.cancel, style: 'cancel', onPress: () => { confirming.current = false; } },
+      { text: copy.finish, style: 'destructive', onPress: () => { confirming.current = false; void run(onStop); } },
+    ], { cancelable: true, onDismiss: () => { confirming.current = false; } });
+  };
+  const primaryLabel = isPaused ? t.ride.actions.resume : t.ride.actions.pause;
+  const primaryAction = isPaused ? onResume : onPause;
+  return <View style={styles.stack}>
+    {error ? <Text accessibilityRole="alert" accessibilityLiveRegion="polite" testID="ride-action-error" style={styles.error}>{copy.actionError}</Text> : null}
+    <Pressable testID={isPaused ? resumeTestID : pauseTestID} accessibilityRole="button"
+      accessibilityLabel={primaryLabel} accessibilityState={{ disabled: busy || !primaryAction, busy }}
+      disabled={busy || !primaryAction} onPress={() => void run(primaryAction)}
+      style={({ pressed }) => [styles.primary, { backgroundColor: pressed ? c.action.primaryPressed : c.action.primary }]}>
+      <View testID={isPaused ? 'ride-action-icon-resume-v1' : 'ride-action-icon-pause-v1'} accessible={false}>
+        <Text style={[styles.icon, { color: c.text.onAction }]}>{isPaused ? '▶' : 'Ⅱ'}</Text>
+      </View>
+      <Text style={[styles.label, { color: c.text.onAction }]}>{busy ? copy.busy : primaryLabel}</Text>
+    </Pressable>
+    <Pressable testID={stopTestID} accessibilityRole="button" accessibilityLabel={t.ride.actions.stopConfirm}
+      accessibilityHint={copy.hold} accessibilityState={{ disabled: busy, busy }} disabled={busy}
+      onPressIn={startStopHold} onPressOut={cancelHold} onAccessibilityTap={confirmAccessibleFinish}
+      accessibilityActions={[{ name: 'activate', label: copy.finish }]}
+      onAccessibilityAction={(event) => { if (event.nativeEvent.actionName === 'activate') confirmAccessibleFinish(); }}
+      style={[styles.stop, { borderColor: c.action.destructive }]}>
+      <View testID="ride-action-icon-stop-v1" style={[styles.square, { backgroundColor: c.action.destructive }]} />
+      <Text style={styles.error}>{stopArmed ? '…' : t.ride.actions.stop}</Text>
+      <Text style={styles.hint}>{copy.hold}</Text>
+    </Pressable>
+  </View>;
 };
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  btn: {
-    borderWidth: 1,
-    borderRadius: 14,
-    minHeight: 56,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  primaryAction: {
-    flex: 1.6,
-  },
-  stopAction: {
-    flex: 1,
-  },
-  iconBox: {
-    width: 22,
-    height: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pauseRow: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  pauseBar: {
-    width: 5,
-    height: 16,
-    borderRadius: 2,
-  },
-  stopSquare: {
-    width: 14,
-    height: 14,
-    borderRadius: 3,
-  },
-  playTriangle: {
-    width: 0,
-    height: 0,
-    borderTopWidth: 8,
-    borderBottomWidth: 8,
-    borderLeftWidth: 13,
-  },
-  label: {
-    ...PRODUCT_TYPOGRAPHY.bodyMedium,
-    textTransform: 'uppercase',
-    letterSpacing: 0.2,
-  },
+const styles = StyleSheet.create((theme) => {
+  const c = getSemanticColors(theme.colors);
+  return {
+    stack: { gap: 10 }, primary: { minHeight: 60, padding: 16, borderRadius: 8,
+      flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 10 },
+    stop: { minHeight: 48, borderWidth: 1, borderRadius: 8, padding: 12,
+      flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 8 },
+    label: { ...PRODUCT_TYPOGRAPHY.bodyMedium }, error: { ...PRODUCT_TYPOGRAPHY.bodyMedium, color: c.status.error },
+    hint: { ...PRODUCT_TYPOGRAPHY.metricLabel, color: c.text.secondary },
+    icon: { fontSize: 22 }, square: { width: 12, height: 12, borderRadius: 2 },
+  };
 });
