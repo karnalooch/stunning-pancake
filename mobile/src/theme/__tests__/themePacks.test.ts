@@ -36,7 +36,8 @@ describe('data-only theme packs', () => {
   it('rejects prototype keys without polluting Object', () => {
     const poisoned = custom().replace('"schemaVersion":1', '"schemaVersion":1,"__proto__":{"polluted":true}');
     assert.throws(() => parseThemePack(poisoned), ThemePackError);
-    assert.equal(Object.prototype.hasOwnProperty.call({}, 'polluted'), false);
+    assert.equal(({} as Record<string, unknown>).polluted, undefined);
+    assert.equal((Object.prototype as Record<string, unknown>).polluted, undefined);
   });
   it('rejects malformed JSON and bounded oversized input', () => {
     assert.throws(() => parseThemePack('{'), ThemePackError);
@@ -47,6 +48,10 @@ describe('data-only theme packs', () => {
       assert.throws(() => parseThemePack(JSON.stringify({ ...roadbook,
         light: { ...roadbook.light, [key]: roadbook.light.surface } })), ThemePackError);
     }
+  });
+  it('requires text-link contrast for action roles, not merely control contrast', () => {
+    assert.throws(() => parseThemePack(JSON.stringify({ ...roadbook,
+      light: { ...roadbook.light, action: '#808080', actionPressed: '#777777', onAction: '#000000' } })), ThemePackError);
   });
   it('computes black/white contrast without rounding a failing pair up', () => {
     assert.equal(contrastRatio('#000000', '#FFFFFF'), 21);

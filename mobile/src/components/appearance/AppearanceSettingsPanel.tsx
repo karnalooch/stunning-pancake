@@ -3,6 +3,7 @@ import { Alert, Pressable, ScrollView, Share, StyleSheet, Switch, Text, TextInpu
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useI18n } from '../../i18n/useI18n';
 import { appearanceCopy } from './copy';
+import { PRODUCT_TYPOGRAPHY } from '../../theme/typography';
 import { useAppearance } from '../../theme/ThemeProvider';
 import { BUILTIN_THEME_PACKS } from '../../theme/packs/builtins';
 import {
@@ -118,7 +119,7 @@ export function AppearanceSettingsPanel({ onClose }: { onClose: () => void }) {
           <Text style={[s.body, { color: preview.muted }]}>{t.speed}</Text>
           <Text style={[s.metric, { color: preview.text }]}>{locale === 'pl' ? '28,4' : '28.4'} <Text style={s.unit}>km/h</Text></Text>
           <View style={s.options}>
-            <View style={s.previewCell}><Text style={[s.body, { color: preview.muted }]}>{t.distance}</Text><Text style={[s.value, { color: preview.text }]}>42.7 km</Text></View>
+            <View style={s.previewCell}><Text style={[s.body, { color: preview.muted }]}>{t.distance}</Text><Text style={[s.value, { color: preview.text }]}>{locale === 'pl' ? '42,7' : '42.7'} km</Text></View>
             <View style={s.previewCell}><Text style={[s.body, { color: preview.muted }]}>{t.time}</Text><Text style={[s.value, { color: preview.text }]}>01:23:12</Text></View>
           </View>
           <View style={[s.button, { backgroundColor: preview.action }]}>
@@ -163,17 +164,17 @@ export function AppearanceSettingsPanel({ onClose }: { onClose: () => void }) {
 const s = StyleSheet.create({
   root: { flex: 1 }, content: { padding: 20, gap: 14, paddingBottom: 36 },
   back: { minHeight: 48, justifyContent: 'center', alignSelf: 'flex-start', minWidth: 64 },
-  title: { fontSize: 34, fontWeight: '700' }, section: { fontSize: 20, fontWeight: '600', marginTop: 12 },
-  body: { fontSize: 16, lineHeight: 24 }, caption: { fontSize: 13, lineHeight: 20 },
-  label: { fontSize: 16, fontWeight: '600', textAlign: 'center' },
+  title: { ...PRODUCT_TYPOGRAPHY.displayEditorial, fontSize: 34, lineHeight: 40 }, section: { ...PRODUCT_TYPOGRAPHY.title, fontSize: 20, lineHeight: 26, marginTop: 12 },
+  body: { ...PRODUCT_TYPOGRAPHY.body, lineHeight: 24 }, caption: { ...PRODUCT_TYPOGRAPHY.metricLabel, lineHeight: 20 },
+  label: { ...PRODUCT_TYPOGRAPHY.bodyMedium, fontSize: 16, textAlign: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 16, minHeight: 56 }, flex: { flex: 1, textAlign: 'left' },
   options: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   option: { flexGrow: 1, minWidth: 120, padding: 16, borderRadius: 14, gap: 12 },
   mode: { flexGrow: 1, minWidth: 84, minHeight: 52, padding: 12, borderRadius: 12, borderWidth: 1, justifyContent: 'center' },
   swatches: { flexDirection: 'row', gap: 7 }, swatch: { width: 24, height: 24, borderRadius: 12, borderWidth: 1 },
   preview: { padding: 20, borderRadius: 20, borderWidth: 1, gap: 12 },
-  metric: { fontSize: 56, fontWeight: '700', fontVariant: ['tabular-nums'] }, unit: { fontSize: 18, fontWeight: '400' },
-  previewCell: { flexGrow: 1, minWidth: 100, gap: 5 }, value: { fontSize: 23, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  metric: { ...PRODUCT_TYPOGRAPHY.metric, fontSize: 56, lineHeight: 64 }, unit: { ...PRODUCT_TYPOGRAPHY.body, fontSize: 18 },
+  previewCell: { flexGrow: 1, minWidth: 100, gap: 5 }, value: { ...PRODUCT_TYPOGRAPHY.metric, fontSize: 23, lineHeight: 30 },
   button: { minHeight: 52, padding: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   input: { minHeight: 144, maxHeight: 260, borderWidth: 1, borderRadius: 12, padding: 14, fontSize: 14, textAlignVertical: 'top' },
 });

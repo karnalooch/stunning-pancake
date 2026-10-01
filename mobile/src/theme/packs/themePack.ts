@@ -64,11 +64,10 @@ function validatePalette(value: unknown): ThemePalette {
     if (contrastRatio(result[a], result[b]) < minimum) throw new ThemePackError('contrast');
   };
   for (const background of ['canvas', 'surface', 'raised'] as const) {
-    for (const text of ['text', 'muted', 'success', 'warning', 'error'] as const) {
+    for (const text of ['text', 'muted', 'action', 'success', 'warning', 'error'] as const) {
       requireContrast(text, background, 4.5);
     }
     requireContrast('border', background, 3);
-    requireContrast('action', background, 3);
   }
   requireContrast('onAction', 'action', 4.5);
   requireContrast('onAction', 'actionPressed', 4.5);
