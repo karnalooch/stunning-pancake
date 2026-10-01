@@ -9,7 +9,6 @@ from core.production_guards import (
 )
 from core.sentry import init_sentry
 
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Signing authority is explicit and persistent whenever DEBUG=0, including PaaS.
